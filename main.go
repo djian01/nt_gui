@@ -9,10 +9,9 @@ import (
 	"fyne.io/fyne/v2/app"
 )
 
-// create a global logFile pointer and logger pointer
+// create a global logger pointer
 var (
-	logFile *os.File
-	logger  *log.Logger
+	logger *log.Logger
 )
 
 func main() {

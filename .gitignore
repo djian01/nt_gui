@@ -1,0 +1,19 @@
+# Executable
+*.exe
+*.exe~
+nt
+/executable/
+
+# log file
+*.log
+
+# CSV file
+*.csv
+
+# git files
+.gitconfig
+.git-credentials
+
+# zip files
+*.zip
+*.tar.gz

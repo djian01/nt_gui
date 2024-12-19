@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/url"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -37,18 +38,34 @@ func makeUI(w fyne.Window, a fyne.App) {
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
 			// Create about dialog with left-aligned text
-			aboutContent := widget.NewLabel(
-				"Version: 1.0.0\n" +
-					"Developed By: Dennis Jian\n" +
-					"Project Home: https://github.com/djian01/nt_gui\n\n")
-			aboutContent.Alignment = fyne.TextAlignLeading // Left alignment
+			aboutContent := container.NewVBox(
+				widget.NewLabel("Version:  1.0.0"),
+				widget.NewLabel("Developed By:   Dennis Jian"),
+				container.NewHBox(
+					widget.NewLabel("Project Home: "),
+					widget.NewHyperlink("https://github.com/djian01/nt_gui",
+						parseURL("https://github.com/djian01/nt_gui")),
+				),
+				widget.NewLabel(""), // Add a blank line
+			)
+
+			aboutOkButton := widget.NewButton("           OK          ", nil)
+			aboutOkButton.Importance = widget.HighImportance
 
 			aboutDialog := dialog.NewCustom(
 				"About NT (Net-Test) GUI",
-				"OK",
-				aboutContent,
+				"", // Empty string since we'll use our custom button
+				container.NewVBox(
+					aboutContent,
+					container.NewPadded(container.NewCenter(aboutOkButton)),
+				),
 				w)
-			aboutDialog.Resize(fyne.NewSize(500, 130))
+
+			aboutOkButton.OnTapped = func() {
+				aboutDialog.Hide()
+			}
+
+			aboutDialog.Resize(fyne.NewSize(500, 100))
 			aboutDialog.Show()
 		}),
 	)
@@ -86,4 +103,9 @@ func makeUI(w fyne.Window, a fyne.App) {
 
 	w.SetContent(mainContainer)
 
+}
+
+func parseURL(urlStr string) *url.URL {
+	link, _ := url.Parse(urlStr)
+	return link
 }

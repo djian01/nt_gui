@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -71,10 +74,14 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet) fun
 				return
 			}
 
-			// Get Type
+			// Get Result Analysis File Type
 			RaType := records[1][0]
 
-			fmt.Println(RaType)
+			appenPacket(inputResultPackets, RaType, &records)
+
+			for _, pk := range *inputResultPackets {
+				fmt.Println(*(pk.(*ntPinger.PacketDNS)))
+			}
 
 		}, w)
 
@@ -94,4 +101,65 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet) fun
 		// show dialog
 		RA_Dialog.Show()
 	}
+}
+
+// func: Appen Packet Slide
+func appenPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records *[][]string) {
+	switch RaType {
+	case "dns":
+		for i, packet := range *records {
+			// skip the header row
+			if i == 0 {
+				continue
+			}
+
+			// fill in packet info
+			var p ntPinger.PacketDNS
+			p.Type = packet[0]
+			p.Seq, _ = strconv.Atoi(packet[1])
+			p.Status, _ = strconv.ParseBool(packet[2])
+			p.DestAddr = packet[3]
+			p.DestHost = packet[3]
+			p.SendTime, _ = time.Parse("2006-01-02 15:04:05", packet[9]+" "+packet[10])
+			p.RTT, _ = parseCustomDuration(packet[8] + "ms")
+			p.Dns_query = packet[4]
+			p.Dns_queryType = packet[6]
+			p.Dns_protocol = packet[7]
+			p.Dns_response = packet[5]
+			p.PacketsSent, _ = strconv.Atoi(packet[11])
+			p.PacketsRecv, _ = strconv.Atoi(packet[12])
+			p.MinRtt, _ = parseCustomDuration(packet[14])
+			p.MaxRtt, _ = parseCustomDuration(packet[16])
+			p.AvgRtt, _ = parseCustomDuration(packet[15])
+			index_AdditionalInfo := 17
+			if len(packet) == index_AdditionalInfo+1 {
+				p.AdditionalInfo = packet[17]
+			} else {
+				p.AdditionalInfo = ""
+			}
+
+			// append
+			*inputResultPackets = append(*inputResultPackets, &p)
+
+		}
+	}
+}
+
+// Parse stirng (ms) to time.duration
+func parseCustomDuration(input string) (time.Duration, error) {
+	// Remove the "ms" suffix
+	if !strings.HasSuffix(input, "ms") {
+		return 0, fmt.Errorf("invalid duration format: %s", input)
+	}
+	valueStr := strings.TrimSuffix(input, "ms")
+
+	// Parse the numeric part
+	value, err := strconv.ParseFloat(valueStr, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid numeric value: %s", valueStr)
+	}
+
+	// Convert milliseconds to nanoseconds (time.Duration's base unit)
+	duration := time.Duration(value * float64(time.Millisecond))
+	return duration, nil
 }

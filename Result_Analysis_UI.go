@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"image/color"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -46,13 +47,32 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	chartImage.FillMode = canvas.ImageFillContain
 	chartImage.SetMinSize(fyne.NewSize(400, 400))
 
+	// Slider Card
+	sliderLeft := widget.NewSlider(0, 100)
+	sliderLeftValue := widget.NewEntry()
+
+	sliderRight := widget.NewSlider(0, 100)
+	sliderRightValue := widget.NewEntry()
+
+	chartUpdateBtn := widget.NewButton("Update Chart", func() {})
+	chartUpdateBtn.Importance = widget.HighImportance
+
+	ErrLabel := canvas.NewText("No Error:", color.Black)
+
+	sliderContainer := container.New(layout.NewGridLayoutWithColumns(5), sliderLeft, sliderLeftValue, sliderRight, sliderRightValue, chartUpdateBtn)
+
+	//sliderContainer := container.New(layout.NewHBoxLayout(), sliderLeft, sliderLeftValue, sliderRight, sliderRightValue, chartUpdateBtn)
+	sliderCardContainer := container.New(layout.NewBorderLayout(nil, ErrLabel, nil, nil), sliderContainer, ErrLabel)
+
+	sliderCard := widget.NewCard("", "", sliderCardContainer)
+
 	// Create a grid with the placeholder
 	chartContainer := container.New(layout.NewBorderLayout(nil, nil, nil, nil), chartImage)
 	chartCard := widget.NewCard("", "", chartContainer)
 
 	//// Main Container
 	spaceHolder := widget.NewLabel("                     ")
-	RaMainContainerInner := container.New(layout.NewVBoxLayout(), inputResultCSVFileCard, summaryCard, chartCard)
+	RaMainContainerInner := container.New(layout.NewVBoxLayout(), inputResultCSVFileCard, summaryCard, chartCard, sliderCard)
 	RaMainContainerOuter := container.New(layout.NewBorderLayout(spaceHolder, spaceHolder, spaceHolder, spaceHolder), spaceHolder, RaMainContainerInner)
 
 	// Input NSX Config File BTN

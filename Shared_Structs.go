@@ -55,6 +55,7 @@ type SummaryUI struct {
 
 	ntCmdLabel *widget.Label
 	ntCmdEntry *widget.Entry
+	ntCmdBtn   *widget.Button
 }
 
 func (s *SummaryUI) Initial() {
@@ -90,6 +91,8 @@ func (s *SummaryUI) Initial() {
 
 	s.ntCmdLabel = widget.NewLabel("nt CMD         ")
 	s.ntCmdEntry = widget.NewEntry()
+	s.ntCmdBtn = widget.NewButton("Relaunch CMD", func() {})
+	s.ntCmdBtn.Importance = widget.HighImportance
 }
 
 func (s *SummaryUI) CreateCard() *widget.Card {
@@ -112,7 +115,7 @@ func (s *SummaryUI) CreateCard() *widget.Card {
 	summaryRow2 := container.New(layout.NewGridLayoutWithColumns(2), startTimeContainer, endTimeContainer)
 	summaryRow3 := container.New(layout.NewGridLayoutWithColumns(3), packetSentContainer, successRespContainer, failRateContainer)
 	summaryRow4 := container.New(layout.NewGridLayoutWithColumns(3), minRttContainer, maxRttContainer, avgRttContainer)
-	summaryRow5 := container.New(layout.NewGridLayoutWithColumns(1), ntCmdContainer)
+	summaryRow5 := container.New(layout.NewBorderLayout(nil, nil, nil, s.ntCmdBtn), s.ntCmdBtn, ntCmdContainer)
 
 	// overall container and card
 	summaryContainer := container.New(layout.NewGridLayoutWithRows(5), summaryRow1, summaryRow2, summaryRow3, summaryRow4, summaryRow5)

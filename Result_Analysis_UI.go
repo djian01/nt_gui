@@ -49,9 +49,9 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	// Slider Card
 	slider := Slider{}
 	slider.Initial()
-
-	sliderCard := slider.CreateCard()
-	sliderCard.Hidden = true
+	slider.chartData = &chartData
+	slider.CreateCard()
+	slider.sliderCard.Hidden = true
 
 	// Create a grid with the placeholder
 	chartContainer := container.New(layout.NewBorderLayout(nil, nil, nil, nil), chartImage)
@@ -59,18 +59,22 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 
 	//// Main Container
 	spaceHolder := widget.NewLabel("                     ")
-	RaMainContainerInner := container.New(layout.NewVBoxLayout(), inputResultCSVFileCard, summaryCard, chartCard, sliderCard)
+	RaMainContainerInner := container.New(layout.NewVBoxLayout(), inputResultCSVFileCard, summaryCard, chartCard, slider.sliderCard)
 	RaMainContainerOuter := container.New(layout.NewBorderLayout(spaceHolder, spaceHolder, spaceHolder, spaceHolder), spaceHolder, RaMainContainerInner)
 
 	// Input NSX Config File BTN
-	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(w, &inputResultPackets, &chartData, chartImage, chartContainer, &Summary, &summaryUI, inputResultCSVFilePath, sliderCard, &slider)
+	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(w, &inputResultPackets, &chartData, chartImage, chartContainer, &Summary, &summaryUI, inputResultCSVFilePath, &slider)
+
+	// Slider Update
+	slider.sliderLeft.OnChanged = func(f float64) { slider.sliderUpdate() }
+	slider.sliderRight.OnChanged = func(f float64) { slider.sliderUpdate() }
 
 	// Return your result analysis interface components here
 	return RaMainContainerOuter // Temporary empty container, replace with your actual UI
 }
 
 // func: OpenResultCSVFile
-func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chartImage *canvas.Image, chartContainer *fyne.Container, Summary *Summary, summaryUI *SummaryUI, inputResultCSVFilePath *widget.Entry, sliderCard *widget.Card, slider *Slider) func() {
+func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chartImage *canvas.Image, chartContainer *fyne.Container, Summary *Summary, summaryUI *SummaryUI, inputResultCSVFilePath *widget.Entry, slider *Slider) func() {
 	return func() {
 
 		// reset vars
@@ -153,7 +157,8 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, cha
 			summaryUI.ntCmdEntry.SetText((*Summary).ntCmd)
 
 			// update slider card
-			sliderCard.Hidden = false
+			(*slider).initialSetMax(float64(len(*chartData) - 1))
+			slider.sliderCard.Hidden = false
 
 		}, w)
 

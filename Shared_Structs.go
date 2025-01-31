@@ -11,6 +11,8 @@ import (
 	ntchart "github.com/djian01/nt_gui/pkg/chart"
 )
 
+// ********* Summary ***************
+
 type Summary struct {
 	Type            string
 	DestHost        string
@@ -127,6 +129,8 @@ func (s *SummaryUI) CreateCard() *widget.Card {
 	return summaryCard
 }
 
+// ********* Chart Update Slider ***************
+
 type Slider struct {
 	sliderLeftEdge  float64
 	sliderRightEdge float64
@@ -145,6 +149,8 @@ type Slider struct {
 	chartUpdateBtn *widget.Button
 
 	ErrLabel *canvas.Text
+
+	sliderCard *widget.Card
 }
 
 func (s *Slider) Initial() {
@@ -165,12 +171,17 @@ func (s *Slider) Initial() {
 	s.ErrLabel = canvas.NewText("No Error:", color.RGBA{255, 0, 0, 255})
 }
 
-func (s *Slider) SetMax() {
-	s.sliderLeft.Max = s.sliderMax
-	s.sliderRight.Max = s.sliderMax
+func (s *Slider) initialSetMax(Max float64) {
+	s.sliderMax = Max
+	s.sliderLeft.Max = Max
+	s.sliderRight.Max = Max
+	s.sliderRightEdge = Max
+	s.sliderRight.SetValue(Max)
+	s.sliderUpdate()
+
 }
 
-func (s *Slider) CreateCard() *widget.Card {
+func (s *Slider) CreateCard() {
 	sliderLeftContainerIn := container.New(layout.NewGridLayoutWithColumns(2), s.sliderLeft, s.sliderLeftValue)
 	sliderLeftContainerOut := container.New(layout.NewBorderLayout(nil, nil, s.sliderLeftIndicate, nil), s.sliderLeftIndicate, sliderLeftContainerIn)
 
@@ -182,14 +193,14 @@ func (s *Slider) CreateCard() *widget.Card {
 
 	sliderContainerMain := container.New(layout.NewBorderLayout(nil, s.ErrLabel, nil, nil), sliderContainerOut, s.ErrLabel)
 
-	sliderCard := widget.NewCard("", "", sliderContainerMain)
-
-	return sliderCard
+	s.sliderCard = widget.NewCard("", "", sliderContainerMain)
 }
 
-func (s *Slider) SetChartData(cd *[]ntchart.ChartPoint) {
-	s.chartData = cd
-	s.sliderRightEdge = float64(len(*cd))
+func (s *Slider) sliderUpdate() {
+	s.sliderLeftValue.Text = (*s.chartData)[int(s.sliderLeft.Value)].XValues.Format("2006-01-02 15:04:05 MST")
+	s.sliderRightValue.Text = (*s.chartData)[int(s.sliderRight.Value)].XValues.Format("2006-01-02 15:04:05 MST")
+	s.sliderRight.Min = s.sliderLeft.Value
+	s.sliderLeft.Max = s.sliderRight.Value
 }
 
 func (s *Slider) BuildSliderChartData() {

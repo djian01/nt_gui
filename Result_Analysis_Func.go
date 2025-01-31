@@ -1,21 +1,10 @@
 package main
 
 import (
-	"encoding/csv"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
-
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/storage"
-	"fyne.io/fyne/v2/widget"
 
 	ntHttp "github.com/djian01/nt/pkg/cmd/http"
 	"github.com/djian01/nt/pkg/ntPinger"
@@ -23,130 +12,11 @@ import (
 	ntchart "github.com/djian01/nt_gui/pkg/chart"
 )
 
-func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
-
-	// Initial slides
-	inputResultPackets := []ntPinger.Packet{}
-	chartData := []ntchart.ChartPoint{}
-
-	// Input Result CSV File card
-	inputResultCSVFilePath := widget.NewEntry()
-	inputResultCSVFilePath.SetPlaceHolder("please input the file path or press the right button to select the Result CSV file")
-	inputResultCSVFileButton := widget.NewButton("Select the Result CSV File", func() {})
-	inputResultCSVFileButton.Importance = widget.WarningImportance
-	inputNSXConfigContainer := container.New(layout.NewBorderLayout(nil, nil, nil, inputResultCSVFileButton), inputResultCSVFilePath, inputResultCSVFileButton)
-	inputResultCSVFileCard := widget.NewCard("", "Input the existing Result CSV File", inputNSXConfigContainer)
-
-	// Chart Card (Place Holder)
-	chartImage := canvas.NewImageFromResource(nil)
-	chartImage.FillMode = canvas.ImageFillContain
-	chartImage.SetMinSize(fyne.NewSize(400, 400))
-
-	// Create a grid with the placeholder
-	chartContainer := container.New(layout.NewBorderLayout(nil, nil, nil, nil), chartImage)
-	chartCard := widget.NewCard("", "", chartContainer)
-
-	//// Main Container
-	spaceHolder := widget.NewLabel("                     ")
-	RaMainContainerInner := container.New(layout.NewVBoxLayout(), inputResultCSVFileCard, chartCard)
-	RaMainContainerOuter := container.New(layout.NewBorderLayout(spaceHolder, spaceHolder, spaceHolder, spaceHolder), spaceHolder, RaMainContainerInner)
-
-	// Input NSX Config File BTN
-	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(w, &inputResultPackets, &chartData, chartImage, chartContainer)
-
-	// Return your result analysis interface components here
-	return RaMainContainerOuter // Temporary empty container, replace with your actual UI
-}
-
-// func: OpenResultCSVFile
-func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chartImage *canvas.Image, chartContainer *fyne.Container) func() {
-	return func() {
-
-		//// Select Analysis Dialog
-		RA_Dialog := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
-
-			// if err when saving, return
-			if err != nil {
-				logger.Println("Error opening file")
-				return
-			}
-
-			// if user cancel, return
-			if reader == nil {
-				// user cancelled
-				logger.Println("No file selected")
-				return
-			}
-
-			defer reader.Close()
-
-			// Open file using Fyne
-			r := csv.NewReader(reader)
-			records, err := r.ReadAll()
-			if err != nil {
-				logger.Println("Error reading CSV")
-				return
-			}
-
-			// Get Result Analysis File Type
-			RaType := records[1][0]
-
-			appenPacket(inputResultPackets, RaType, &records, chartData)
-
-			// for _, pk := range *inputResultPackets {
-
-			// 	switch RaType {
-			// 	case "dns":
-			// 		fmt.Println(*(pk.(*ntPinger.PacketDNS)))
-			// 	case "http":
-			// 		fmt.Println(*(pk.(*ntPinger.PacketHTTP)))
-			// 	case "tcp":
-			// 		fmt.Println(*(pk.(*ntPinger.PacketTCP)))
-			// 	case "icmp":
-			// 		fmt.Println(*(pk.(*ntPinger.PacketICMP)))
-			// 	}
-			// }
-
-			// for _, chartPoint := range *chartData {
-			// 	fmt.Printf("%v, %v, %v\n", chartPoint.Status, chartPoint.XValues, chartPoint.YValues)
-			// }
-
-			// Create an image Chart
-			image := ntchart.CreateChart("My Chart", chartData, 0)
-
-			// verify the image.Bounds(), e.g. image bounds: (0,0)-(1024,512) is good
-			// fmt.Println("image bounds:", image.Bounds())
-
-			chartImage.Image = image
-			chartImage.FillMode = canvas.ImageFillStretch
-			chartImage.Refresh()
-
-			chartContainer.Refresh()
-
-		}, w)
-
-		// resize the dialog size
-		RA_Dialog.Resize(fyne.Size{800, 600})
-
-		// get current executable path
-		exePath, _ := os.Executable()
-		exeDir := filepath.Dir(exePath)
-		exePathURI, _ := storage.ListerForURI(storage.NewFileURI(exeDir))
-		RA_Dialog.SetLocation(exePathURI)
-
-		// create a file extension filter
-		filter1 := storage.NewExtensionFileFilter([]string{".csv"})
-		RA_Dialog.SetFilter(filter1)
-
-		// show dialog
-		RA_Dialog.Show()
-	}
-}
-
-// func: Appen Packet Slide
-func appenPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records *[][]string, chartData *[]ntchart.ChartPoint) {
+// func: Append Packet Slide
+func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records *[][]string, chartData *[]ntchart.ChartPoint, Summary *Summary) {
 
 	var chartPoint ntchart.ChartPoint
+	recordLen := len(*records)
 
 	switch RaType {
 	case "dns":
@@ -182,6 +52,24 @@ func appenPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records *
 				p.AdditionalInfo = packet[index_AdditionalInfo]
 			} else {
 				p.AdditionalInfo = ""
+			}
+
+			// update summary
+			//// if it's the 1st packet
+			if i == 1 {
+				(*Summary).StartTime = p.SendTime
+				(*Summary).DestHost = p.DestHost
+				(*Summary).ntCmd = NtCmdGenerator(p.Type, &p)
+			}
+			//// if it's the last packet
+			if i == recordLen-1 {
+				(*Summary).EndTime = p.SendTime
+				(*Summary).PacketSent = p.PacketsSent
+				(*Summary).SuccessResponse = p.PacketsRecv
+				(*Summary).FailRate = packet[13]
+				(*Summary).MinRTT = p.MinRtt
+				(*Summary).MaxRTT = p.MaxRtt
+				(*Summary).AvgRtt = p.AvgRtt
 			}
 
 			// append
@@ -228,6 +116,24 @@ func appenPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records *
 				p.AdditionalInfo = ""
 			}
 
+			// update summary
+			//// if it's the 1st packet
+			if i == 1 {
+				(*Summary).StartTime = p.SendTime
+				(*Summary).DestHost = p.DestHost
+				(*Summary).ntCmd = NtCmdGenerator(p.Type, &p)
+			}
+			//// if it's the last packet
+			if i == recordLen-1 {
+				(*Summary).EndTime = p.SendTime
+				(*Summary).PacketSent = p.PacketsSent
+				(*Summary).SuccessResponse = p.PacketsRecv
+				(*Summary).FailRate = packet[12]
+				(*Summary).MinRTT = p.MinRtt
+				(*Summary).MaxRTT = p.MaxRtt
+				(*Summary).AvgRtt = p.AvgRtt
+			}
+
 			// append
 			*inputResultPackets = append(*inputResultPackets, &p)
 			*chartData = append(*chartData, chartPoint)
@@ -265,6 +171,24 @@ func appenPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records *
 				p.AdditionalInfo = packet[index_AdditionalInfo]
 			} else {
 				p.AdditionalInfo = ""
+			}
+
+			// update summary
+			//// if it's the 1st packet
+			if i == 1 {
+				(*Summary).StartTime = p.SendTime
+				(*Summary).DestHost = p.DestHost
+				(*Summary).ntCmd = NtCmdGenerator(p.Type, &p)
+			}
+			//// if it's the last packet
+			if i == recordLen-1 {
+				(*Summary).EndTime = p.SendTime
+				(*Summary).PacketSent = p.PacketsSent
+				(*Summary).SuccessResponse = p.PacketsRecv
+				(*Summary).FailRate = packet[12]
+				(*Summary).MinRTT = p.MinRtt
+				(*Summary).MaxRTT = p.MaxRtt
+				(*Summary).AvgRtt = p.AvgRtt
 			}
 
 			// append
@@ -305,6 +229,24 @@ func appenPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records *
 				p.AdditionalInfo = ""
 			}
 
+			// update summary
+			//// if it's the 1st packet
+			if i == 1 {
+				(*Summary).StartTime = p.SendTime
+				(*Summary).DestHost = p.DestHost
+				(*Summary).ntCmd = NtCmdGenerator(p.Type, &p)
+			}
+			//// if it's the last packet
+			if i == recordLen-1 {
+				(*Summary).EndTime = p.SendTime
+				(*Summary).PacketSent = p.PacketsSent
+				(*Summary).SuccessResponse = p.PacketsRecv
+				(*Summary).FailRate = packet[11]
+				(*Summary).MinRTT = p.MinRtt
+				(*Summary).MaxRTT = p.MaxRtt
+				(*Summary).AvgRtt = p.AvgRtt
+			}
+
 			// append
 			*inputResultPackets = append(*inputResultPackets, &p)
 			*chartData = append(*chartData, chartPoint)
@@ -338,4 +280,43 @@ func parseCustomDuration(input string) (time.Duration, error) {
 	// Use the multiplier to compute the duration
 	duration := time.Duration(value * multiplier)
 	return duration, nil
+}
+
+// NT CMD Generator
+func NtCmdGenerator(RaType string, pk ntPinger.Packet) string {
+	ntCmd := ""
+
+	switch RaType {
+	case "dns":
+		myPk := *(pk.(*ntPinger.PacketDNS))
+		if myPk.Dns_protocol == "tcp" {
+			ntCmd = fmt.Sprintf("nt -r dns -o tcp %v %v", myPk.DestHost, myPk.Dns_query)
+		} else {
+			ntCmd = fmt.Sprintf("nt -r dns %v %v", myPk.DestHost, myPk.Dns_query)
+		}
+
+	case "http":
+		myPk := *(pk.(*ntPinger.PacketHTTP))
+		httpUrl := ntPinger.ConstructURL(myPk.Http_scheme, myPk.DestHost, myPk.Http_path, myPk.DestPort)
+
+		if myPk.Http_method != "GET" {
+			ntCmd = fmt.Sprintf("nt -r http -m %v %v %v", myPk.Http_method, myPk.DestHost, httpUrl)
+		} else {
+			ntCmd = fmt.Sprintf("nt -r http %v %v", myPk.DestHost, httpUrl)
+		}
+
+	case "tcp":
+		myPk := *(pk.(*ntPinger.PacketTCP))
+		ntCmd = fmt.Sprintf("nt -r tcp %v %v", myPk.DestAddr, myPk.DestPort)
+
+	case "icmp":
+		myPk := *(pk.(*ntPinger.PacketICMP))
+		if myPk.PayLoadSize > 32 {
+			ntCmd = fmt.Sprintf("nt -r icmp -s %v %v", myPk.PayLoadSize, myPk.DestAddr)
+		} else {
+			ntCmd = fmt.Sprintf("nt -r icmp %v", myPk.DestAddr)
+		}
+	}
+
+	return ntCmd
 }

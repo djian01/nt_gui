@@ -68,7 +68,7 @@ func CreateChart(legendName string, chartData *[]ChartPoint, threshold float64) 
 			},
 		},
 		YAxis: chart.YAxis{
-			Name: "Value",
+			Name: "Milliseconds",
 			GridMinorStyle: chart.Style{
 				Hidden:      false,
 				StrokeColor: drawing.Color{R: 0, G: 0, B: 0, A: 100},

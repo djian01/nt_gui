@@ -136,8 +136,8 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, cha
 			summaryUI.typeEntry.SetText((*Summary).Type)
 			summaryUI.destHostEntry.SetText((*Summary).DestHost)
 
-			summaryUI.startTimeEntry.SetText((*Summary).StartTime.Format(("2006-01-02 15:04:05")))
-			summaryUI.endTimeEntry.SetText((*Summary).EndTime.Format(("2006-01-02 15:04:05")))
+			summaryUI.startTimeEntry.SetText((*Summary).StartTime.Format(("2006-01-02 15:04:05 MST")))
+			summaryUI.endTimeEntry.SetText((*Summary).EndTime.Format(("2006-01-02 15:04:05 MST")))
 			summaryUI.packetSentEntry.SetText(strconv.Itoa((*Summary).PacketSent))
 			summaryUI.successResponseEntry.SetText(strconv.Itoa((*Summary).SuccessResponse))
 			summaryUI.failRateEntry.SetText((*Summary).FailRate)

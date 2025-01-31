@@ -34,7 +34,7 @@ func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records 
 			chartPoint.Status = p.Status
 			p.DestAddr = packet[3]
 			p.DestHost = packet[3]
-			p.SendTime, _ = time.Parse("2006-01-02 15:04:05", packet[9]+" "+packet[10])
+			p.SendTime, _ = time.Parse("2006-01-02 15:04:05 MST", packet[9]+" "+packet[10])
 			chartPoint.XValues = p.SendTime
 			p.RTT, _ = parseCustomDuration(packet[8] + "ms")
 			chartPoint.YValues = float64(p.RTT) / float64(time.Millisecond)
@@ -95,7 +95,7 @@ func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records 
 			p.Seq, _ = strconv.Atoi(packet[1])
 			p.DestHost = RAHttpVar.Hostname
 			p.DestPort = RAHttpVar.Port
-			p.SendTime, _ = time.Parse("2006-01-02 15:04:05", packet[8]+" "+packet[9])
+			p.SendTime, _ = time.Parse("2006-01-02 15:04:05 MST", packet[8]+" "+packet[9])
 			chartPoint.XValues = p.SendTime
 			p.RTT, _ = parseCustomDuration(packet[7] + "ms")
 			chartPoint.YValues = float64(p.RTT) / float64(time.Millisecond)
@@ -156,7 +156,7 @@ func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records 
 			p.DestAddr = packet[4]
 			p.DestHost = packet[3]
 			p.DestPort, _ = strconv.Atoi(packet[5])
-			p.SendTime, _ = time.Parse("2006-01-02 15:04:05", packet[8]+" "+packet[9])
+			p.SendTime, _ = time.Parse("2006-01-02 15:04:05 MST", packet[8]+" "+packet[9])
 			chartPoint.XValues = p.SendTime
 			p.RTT, _ = parseCustomDuration(packet[7] + "ms")
 			chartPoint.YValues = float64(p.RTT) / float64(time.Millisecond)
@@ -213,7 +213,7 @@ func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records 
 			p.DestAddr = packet[4]
 			p.DestHost = packet[3]
 			p.PayLoadSize, _ = strconv.Atoi(packet[5])
-			p.SendTime, _ = time.Parse("2006-01-02 15:04:05", packet[7]+" "+packet[8])
+			p.SendTime, _ = time.Parse("2006-01-02 15:04:05 MST", packet[7]+" "+packet[8])
 			chartPoint.XValues = p.SendTime
 			p.RTT, _ = parseCustomDuration(packet[6] + "ms")
 			chartPoint.YValues = float64(p.RTT) / float64(time.Millisecond)

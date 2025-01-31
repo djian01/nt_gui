@@ -33,12 +33,12 @@ func CreateChart(legendName string, chartData *[]ChartPoint, threshold float64) 
 		xValues[i] = float64(point.XValues.Unix())
 		yValues[i] = point.YValues
 
-		// Check if the value exceeds the threshold
-		if threshold != 0 && point.YValues >= threshold {
+		// Check if the status is "false"
+		if !point.Status {
 			annotations = append(annotations, chart.Value2{
 				XValue: float64(point.XValues.Unix()),
 				YValue: point.YValues,
-				Label:  "Alert", // Annotation text
+				Label:  "F", // Annotation text
 			})
 		}
 	}

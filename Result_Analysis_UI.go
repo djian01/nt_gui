@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
-	"image/color"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -48,23 +47,11 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	chartImage.SetMinSize(fyne.NewSize(400, 400))
 
 	// Slider Card
-	sliderLeft := widget.NewSlider(0, 100)
-	sliderLeftValue := widget.NewEntry()
+	slider := Slider{}
+	slider.Initial()
 
-	sliderRight := widget.NewSlider(0, 100)
-	sliderRightValue := widget.NewEntry()
-
-	chartUpdateBtn := widget.NewButton("Update Chart", func() {})
-	chartUpdateBtn.Importance = widget.HighImportance
-
-	ErrLabel := canvas.NewText("No Error:", color.Black)
-
-	sliderContainer := container.New(layout.NewGridLayoutWithColumns(5), sliderLeft, sliderLeftValue, sliderRight, sliderRightValue, chartUpdateBtn)
-
-	//sliderContainer := container.New(layout.NewHBoxLayout(), sliderLeft, sliderLeftValue, sliderRight, sliderRightValue, chartUpdateBtn)
-	sliderCardContainer := container.New(layout.NewBorderLayout(nil, ErrLabel, nil, nil), sliderContainer, ErrLabel)
-
-	sliderCard := widget.NewCard("", "", sliderCardContainer)
+	sliderCard := slider.CreateCard()
+	sliderCard.Hidden = true
 
 	// Create a grid with the placeholder
 	chartContainer := container.New(layout.NewBorderLayout(nil, nil, nil, nil), chartImage)
@@ -76,14 +63,14 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	RaMainContainerOuter := container.New(layout.NewBorderLayout(spaceHolder, spaceHolder, spaceHolder, spaceHolder), spaceHolder, RaMainContainerInner)
 
 	// Input NSX Config File BTN
-	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(w, &inputResultPackets, &chartData, chartImage, chartContainer, &Summary, &summaryUI, inputResultCSVFilePath)
+	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(w, &inputResultPackets, &chartData, chartImage, chartContainer, &Summary, &summaryUI, inputResultCSVFilePath, sliderCard, &slider)
 
 	// Return your result analysis interface components here
 	return RaMainContainerOuter // Temporary empty container, replace with your actual UI
 }
 
 // func: OpenResultCSVFile
-func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chartImage *canvas.Image, chartContainer *fyne.Container, Summary *Summary, summaryUI *SummaryUI, inputResultCSVFilePath *widget.Entry) func() {
+func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chartImage *canvas.Image, chartContainer *fyne.Container, Summary *Summary, summaryUI *SummaryUI, inputResultCSVFilePath *widget.Entry, sliderCard *widget.Card, slider *Slider) func() {
 	return func() {
 
 		// reset vars
@@ -149,7 +136,6 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, cha
 			chartImage.Image = image
 			chartImage.FillMode = canvas.ImageFillStretch
 			chartImage.Refresh()
-
 			chartContainer.Refresh()
 
 			// update summary
@@ -165,6 +151,9 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, cha
 			summaryUI.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*Summary).MaxRTT.Milliseconds()))
 			summaryUI.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*Summary).AvgRtt.Milliseconds()))
 			summaryUI.ntCmdEntry.SetText((*Summary).ntCmd)
+
+			// update slider card
+			sliderCard.Hidden = false
 
 		}, w)
 

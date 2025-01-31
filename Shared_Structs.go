@@ -1,11 +1,14 @@
 package main
 
 import (
+	"image/color"
 	"time"
 
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
+	ntchart "github.com/djian01/nt_gui/pkg/chart"
 )
 
 type Summary struct {
@@ -122,4 +125,80 @@ func (s *SummaryUI) CreateCard() *widget.Card {
 	summaryCard := widget.NewCard("", "", summaryContainer)
 
 	return summaryCard
+}
+
+type Slider struct {
+	sliderLeftEdge  float64
+	sliderRightEdge float64
+	sliderMax       float64
+	chartData       *[]ntchart.ChartPoint
+	sliderChartData []ntchart.ChartPoint
+
+	sliderLeft         *widget.Slider
+	sliderLeftIndicate *widget.Label
+	sliderLeftValue    *widget.Label
+
+	sliderRight         *widget.Slider
+	sliderRightIndicate *widget.Label
+	sliderRightValue    *widget.Label
+
+	chartUpdateBtn *widget.Button
+
+	ErrLabel *canvas.Text
+}
+
+func (s *Slider) Initial() {
+	s.sliderMax = 100
+	s.sliderLeftEdge = 0
+	s.sliderRightEdge = 100
+	s.sliderLeft = widget.NewSlider(0, s.sliderMax)
+	s.sliderLeftIndicate = widget.NewLabel("From: ")
+	s.sliderLeftValue = widget.NewLabel("")
+
+	s.sliderRight = widget.NewSlider(0, s.sliderMax)
+	s.sliderRightIndicate = widget.NewLabel("To: ")
+	s.sliderRightValue = widget.NewLabel("")
+
+	s.chartUpdateBtn = widget.NewButton("Update Chart", func() {})
+	s.chartUpdateBtn.Importance = widget.HighImportance
+
+	s.ErrLabel = canvas.NewText("No Error:", color.RGBA{255, 0, 0, 255})
+}
+
+func (s *Slider) SetMax() {
+	s.sliderLeft.Max = s.sliderMax
+	s.sliderRight.Max = s.sliderMax
+}
+
+func (s *Slider) CreateCard() *widget.Card {
+	sliderLeftContainerIn := container.New(layout.NewGridLayoutWithColumns(2), s.sliderLeft, s.sliderLeftValue)
+	sliderLeftContainerOut := container.New(layout.NewBorderLayout(nil, nil, s.sliderLeftIndicate, nil), s.sliderLeftIndicate, sliderLeftContainerIn)
+
+	sliderRightContainerIn := container.New(layout.NewGridLayoutWithColumns(2), s.sliderRight, s.sliderRightValue)
+	sliderRightContainerOut := container.New(layout.NewBorderLayout(nil, nil, s.sliderRightIndicate, nil), s.sliderRightIndicate, sliderRightContainerIn)
+
+	sliderContainerIn := container.New(layout.NewGridLayoutWithColumns(2), sliderLeftContainerOut, sliderRightContainerOut)
+	sliderContainerOut := container.New(layout.NewBorderLayout(nil, nil, nil, s.chartUpdateBtn), s.chartUpdateBtn, sliderContainerIn)
+
+	sliderContainerMain := container.New(layout.NewBorderLayout(nil, s.ErrLabel, nil, nil), sliderContainerOut, s.ErrLabel)
+
+	sliderCard := widget.NewCard("", "", sliderContainerMain)
+
+	return sliderCard
+}
+
+func (s *Slider) SetChartData(cd *[]ntchart.ChartPoint) {
+	s.chartData = cd
+	s.sliderRightEdge = float64(len(*cd))
+}
+
+func (s *Slider) BuildSliderChartData() {
+	for i, data := range *s.chartData {
+		if i >= int(s.sliderLeftEdge) {
+			s.sliderChartData = append(s.sliderChartData, data)
+		}
+		if i > int(s.sliderRightEdge) {
+			break
+		}
+	}
 }

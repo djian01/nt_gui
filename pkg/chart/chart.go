@@ -35,9 +35,11 @@ func CreateChart(legendName string, chartData *[]ChartPoint, threshold float64) 
 
 		// Check if the status is "false"
 		if !point.Status {
+			yValues[i] = 0
 			annotations = append(annotations, chart.Value2{
 				XValue: float64(point.XValues.Unix()),
-				YValue: point.YValues,
+				//YValue: point.YValues,
+				YValue: 0,
 				Label:  "F", // Annotation text
 			})
 		}

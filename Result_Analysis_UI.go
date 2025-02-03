@@ -136,7 +136,7 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, cha
 
 			// Create an image Chart
 			// verify the image.Bounds(), e.g. image bounds: (0,0)-(1024,512) is good. code -> fmt.Println("image bounds:", image.Bounds())
-			image := ntchart.CreateChart(RaType, chartData, 0)
+			image := ntchart.CreateChart(RaType, chartData)
 			chartImage.Image = image
 			chartImage.FillMode = canvas.ImageFillStretch
 			chartImage.Refresh()
@@ -159,6 +159,21 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, cha
 			// update slider card
 			(*slider).initialSetMax(float64(len(*chartData) - 1))
 			slider.sliderCard.Hidden = false
+
+			// slider update chart image
+			slider.chartUpdateBtn.OnTapped = func() {
+				slider.BuildSliderChartData()
+				slider.UpdateChartImage(RaType, chartImage)
+				chartImage.Refresh()
+				chartContainer.Refresh()
+			}
+
+			// slider reset chart image
+			slider.chartResetBtn.OnTapped = func() {
+				slider.ResetChartImage(RaType, chartImage)
+				chartImage.Refresh()
+				chartContainer.Refresh()
+			}
 
 		}, w)
 

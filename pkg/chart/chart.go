@@ -19,7 +19,7 @@ type ChartPoint struct {
 }
 
 // Generate the dynamic chart or a placeholder if needed
-func CreateChart(legendName string, chartData *[]ChartPoint, threshold float64) image.Image {
+func CreateChart(legendName string, chartData *[]ChartPoint) image.Image {
 
 	//xValues := make([]time.Time, len(chartData))
 	xValues := make([]float64, len(*chartData))

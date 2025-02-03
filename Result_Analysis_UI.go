@@ -58,9 +58,9 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	chartCard := widget.NewCard("", "", chartContainer)
 
 	//// Main Container
-	spaceHolder := widget.NewLabel("                     ")
+	RASpaceHolder := widget.NewLabel("                     ")
 	RaMainContainerInner := container.New(layout.NewVBoxLayout(), inputResultCSVFileCard, summaryCard, chartCard, slider.sliderCard)
-	RaMainContainerOuter := container.New(layout.NewBorderLayout(spaceHolder, spaceHolder, spaceHolder, spaceHolder), spaceHolder, RaMainContainerInner)
+	RaMainContainerOuter := container.New(layout.NewBorderLayout(RASpaceHolder, RASpaceHolder, RASpaceHolder, RASpaceHolder), RASpaceHolder, RaMainContainerInner)
 
 	// Input NSX Config File BTN
 	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(w, &inputResultPackets, &chartData, chartImage, chartContainer, &Summary, &summaryUI, inputResultCSVFilePath, &slider)

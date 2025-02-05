@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"image/color"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
@@ -12,105 +13,81 @@ import (
 
 func DNSPingContainer(a fyne.App, w fyne.Window) *fyne.Container {
 
-	// Add Button Card
-	DNSPingAddBtn := widget.NewButtonWithIcon("Add DNS Ping", theme.ContentAddIcon(), func() {})
-	DNSPingAddBtn.Importance = widget.HighImportance
-	DNSPingAddBtnContainer := container.New(layout.NewBorderLayout(nil, nil, DNSPingAddBtn, nil), DNSPingAddBtn)
-	DNSPingAddBtncard := widget.NewCard("", "", DNSPingAddBtnContainer)
+	// ** Add-Button Card **
+	dnsPingAddBtn := widget.NewButtonWithIcon("Add DNS Ping", theme.ContentAddIcon(), func() {})
+	dnsPingAddBtn.Importance = widget.HighImportance
+	dnsPingAddBtnContainer := container.New(layout.NewBorderLayout(nil, nil, dnsPingAddBtn, nil), dnsPingAddBtn)
+	dnsPingAddBtncard := widget.NewCard("", "", dnsPingAddBtnContainer)
 
-	// table
-	header := []string{"header 1", "header 2", "header 3", "header 4", "header 5", "header 6"}
-	data := [][]string{
-		{"a", "b", "c", "d", "e", "f"},
-		{"g", "h", "i", "j0000000000000000000", "k", "l"},
-		{"m", "n", "o", "p", "q", "r"},
-		{"s", "t", "u", "v", "w", "x"},
-		{"a", "b", "c", "d", "e", "f"},
-		{"g", "h", "i", "j0000000000000000000", "k", "l"},
-		{"m", "n", "o", "p", "q", "r"},
-		{"s", "t", "u", "v", "w", "x"},
-		{"a", "b", "c", "d", "e", "f"},
-		{"g", "h", "i", "j0000000000000000000", "k", "l"},
-		{"m", "n", "o", "p", "q", "r"},
-		{"s", "t", "u", "v", "w", "x"},
-		{"a", "b", "c", "d", "e", "f"},
-		{"g", "h", "i", "j0000000000000000000", "k", "l"},
-		{"m", "n", "o", "p", "q", "r"},
-		{"s", "t", "u", "v", "w", "x"},
-		{"a", "b", "c", "d", "e", "f"},
-		{"g", "h", "i", "j0000000000000000000", "k", "l"},
-		{"m", "n", "o", "p", "q", "r"},
-		{"s", "t", "u", "v", "w", "x"},
+	// ** Table Container **
+	dnsHeader := []pingCell{
+		{Label: "Seq", Length: 50},
+		{Label: "Status", Length: 65},
+		{Label: "Resolver", Length: 145},
+		{Label: "Query", Length: 160},
+		{Label: "Response", Length: 160},
+		{Label: "RTT", Length: 75},
+		{Label: "Send_Time", Length: 100},
+		{Label: "Add_Info", Length: 100},
+		{Label: "Fail", Length: 60},
+		{Label: "Min_RTT", Length: 75},
+		{Label: "Max_RTT", Length: 80},
+		{Label: "Avg_RTT", Length: 75},
+		{Label: "Action", Length: 100},
 	}
-	tableBody := [][]string{}
-	tableBody = append(tableBody, header)
-	tableBody = append(tableBody, data...)
 
-	// widget.NewTable(Length(){},CreateCell(){},UpdateCell(){})
-	t := widget.NewTable(
-
+	dnsHeaderTable := widget.NewTable(
 		// callback - length
 		func() (int, int) {
-			return len(tableBody), len(data[0])
+			return 1, len(dnsHeader)
 		},
-
 		// callback - CreateCell
 		func() fyne.CanvasObject {
 			// the basic Cell Width is defined by the string length below
-			item := widget.NewLabel("AAAAAAAAA")
+			item := widget.NewLabel("")
 			item.Wrapping = fyne.TextWrap(fyne.TextTruncateClip)
 			return item
 		},
-
 		// callback - UpdateCell
 		//// cell: contains Row, Col int for a cell, item: the CanvasObject from CreateCell Callback
 		func(id widget.TableCellID, item fyne.CanvasObject) {
-			if id.Row == 0 {
-				// Header row
-				item.(*widget.Label).TextStyle.Bold = true
-				item.(*widget.Label).SetText(tableBody[id.Row][id.Col])
-			} else {
-				item.(*widget.Label).SetText(fmt.Sprintf("Cell[%v][%v]: %s ", id.Row, id.Col, tableBody[id.Row][id.Col]))
-			}
-
+			// Header row
+			item.(*widget.Label).TextStyle.Bold = true
+			item.(*widget.Label).SetText(dnsHeader[id.Col].Label)
 		},
 	)
 
-	t.StickyRowCount = 1
-
-	t.Select(widget.TableCellID{
-		Row: 1,
-		Col: 2,
-	})
-
-	t.OnSelected = func(id widget.TableCellID) {
-		fmt.Printf("Selected: [%v][%v], %s \n", id.Row, id.Col, tableBody[id.Row][id.Col])
-	}
-
 	// set width for all colunms width for loop
-	for i := 0; i < len(data[0]); i++ {
-		t.SetColumnWidth(i, 150)
+	for i := 0; i < len(dnsHeader); i++ {
+		dnsHeaderTable.SetColumnWidth(i, float32(dnsHeader[i].Length))
 	}
 
-	// set the width for one column
-	t.SetColumnWidth(0, 120)
+	dnsHeaderRow := container.New(layout.NewVBoxLayout(),
+		dnsHeaderTable,
+		canvas.NewLine(color.RGBA{200, 200, 200, 255}),
+	)
 
-	// button to change data[0][0], update table display
-	// bt := widget.NewButton("Change data[0][0]", func() {
-	// 	data[0][0] = "ABC"
-	// 	t.Refresh()
-	// })
+	dnsTableBody := container.New(layout.NewVBoxLayout())
+	dnsTableScroll := container.NewScroll(dnsTableBody)
+	dnsTableContainer := container.New(layout.NewBorderLayout(dnsHeaderRow, nil, nil, nil), dnsHeaderRow, dnsTableScroll)
 
-	tableContainer := container.NewHScroll(t)
+	// ** Table Card **
+	dnsTableCard := widget.NewCard("", "", dnsTableContainer)
 
-	tableCard := widget.NewCard("", "", tableContainer)
-
-	//// Main Container
+	// ** Main Container **
 	DNSSpaceHolder := widget.NewLabel("    ")
-	DNSMainContainerInner := container.New(layout.NewBorderLayout(DNSPingAddBtncard, nil, nil, nil), DNSPingAddBtncard, tableCard)
+	DNSMainContainerInner := container.New(layout.NewBorderLayout(dnsPingAddBtncard, nil, nil, nil), dnsPingAddBtncard, dnsTableCard)
 	DNSMainContainerOuter := container.New(layout.NewBorderLayout(DNSSpaceHolder, DNSSpaceHolder, DNSSpaceHolder, DNSSpaceHolder), DNSSpaceHolder, DNSMainContainerInner)
+
+	// dnsPingAddBtn action
+	dnsPingAddBtn.OnTapped = func() {
+		// ResultGenerateDNS()
+		myD1 := dnsPingRow{}
+		myD1.Initial()
+		dnsTableBody.Add(myD1.DnsTableRow)
+		dnsTableBody.Refresh()
+	}
 
 	// Return your DNS ping interface components here
 	return DNSMainContainerOuter // Temporary empty container, replace with your actual UI
-
 }

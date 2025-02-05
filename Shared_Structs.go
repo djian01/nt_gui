@@ -229,3 +229,9 @@ func (s *Slider) ResetChartImage(RaType string, chartImage *canvas.Image) {
 	image := ntchart.CreateChart(RaType, s.chartData)
 	chartImage.Image = image
 }
+
+// ********* Ping Table Header ***************
+type pingCell struct {
+	Label  string
+	Length int
+}

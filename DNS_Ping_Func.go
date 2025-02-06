@@ -38,13 +38,14 @@ type dnsGUIRow struct {
 
 func (d *dnsGUIRow) Initial() {
 
-	d.ChartBtn = widget.NewButton("Chart", func() {})
-	d.ChartBtn.Importance = widget.HighImportance
+	chartIcon := theme.NewThemedResource(resourceChartSvg)
+	d.ChartBtn = widget.NewButtonWithIcon("", chartIcon, func() {})
+	//d.ChartBtn.Importance = widget.LowImportance
 	d.CloseBtn = widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {})
 	d.CloseBtn.Importance = widget.WarningImportance
 
 	d.Action.Label = "Action"
-	d.Action.Length = 60
+	d.Action.Length = 80
 	d.Action.Object = container.New(layout.NewGridLayoutWithColumns(2), d.ChartBtn, d.CloseBtn)
 
 	d.Index.Label = "Index"

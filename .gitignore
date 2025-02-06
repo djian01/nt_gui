@@ -4,6 +4,7 @@
 nt
 /executable/
 *.app
+nt_gui
 
 # log file
 *.log

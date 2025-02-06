@@ -181,7 +181,7 @@ func (d *dnsGUIRow) GenerateHeaderRow() *fyne.Container {
 
 type dnsObject struct {
 	FailCount   int
-	GuiPingChan <-chan ntPinger.Packet
+	GuiPingChan chan ntPinger.Packet
 	ChartData   []ntchart.ChartPoint
 	DnsGUI      dnsGUIRow
 }

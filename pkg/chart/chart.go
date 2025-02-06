@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/djian01/nt/pkg/ntPinger"
 	"github.com/wcharczuk/go-chart/v2"
 	"github.com/wcharczuk/go-chart/v2/drawing"
 )
@@ -16,6 +17,18 @@ type ChartPoint struct {
 	XValues time.Time
 	YValues float64
 	Status  bool
+}
+
+// func: convert Packet to ChartPoint
+func ConvertFromPacketToChartPoint(pkt ntPinger.Packet) ChartPoint {
+
+	cp := ChartPoint{}
+
+	cp.XValues = pkt.GetSendTime()
+	cp.YValues = float64(pkt.GetRtt())
+	cp.Status = pkt.GetStatus()
+
+	return cp
 }
 
 // Generate the dynamic chart or a placeholder if needed

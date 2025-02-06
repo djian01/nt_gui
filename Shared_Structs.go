@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"time"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
@@ -234,4 +235,5 @@ func (s *Slider) ResetChartImage(RaType string, chartImage *canvas.Image) {
 type pingCell struct {
 	Label  string
 	Length int
+	Object fyne.CanvasObject
 }

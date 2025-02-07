@@ -237,3 +237,18 @@ type pingCell struct {
 	Length int
 	Object fyne.CanvasObject
 }
+
+// ********* nt gui ping global ***************
+type ntGUIGlboal struct {
+	dnsTable *fyne.Container
+	dnsIndex int
+
+	httpTable *fyne.Container
+	httpIndex int
+
+	tcpTable *fyne.Container
+	tcpIndex int
+
+	icmpTable *fyne.Container
+	icmpIndex int
+}

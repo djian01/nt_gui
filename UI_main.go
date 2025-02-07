@@ -12,6 +12,9 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+// Global Var: nt table
+var ntGlobal ntGUIGlboal
+
 // func makeUI: make the UI body
 func makeUI(w fyne.Window, a fyne.App) {
 

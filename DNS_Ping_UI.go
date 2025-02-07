@@ -15,7 +15,7 @@ import (
 func DNSPingContainer(a fyne.App, w fyne.Window) *fyne.Container {
 
 	// index
-	indexPing := 1
+	ntGlobal.dnsIndex = 1
 
 	// ** Add-Button Card **
 	dnsPingAddBtn := widget.NewButtonWithIcon("Add DNS Ping", theme.ContentAddIcon(), func() {})
@@ -29,7 +29,9 @@ func DNSPingContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	dnsHeaderRow := dnsHeader.GenerateHeaderRow()
 
 	dnsTableBody := container.New(layout.NewVBoxLayout())
-	dnsTableScroll := container.NewScroll(dnsTableBody)
+	ntGlobal.dnsTable = dnsTableBody
+
+	dnsTableScroll := container.NewScroll(ntGlobal.dnsTable)
 	dnsTableContainer := container.New(layout.NewBorderLayout(dnsHeaderRow, nil, nil, nil), dnsHeaderRow, dnsTableScroll)
 
 	// ** Table Card **
@@ -52,7 +54,7 @@ func DNSPingContainer(a fyne.App, w fyne.Window) *fyne.Container {
 
 	// dnsPingAddBtn action
 	dnsPingAddBtn.OnTapped = func() {
-		go DnsAddPingRow(&indexPing, &iv, dnsTableBody)
+		go DnsAddPingRow(&ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable)
 	}
 
 	// Return your DNS ping interface components here

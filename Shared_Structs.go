@@ -231,7 +231,7 @@ func (s *Slider) ResetChartImage(RaType string, chartImage *canvas.Image) {
 	chartImage.Image = image
 }
 
-// ********* Ping Table Header ***************
+// ********* Ping Row Cell ***************
 type pingCell struct {
 	Label  string
 	Length int

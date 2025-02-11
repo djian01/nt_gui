@@ -77,9 +77,8 @@ func DnsAddPingRow(indexPing *int, inputVars *ntPinger.InputVars, dnsTableBody *
 	dnsTableBody.Refresh()
 
 	// update the close btn
-	myDnsPing.DnsGUI.CloseBtn.OnTapped = func() {
-		dnsTableBody.Remove(myDnsPing.DnsGUI.DnsTableRow)
-		dnsTableBody.Refresh()
+	myDnsPing.DnsGUI.ChartBtn.OnTapped = func() {
+		fmt.Println("Open Chart")
 	}
 
 	// ** start ntPinger Probe **
@@ -97,6 +96,14 @@ func DnsAddPingRow(indexPing *int, inputVars *ntPinger.InputVars, dnsTableBody *
 		return
 	}
 
+	// update the close btn
+	myDnsPing.DnsGUI.CloseBtn.OnTapped = func() {
+		dnsTableBody.Remove(myDnsPing.DnsGUI.DnsTableRow)
+		dnsTableBody.Refresh()
+		p.PingerEnd = true
+	}
+
+	// start ping go routing
 	go p.Run(errChan)
 
 	// harvest the result
@@ -124,4 +131,5 @@ func DnsAddPingRow(indexPing *int, inputVars *ntPinger.InputVars, dnsTableBody *
 			return
 		}
 	}
+
 }

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
+	"strconv"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -11,6 +13,31 @@ import (
 	"fyne.io/fyne/v2/widget"
 	ntchart "github.com/djian01/nt_gui/pkg/chart"
 )
+
+// ********* Chart ***************
+type Chart struct {
+	chartImage     *canvas.Image
+	chartContainer *fyne.Container
+	chartCard      *widget.Card
+}
+
+func (c *Chart) Initial() {
+	// chartImage
+	c.chartImage = canvas.NewImageFromResource(nil)
+	c.chartImage.FillMode = canvas.ImageFillContain
+	c.chartImage.SetMinSize(fyne.NewSize(400, 400))
+
+	// chartCard
+	c.chartContainer = container.New(layout.NewBorderLayout(nil, nil, nil, nil), c.chartImage)
+	c.chartCard = widget.NewCard("", "", c.chartContainer)
+}
+
+func (c *Chart) ChartUpdate(RaType string, chartData *[]ntchart.ChartPoint) {
+	c.chartImage.Image = ntchart.CreateChart(RaType, chartData)
+	c.chartImage.FillMode = canvas.ImageFillStretch
+	c.chartImage.Refresh()
+	c.chartContainer.Refresh()
+}
 
 // ********* Summary ***************
 
@@ -26,6 +53,24 @@ type Summary struct {
 	MaxRTT          time.Duration
 	AvgRtt          time.Duration
 	ntCmd           string
+	UI              SummaryUI
+}
+
+func (s *Summary) UpdateUI() {
+
+	// update summary UI
+	s.UI.typeEntry.SetText((*s).Type)
+	s.UI.destHostEntry.SetText((*s).DestHost)
+
+	s.UI.startTimeEntry.SetText((*s).StartTime.Format(("2006-01-02 15:04:05 MST")))
+	s.UI.endTimeEntry.SetText((*s).EndTime.Format(("2006-01-02 15:04:05 MST")))
+	s.UI.packetSentEntry.SetText(strconv.Itoa((*s).PacketSent))
+	s.UI.successResponseEntry.SetText(strconv.Itoa((*s).SuccessResponse))
+	s.UI.failRateEntry.SetText((*s).FailRate)
+	s.UI.minRttEntry.SetText(fmt.Sprintf("%d ms", (*s).MinRTT.Milliseconds()))
+	s.UI.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*s).MaxRTT.Milliseconds()))
+	s.UI.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*s).AvgRtt.Milliseconds()))
+	s.UI.ntCmdEntry.SetText((*s).ntCmd)
 }
 
 type SummaryUI struct {
@@ -62,6 +107,8 @@ type SummaryUI struct {
 	ntCmdLabel *widget.Label
 	ntCmdEntry *widget.Entry
 	ntCmdBtn   *widget.Button
+
+	summaryCard *widget.Card
 }
 
 func (s *SummaryUI) Initial() {
@@ -101,7 +148,7 @@ func (s *SummaryUI) Initial() {
 	s.ntCmdBtn.Importance = widget.HighImportance
 }
 
-func (s *SummaryUI) CreateCard() *widget.Card {
+func (s *SummaryUI) CreateCard() {
 
 	// cell containers
 	typeContainer := container.New(layout.NewBorderLayout(nil, nil, s.typeLabel, nil), s.typeLabel, s.typeEntry)
@@ -125,9 +172,7 @@ func (s *SummaryUI) CreateCard() *widget.Card {
 
 	// overall container and card
 	summaryContainer := container.New(layout.NewGridLayoutWithRows(5), summaryRow1, summaryRow2, summaryRow3, summaryRow4, summaryRow5)
-	summaryCard := widget.NewCard("", "", summaryContainer)
-
-	return summaryCard
+	s.summaryCard = widget.NewCard("", "", summaryContainer)
 }
 
 // ********* Chart Update Slider ***************
@@ -179,7 +224,6 @@ func (s *Slider) initialSetMax(Max float64) {
 	s.sliderLeft.SetValue(0)
 	s.sliderRight.SetValue(Max)
 	s.sliderUpdate()
-
 }
 
 func (s *Slider) CreateCard() {
@@ -219,16 +263,14 @@ func (s *Slider) BuildSliderChartData() {
 	}
 }
 
-func (s *Slider) UpdateChartImage(RaType string, chartImage *canvas.Image) {
+func (s *Slider) UpdateChartImage(RaType string, chart *Chart) {
 	s.BuildSliderChartData()
-	image := ntchart.CreateChart(RaType, &(s.sliderChartData))
-	chartImage.Image = image
+	(*chart).ChartUpdate(RaType, &(s.sliderChartData))
 }
 
-func (s *Slider) ResetChartImage(RaType string, chartImage *canvas.Image) {
+func (s *Slider) ResetChartImage(RaType string, chart *Chart) {
 	s.initialSetMax(float64(len(*(s.chartData)) - 1))
-	image := ntchart.CreateChart(RaType, s.chartData)
-	chartImage.Image = image
+	(*chart).ChartUpdate(RaType, s.chartData)
 }
 
 // ********* Ping Row Cell ***************

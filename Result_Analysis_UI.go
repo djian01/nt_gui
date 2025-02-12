@@ -2,14 +2,11 @@ package main
 
 import (
 	"encoding/csv"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
@@ -26,7 +23,6 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	// Initial slides
 	inputResultPackets := []ntPinger.Packet{}
 	chartData := []ntchart.ChartPoint{}
-	Summary := Summary{}
 
 	// Input Result CSV File card
 	inputResultCSVFilePath := widget.NewEntry()
@@ -37,14 +33,13 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	inputResultCSVFileCard := widget.NewCard("", "Input the existing Result CSV File", inputNSXConfigContainer)
 
 	// Summary Card
-	summaryUI := SummaryUI{}
-	summaryUI.Initial()
-	summaryCard := summaryUI.CreateCard()
+	Summary := Summary{}
+	Summary.UI.Initial()
+	Summary.UI.CreateCard()
 
 	// Chart Card (Place Holder)
-	chartImage := canvas.NewImageFromResource(nil)
-	chartImage.FillMode = canvas.ImageFillContain
-	chartImage.SetMinSize(fyne.NewSize(400, 400))
+	chart := Chart{}
+	chart.Initial()
 
 	// Slider Card
 	slider := Slider{}
@@ -53,17 +48,13 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	slider.CreateCard()
 	slider.sliderCard.Hidden = true
 
-	// Create a grid with the placeholder
-	chartContainer := container.New(layout.NewBorderLayout(nil, nil, nil, nil), chartImage)
-	chartCard := widget.NewCard("", "", chartContainer)
-
 	//// Main Container
 	RASpaceHolder := widget.NewLabel("                     ")
-	RaMainContainerInner := container.New(layout.NewVBoxLayout(), inputResultCSVFileCard, summaryCard, chartCard, slider.sliderCard)
+	RaMainContainerInner := container.New(layout.NewVBoxLayout(), inputResultCSVFileCard, Summary.UI.summaryCard, chart.chartCard, slider.sliderCard)
 	RaMainContainerOuter := container.New(layout.NewBorderLayout(RASpaceHolder, RASpaceHolder, RASpaceHolder, RASpaceHolder), RASpaceHolder, RaMainContainerInner)
 
 	// Input NSX Config File BTN
-	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(w, &inputResultPackets, &chartData, chartImage, chartContainer, &Summary, &summaryUI, inputResultCSVFilePath, &slider)
+	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(w, &inputResultPackets, &chartData, &chart, &Summary, inputResultCSVFilePath, &slider)
 
 	// Slider Update
 	slider.sliderLeft.OnChanged = func(f float64) { slider.sliderUpdate() }
@@ -74,7 +65,7 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 }
 
 // func: OpenResultCSVFile
-func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chartImage *canvas.Image, chartContainer *fyne.Container, Summary *Summary, summaryUI *SummaryUI, inputResultCSVFilePath *widget.Entry, slider *Slider) func() {
+func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chart *Chart, Summary *Summary, inputResultCSVFilePath *widget.Entry, slider *Slider) func() {
 	return func() {
 
 		// reset vars
@@ -116,69 +107,33 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, cha
 
 			appendPacket(inputResultPackets, RaType, &records, chartData, Summary)
 
-			// for _, pk := range *inputResultPackets {
-
-			// 	switch RaType {
-			// 	case "dns":
-			// 		fmt.Println(*(pk.(*ntPinger.PacketDNS)))
-			// 	case "http":
-			// 		fmt.Println(*(pk.(*ntPinger.PacketHTTP)))
-			// 	case "tcp":
-			// 		fmt.Println(*(pk.(*ntPinger.PacketTCP)))
-			// 	case "icmp":
-			// 		fmt.Println(*(pk.(*ntPinger.PacketICMP)))
-			// 	}
-			// }
-
-			// for _, chartPoint := range *chartData {
-			// 	fmt.Printf("%v, %v, %v\n", chartPoint.Status, chartPoint.XValues, chartPoint.YValues)
-			// }
-
 			// Create an image Chart
 			// verify the image.Bounds(), e.g. image bounds: (0,0)-(1024,512) is good. code -> fmt.Println("image bounds:", image.Bounds())
-			image := ntchart.CreateChart(RaType, chartData)
-			chartImage.Image = image
-			chartImage.FillMode = canvas.ImageFillStretch
-			chartImage.Refresh()
-			chartContainer.Refresh()
+			(*chart).ChartUpdate(RaType, chartData)
 
 			// update summary
-			summaryUI.typeEntry.SetText((*Summary).Type)
-			summaryUI.destHostEntry.SetText((*Summary).DestHost)
-
-			summaryUI.startTimeEntry.SetText((*Summary).StartTime.Format(("2006-01-02 15:04:05 MST")))
-			summaryUI.endTimeEntry.SetText((*Summary).EndTime.Format(("2006-01-02 15:04:05 MST")))
-			summaryUI.packetSentEntry.SetText(strconv.Itoa((*Summary).PacketSent))
-			summaryUI.successResponseEntry.SetText(strconv.Itoa((*Summary).SuccessResponse))
-			summaryUI.failRateEntry.SetText((*Summary).FailRate)
-			summaryUI.minRttEntry.SetText(fmt.Sprintf("%d ms", (*Summary).MinRTT.Milliseconds()))
-			summaryUI.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*Summary).MaxRTT.Milliseconds()))
-			summaryUI.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*Summary).AvgRtt.Milliseconds()))
-			summaryUI.ntCmdEntry.SetText((*Summary).ntCmd)
+			(*Summary).UpdateUI()
 
 			// update slider card
 			(*slider).initialSetMax(float64(len(*chartData) - 1))
 			slider.sliderCard.Hidden = false
 
-			// slider update chart image
+			// slider update chart image btn
 			slider.chartUpdateBtn.OnTapped = func() {
 				slider.BuildSliderChartData()
-				slider.UpdateChartImage(RaType, chartImage)
-				chartImage.Refresh()
-				chartContainer.Refresh()
+				slider.UpdateChartImage(RaType, chart)
+
 			}
 
 			// slider reset chart image
 			slider.chartResetBtn.OnTapped = func() {
-				slider.ResetChartImage(RaType, chartImage)
-				chartImage.Refresh()
-				chartContainer.Refresh()
+				slider.ResetChartImage(RaType, chart)
 			}
 
 		}, w)
 
 		// resize the dialog size
-		RA_Dialog.Resize(fyne.Size{800, 600})
+		RA_Dialog.Resize(fyne.Size{Width: 800, Height: 600})
 
 		// get current executable path
 		exePath, _ := os.Executable()

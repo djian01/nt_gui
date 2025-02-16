@@ -81,6 +81,7 @@ func makeUI(w fyne.Window, a fyne.App) {
 	dnsIcon := theme.NewThemedResource(resourceDnsIconSvg)
 	httpIcon := theme.NewThemedResource(resourceHttpIconSvg)
 	analyIcon := theme.NewThemedResource(resourceAnalyIconSvg)
+	historyIcon := theme.NewThemedResource(resourceHistoryIconSvg)
 
 	// AppTabContainer
 	AppTabContainer := container.NewAppTabs(
@@ -89,6 +90,7 @@ func makeUI(w fyne.Window, a fyne.App) {
 		container.NewTabItemWithIcon("HTTP Ping", httpIcon, HTTPPingContainer(a, w)),
 		container.NewTabItemWithIcon("DNS Ping", dnsIcon, DNSPingContainer(a, w)),
 		container.NewTabItemWithIcon("Result Analysis", analyIcon, ResultAnalysisContainer(a, w)),
+		container.NewTabItemWithIcon("History", historyIcon, HistoryContainer(a, w)),
 	)
 
 	AppTabContainer.SetTabLocation(container.TabLocationLeading) // left

@@ -20,3 +20,6 @@ nt_gui
 # zip files
 *.zip
 *.tar.gz
+
+# db files
+*.db

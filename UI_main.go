@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"net/url"
 	"time"
 
@@ -10,13 +11,14 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/djian01/nt_gui/pkg/ntdb"
 )
 
 // Global Var: nt table
 var ntGlobal ntGUIGlboal
 
 // func makeUI: make the UI body
-func makeUI(w fyne.Window, a fyne.App) {
+func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.Entry) {
 
 	// set theme variable
 	currentTheme := "light"
@@ -90,7 +92,7 @@ func makeUI(w fyne.Window, a fyne.App) {
 		container.NewTabItemWithIcon("HTTP Ping", httpIcon, HTTPPingContainer(a, w)),
 		container.NewTabItemWithIcon("DNS Ping", dnsIcon, DNSPingContainer(a, w)),
 		container.NewTabItemWithIcon("Result Analysis", analyIcon, ResultAnalysisContainer(a, w)),
-		container.NewTabItemWithIcon("History", historyIcon, HistoryContainer(a, w)),
+		container.NewTabItemWithIcon("History", historyIcon, HistoryContainer(a, w, db, entryChan)),
 	)
 
 	AppTabContainer.SetTabLocation(container.TabLocationLeading) // left

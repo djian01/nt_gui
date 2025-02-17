@@ -7,6 +7,8 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+
+	ntdb "github.com/djian01/nt_gui/pkg/ntdb"
 )
 
 // create a global logger pointer
@@ -45,8 +47,22 @@ func main() {
 
 	w.Resize(fyne.NewSize(1650, 900))
 
+	// Open NT DB
+	ntDB, err := ntdb.DBOpen("ntdata.db")
+	if err != nil {
+		logger.Println(err)
+	}
+	defer ntDB.Close()
+
+	// Entry Chan
+	entryChan := make(chan ntdb.Entry)
+	defer close(entryChan)
+
+	// run Insert Entry Go routine
+	go ntdb.InsertEntry(ntDB, entryChan)
+
 	// make UI
-	makeUI(w, a)
+	makeUI(w, a, ntDB, entryChan)
 
 	w.ShowAndRun()
 

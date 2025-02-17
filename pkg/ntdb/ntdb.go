@@ -61,7 +61,8 @@ func createHistoryTable(db *sql.DB) error {
 		date TEXT NOT NULL,
 		time TEXT NOT NULL,
 		type TEXT NOT NULL,
-		command TEXT NOT NULL
+		command TEXT NOT NULL,
+		info TEXT NULL
 	);`
 	_, err := db.Exec(query)
 	return err
@@ -81,10 +82,10 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan Entry) error {
 		case "history":
 			he := entry.(*HistoryEntry)
 			// Construct SQL query with the dynamic table name, default table name is "history"
-			query := `INSERT INTO history (date, time, type, command) VALUES (?, ?, ?, ?);`
+			query := `INSERT INTO history (date, time, type, command, info) VALUES (?, ?, ?, ?, ?);`
 
 			// Execute the query safely with placeholders for values
-			_, err = ntdb.Exec(query, he.Date, he.Time, he.Type, he.Command)
+			_, err = ntdb.Exec(query, he.Date, he.Time, he.Type, he.Command, he.Info)
 		}
 	}
 	return err
@@ -97,7 +98,7 @@ func ReadHistoryTable(db *sql.DB, historyEntries *[]HistoryEntry) error {
 	*historyEntries = []HistoryEntry{}
 
 	// Construct query dynamically
-	query := "SELECT id, type, date, time, command FROM history;"
+	query := "SELECT id, type, date, time, command, info FROM history;"
 
 	// Execute the query
 	rows, err := db.Query(query)
@@ -111,7 +112,7 @@ func ReadHistoryTable(db *sql.DB, historyEntries *[]HistoryEntry) error {
 		var entry HistoryEntry
 
 		// The rows.Scan() function in Go is used to map database query results into Go variables
-		if err := rows.Scan(&entry.Id, &entry.Type, &entry.Date, &entry.Time, &entry.Command); err != nil {
+		if err := rows.Scan(&entry.Id, &entry.Type, &entry.Date, &entry.Time, &entry.Command, &entry.Info); err != nil {
 			return err
 		}
 		*historyEntries = append(*historyEntries, entry) // Modify the original slice
@@ -146,7 +147,7 @@ func DeleteEntryByID(db *sql.DB, tableName string, id int) error {
 		return fmt.Errorf("no entry found with ID %d in table %s", id, tableName)
 	}
 
-	fmt.Printf("Successfully deleted entry with ID %d from table %s.\n", id, tableName)
+	//fmt.Printf("Successfully deleted entry with ID %d from table %s.\n", id, tableName)
 	return nil
 }
 
@@ -156,6 +157,6 @@ func ShowHistoryTableConsole(historyEntries *[]HistoryEntry) {
 	fmt.Println("")
 	fmt.Println("History Entries:")
 	for _, entry := range *historyEntries {
-		fmt.Printf("ID: %s, Type: %s, Date: %s, Time: %s, Command: %s\n", entry.Id, entry.Type, entry.Date, entry.Time, entry.Command)
+		fmt.Printf("ID: %s, Type: %s, Date: %s, Time: %s, Command: %s, Info: %s\n", entry.Id, entry.Type, entry.Date, entry.Time, entry.Command, entry.Info)
 	}
 }

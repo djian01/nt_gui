@@ -25,6 +25,9 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 
 	btnContainer := container.New(layout.NewVBoxLayout(), insertBtn, refreshBtn, deleteContainer)
 
+	// initoal entries slide
+	historyEntries := []ntdb.HistoryEntry{}
+
 	// insert Btn functions
 	insertBtn.OnTapped = func() {
 		he := ntdb.HistoryEntry{}
@@ -35,21 +38,23 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 		he.Time = Now.Format("15:04:05 MST")
 		he.Type = "dns"
 		he.Command = "nt -r dns 8.8.8.8 google.com"
+		//he.Info = "No Error"
 
 		// insert to entryChan
 		entryChan <- &he
 
-	}
-
-	// refresh table Btn
-	historyEntries := []ntdb.HistoryEntry{}
-	refreshBtn.OnTapped = func() {
-		err := ntdb.ReadHistoryTable(db, &historyEntries)
+		err := historyRefresh(db, &historyEntries)
 		if err != nil {
 			logger.Println(err)
 		}
-		// show all the history table in console
-		ntdb.ShowHistoryTableConsole(&historyEntries)
+	}
+
+	// refresh table Btn
+	refreshBtn.OnTapped = func() {
+		err := historyRefresh(db, &historyEntries)
+		if err != nil {
+			logger.Println(err)
+		}
 	}
 
 	// delete entry Btn
@@ -59,13 +64,11 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 		if err != nil {
 			logger.Println(err)
 		}
-
-		err = ntdb.ReadHistoryTable(db, &historyEntries)
+		// refresh
+		err = historyRefresh(db, &historyEntries)
 		if err != nil {
 			logger.Println(err)
 		}
-		// show all the history table in console
-		ntdb.ShowHistoryTableConsole(&historyEntries)
 	}
 
 	// ** Main Container **

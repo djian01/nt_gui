@@ -6,6 +6,7 @@ type HistoryEntry struct {
 	Date      string
 	Time      string
 	Command   string
+	Info      string
 	TableName string
 }
 

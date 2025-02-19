@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"runtime/debug"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -15,6 +17,9 @@ import (
 var (
 	logger *log.Logger
 )
+
+// Create a global cancelable context
+var appCtx, cancelFunc = context.WithCancel(context.Background())
 
 func main() {
 
@@ -42,6 +47,14 @@ func main() {
 	}()
 
 	a := app.NewWithID("local.ntgui")
+
+	// Ensure cleanup when the app closes
+	a.Lifecycle().SetOnStopped(func() {
+		// call cancelFunc() to signal the go routines
+		cancelFunc()
+		// give time for go routines to exit
+		time.Sleep(1 * time.Second)
+	})
 
 	w := a.NewWindow("NT GUI") // w is a pointer
 

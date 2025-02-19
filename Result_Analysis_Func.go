@@ -59,7 +59,7 @@ func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records 
 			if i == 1 {
 				(*Summary).StartTime = p.SendTime
 				(*Summary).DestHost = p.DestHost
-				(*Summary).ntCmd = NtCmdGenerator(p.Type, &p)
+				(*Summary).ntCmd = RaNtCmdGenerator(p.Type, &p)
 			}
 			//// if it's the last packet
 			if i == recordLen-1 {
@@ -121,7 +121,7 @@ func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records 
 			if i == 1 {
 				(*Summary).StartTime = p.SendTime
 				(*Summary).DestHost = p.DestHost
-				(*Summary).ntCmd = NtCmdGenerator(p.Type, &p)
+				(*Summary).ntCmd = RaNtCmdGenerator(p.Type, &p)
 			}
 			//// if it's the last packet
 			if i == recordLen-1 {
@@ -178,7 +178,7 @@ func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records 
 			if i == 1 {
 				(*Summary).StartTime = p.SendTime
 				(*Summary).DestHost = p.DestHost
-				(*Summary).ntCmd = NtCmdGenerator(p.Type, &p)
+				(*Summary).ntCmd = RaNtCmdGenerator(p.Type, &p)
 			}
 			//// if it's the last packet
 			if i == recordLen-1 {
@@ -234,7 +234,7 @@ func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records 
 			if i == 1 {
 				(*Summary).StartTime = p.SendTime
 				(*Summary).DestHost = p.DestHost
-				(*Summary).ntCmd = NtCmdGenerator(p.Type, &p)
+				(*Summary).ntCmd = RaNtCmdGenerator(p.Type, &p)
 			}
 			//// if it's the last packet
 			if i == recordLen-1 {
@@ -283,7 +283,7 @@ func parseCustomDuration(input string) (time.Duration, error) {
 }
 
 // NT CMD Generator
-func NtCmdGenerator(RaType string, pk ntPinger.Packet) string {
+func RaNtCmdGenerator(RaType string, pk ntPinger.Packet) string {
 	ntCmd := ""
 
 	switch RaType {

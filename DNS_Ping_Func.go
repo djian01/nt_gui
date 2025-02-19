@@ -12,7 +12,6 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/djian01/nt/pkg/ntPinger"
-	"github.com/djian01/nt/pkg/ntTEST"
 	ntchart "github.com/djian01/nt_gui/pkg/chart"
 )
 
@@ -21,37 +20,56 @@ import (
 type dnsGUIRow struct {
 	verticalSeparator *canvas.Rectangle
 	Index             pingCell
-	Seq               pingCell
-	Status            pingCell
-	Resolver          pingCell
-	Query             pingCell
-	Response          pingCell
-	RTT               pingCell
-	SendTime          pingCell
-	Fail              pingCell
-	MinRTT            pingCell
-	MaxRTT            pingCell
-	AvgRTT            pingCell
-	ChartBtn          *widget.Button
-	CloseBtn          *widget.Button
-	Action            pingCell
-	DnsTableRow       *fyne.Container
+	//IndexProgressBar  pingCell
+	Seq         pingCell
+	Status      pingCell
+	Resolver    pingCell
+	Query       pingCell
+	Response    pingCell
+	RTT         pingCell
+	SendTime    pingCell
+	Fail        pingCell
+	MinRTT      pingCell
+	MaxRTT      pingCell
+	AvgRTT      pingCell
+	Recording   pingCell
+	ChartBtn    *widget.Button
+	StopBtn     *widget.Button
+	ReplayBtn   *widget.Button
+	CloseBtn    *widget.Button
+	Action      pingCell
+	DnsTableRow *fyne.Container
 }
 
 func (d *dnsGUIRow) Initial() {
 
 	chartIcon := theme.NewThemedResource(resourceChartSvg)
 	d.ChartBtn = widget.NewButtonWithIcon("", chartIcon, func() {})
+
+	d.StopBtn = widget.NewButtonWithIcon("", theme.MediaStopIcon(), func() {})
+	d.StopBtn.Importance = widget.DangerImportance
+
+	d.ReplayBtn = widget.NewButtonWithIcon("", theme.MediaReplayIcon(), func() {})
+	d.ReplayBtn.Importance = widget.HighImportance
+	d.ReplayBtn.Disable()
+
 	d.CloseBtn = widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {})
 	d.CloseBtn.Importance = widget.WarningImportance
+	d.CloseBtn.Disable()
 
 	d.Action.Label = "Action"
-	d.Action.Length = 80
-	d.Action.Object = container.New(layout.NewGridLayoutWithColumns(2), d.ChartBtn, d.CloseBtn)
+	d.Action.Length = 110
+	d.Action.Object = container.New(layout.NewGridLayoutWithColumns(4), d.ChartBtn, d.StopBtn, d.ReplayBtn, d.CloseBtn)
 
 	d.Index.Label = "Index"
 	d.Index.Length = 50
 	d.Index.Object = widget.NewLabelWithStyle("--", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+
+	// d.IndexProgressBar.Label = "IndexProgress"
+	// d.IndexProgressBar.Length = 50
+	// d.IndexProgressBar.Object = widget.NewProgressBarInfinite()
+
+	//IndexCell := container.NewStack(d.IndexProgressBar.Object, container.NewCenter(d.Index.Object))
 
 	d.Seq.Label = "Seq"
 	d.Seq.Length = 50
@@ -97,11 +115,16 @@ func (d *dnsGUIRow) Initial() {
 	d.AvgRTT.Length = 90
 	d.AvgRTT.Object = widget.NewLabel("--")
 
+	d.Recording.Label = "Recording"
+	d.Recording.Length = 80
+	d.Recording.Object = widget.NewLabel("OFF")
+
 	// table row
 	row := container.New(layout.NewHBoxLayout(),
 
 		container.NewGridWrap(fyne.NewSize(float32(d.Action.Length), 30), d.Action.Object),
 		GUIVerticalSeparator(),
+		//container.NewGridWrap(fyne.NewSize(float32(d.Index.Length), 30), IndexCell),
 		container.NewGridWrap(fyne.NewSize(float32(d.Index.Length), 30), container.NewCenter(d.Index.Object)),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.Seq.Length), 30), container.NewCenter(d.Seq.Object)),
@@ -125,10 +148,17 @@ func (d *dnsGUIRow) Initial() {
 		container.NewGridWrap(fyne.NewSize(float32(d.MaxRTT.Length), 30), container.NewCenter(d.MaxRTT.Object)),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.AvgRTT.Length), 30), container.NewCenter(d.AvgRTT.Object)),
+		GUIVerticalSeparator(),
+		container.NewGridWrap(fyne.NewSize(float32(d.Recording.Length), 30), container.NewCenter(d.Recording.Object)),
 	)
+
+	// Create a thick line using a rectangle
+	thickLine := canvas.NewRectangle(color.RGBA{200, 200, 200, 255})
+	thickLine.SetMinSize(fyne.NewSize(200, 2)) // Adjust width & thickness
+
 	d.DnsTableRow = container.New(layout.NewVBoxLayout(),
 		row,
-		canvas.NewLine(color.RGBA{200, 200, 200, 255}),
+		thickLine,
 	)
 }
 
@@ -162,10 +192,17 @@ func (d *dnsGUIRow) GenerateHeaderRow() *fyne.Container {
 		container.NewGridWrap(fyne.NewSize(float32(d.MaxRTT.Length), 30), widget.NewLabelWithStyle(d.MaxRTT.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.AvgRTT.Length), 30), widget.NewLabelWithStyle(d.AvgRTT.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
+		GUIVerticalSeparator(),
+		container.NewGridWrap(fyne.NewSize(float32(d.Recording.Length), 30), widget.NewLabelWithStyle(d.Recording.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
 	)
+
+	// Create a thick line using a rectangle
+	thickLine := canvas.NewRectangle(color.RGBA{200, 200, 200, 255})
+	thickLine.SetMinSize(fyne.NewSize(200, 3)) // Adjust width & thickness
+
 	headerRow := container.New(layout.NewVBoxLayout(),
 		header,
-		canvas.NewLine(color.RGBA{200, 200, 200, 255}),
+		thickLine,
 	)
 
 	return headerRow
@@ -257,25 +294,8 @@ func (d *dnsObject) UpdateChartData(pkt *ntPinger.Packet) {
 	d.ChartData = append(d.ChartData, ntchart.ConvertFromPacketToChartPoint(*pkt))
 }
 
-func ResultGenerateDNS() {
-
-	count := 0
-	Type := "dns"
-	dnsSlide := []*ntPinger.PacketDNS{}
-
-	// channel - probeChan: receiving results from probing
-	// probeChan will be closed by the ResultGenerate()
-	probeChan := make(chan ntPinger.Packet, 1)
-
-	go ntTEST.ResultGenerate(count, Type, &probeChan)
-
-	//
-
-	// start Generating Test result
-	for pkt := range probeChan {
-		dnsSlide = append(dnsSlide, pkt.(*ntPinger.PacketDNS))
-		fmt.Println(pkt.(*ntPinger.PacketDNS).RTT)
+func (d *dnsObject) DisplayChartDataTerminal() {
+	for _, d := range d.ChartData {
+		fmt.Println(d)
 	}
-
-	fmt.Println("\n--- ntTEST Testing Completed ---")
 }

@@ -69,17 +69,13 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	myDnsPing.Initial()
 
 	// update index
-	myDnsPing.DnsGUI.Index.Object.(*widget.Label).Text = strconv.Itoa(*indexPing)
+	myPingIndex := strconv.Itoa(*indexPing)
+	myDnsPing.DnsGUI.Index.Object.(*widget.Label).Text = myPingIndex
 	*indexPing++
 
 	// update table body
 	dnsTableBody.Add(myDnsPing.DnsGUI.DnsTableRow)
 	dnsTableBody.Refresh()
-
-	// update the close btn
-	myDnsPing.DnsGUI.ChartBtn.OnTapped = func() {
-		fmt.Println("Open Chart")
-	}
 
 	// ** start ntPinger Probe **
 
@@ -96,11 +92,32 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 		return
 	}
 
-	// update the close btn
+	// OnTapped Func - Chart btn
+	myDnsPing.DnsGUI.ChartBtn.OnTapped = func() {
+		myCmd := NtCmdGenerator(true, *inputVars)
+		fmt.Println(myCmd)
+	}
+
+	// OnTapped Func - Stop btn
+	myDnsPing.DnsGUI.StopBtn.OnTapped = func() {
+		p.PingerEnd = true
+		myDnsPing.DnsGUI.StopBtn.Disable()
+		myDnsPing.DnsGUI.CloseBtn.Enable()
+		myDnsPing.DnsGUI.ReplayBtn.Enable()
+		//myDnsPing.DnsGUI.IndexProgressBar.Object.Hide()
+
+	}
+
+	// OnTapped Func - Replay btn
+	myDnsPing.DnsGUI.ReplayBtn.OnTapped = func() {
+		// re-launch a new go routine for DnsAddPingRow with the same InputVar
+		go DnsAddPingRow(a, indexPing, inputVars, dnsTableBody)
+	}
+
+	// OnTapped Func - close btn
 	myDnsPing.DnsGUI.CloseBtn.OnTapped = func() {
 		dnsTableBody.Remove(myDnsPing.DnsGUI.DnsTableRow)
 		dnsTableBody.Refresh()
-		p.PingerEnd = true
 	}
 
 	// start ping go routing
@@ -117,19 +134,33 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 		// select option
 		select {
+
+		// ends this test when app is closing
+		case <-appCtx.Done():
+			p.PingerEnd = true
+			loopClose = true
+			//fmt.Printf("Closing Testing: %s\n", myPingIndex)
+
+		// harvest the Probe results
 		case pkt, ok := <-p.ProbeChan:
 
+			// if p.ProbeChan is closed, exit
 			if !ok {
 				loopClose = true
-				break // break select, bypass "outputChan <- pkt"
+				break // break select, bypass following code in the same case
 			}
 			myDnsPing.DnsGUI.UpdateRow(&pkt)
 			myDnsPing.UpdateChartData(&pkt)
 
+		// harvest the errChan input
 		case err := <-errChan:
 			logger.Println(err)
 			return
 		}
 	}
+
+	// update test table when test is closed
+
+	// deal with the recordingChan when test is closed
 
 }

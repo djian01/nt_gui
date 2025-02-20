@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"net/url"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -99,14 +98,6 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.Entry) {
 
 	// MainContainer
 	mainContainer := container.NewBorder(ToolbarContainer, nil, nil, nil, AppTabContainer)
-
-	// go routine: refresh the main container every 1 sec
-	go func() {
-		for {
-			AppTabContainer.Refresh()
-			time.Sleep(time.Second)
-		}
-	}()
 
 	w.SetContent(mainContainer)
 

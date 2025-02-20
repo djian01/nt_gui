@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"strconv"
+	"time"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
@@ -50,7 +53,7 @@ func DNSPingContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	iv.Timeout = 2
 	iv.Interval = 1
 	iv.DestHost = "8.8.8.8"
-	iv.Dns_query = "www.packetstreams.net"
+	iv.Dns_query = "netflix.com"
 
 	// dnsPingAddBtn action
 	dnsPingAddBtn.OnTapped = func() {
@@ -70,8 +73,18 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 	// update index
 	myPingIndex := strconv.Itoa(*indexPing)
+
 	myDnsPing.DnsGUI.Index.Object.(*widget.Label).Text = myPingIndex
 	*indexPing++
+
+	// Update Resolver
+	myDnsPing.DnsGUI.Resolver.Object.(*widget.Label).Text = TruncateString(inputVars.DestHost, 22)
+
+	// Update DNS Query
+	myDnsPing.DnsGUI.Query.Object.(*widget.Label).Text = TruncateString(inputVars.Dns_query, 25)
+
+	// Update StartTime
+	myDnsPing.DnsGUI.StartTime.Object.(*widget.Label).Text = time.Now().Format("2006-01-02 15:04:05 MST")
 
 	// update table body
 	dnsTableBody.Add(myDnsPing.DnsGUI.DnsTableRow)
@@ -104,7 +117,10 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 		myDnsPing.DnsGUI.StopBtn.Disable()
 		myDnsPing.DnsGUI.CloseBtn.Enable()
 		myDnsPing.DnsGUI.ReplayBtn.Enable()
-		//myDnsPing.DnsGUI.IndexProgressBar.Object.Hide()
+
+		myDnsPing.DnsGUI.Status.Object.(*canvas.Text).Text = "Stop"
+		myDnsPing.DnsGUI.Status.Object.(*canvas.Text).Color = color.RGBA{165, 42, 42, 255}
+		myDnsPing.DnsGUI.Status.Object.(*canvas.Text).Refresh()
 
 	}
 

@@ -18,19 +18,15 @@ import (
 // ******* struct dnsGUIRow ********
 
 type dnsGUIRow struct {
-	verticalSeparator *canvas.Rectangle
-	Index             pingCell
-	//IndexProgressBar  pingCell
+	Index       pingCell
 	Seq         pingCell
 	Status      pingCell
-	Resolver    pingCell
-	Query       pingCell
+	Resolver    pingCell // fixed
+	Query       pingCell // fixed
 	Response    pingCell
 	RTT         pingCell
-	SendTime    pingCell
+	StartTime   pingCell // fixed
 	Fail        pingCell
-	MinRTT      pingCell
-	MaxRTT      pingCell
 	AvgRTT      pingCell
 	Recording   pingCell
 	ChartBtn    *widget.Button
@@ -65,12 +61,6 @@ func (d *dnsGUIRow) Initial() {
 	d.Index.Length = 50
 	d.Index.Object = widget.NewLabelWithStyle("--", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 
-	// d.IndexProgressBar.Label = "IndexProgress"
-	// d.IndexProgressBar.Length = 50
-	// d.IndexProgressBar.Object = widget.NewProgressBarInfinite()
-
-	//IndexCell := container.NewStack(d.IndexProgressBar.Object, container.NewCenter(d.Index.Object))
-
 	d.Seq.Label = "Seq"
 	d.Seq.Length = 50
 	d.Seq.Object = widget.NewLabelWithStyle("--", fyne.TextAlignCenter, fyne.TextStyle{Bold: false})
@@ -95,21 +85,13 @@ func (d *dnsGUIRow) Initial() {
 	d.RTT.Length = 90
 	d.RTT.Object = widget.NewLabel("--")
 
-	d.SendTime.Label = "SendTime"
-	d.SendTime.Length = 160
-	d.SendTime.Object = widget.NewLabel("--")
+	d.StartTime.Label = "StartTime"
+	d.StartTime.Length = 190
+	d.StartTime.Object = widget.NewLabel("--")
 
 	d.Fail.Label = "Fail"
 	d.Fail.Length = 80
 	d.Fail.Object = widget.NewLabel("--")
-
-	d.MinRTT.Label = "MinRTT"
-	d.MinRTT.Length = 90
-	d.MinRTT.Object = widget.NewLabel("--")
-
-	d.MaxRTT.Label = "MaxRTT"
-	d.MaxRTT.Length = 90
-	d.MaxRTT.Object = widget.NewLabel("--")
 
 	d.AvgRTT.Label = "AvgRTT"
 	d.AvgRTT.Length = 90
@@ -121,31 +103,25 @@ func (d *dnsGUIRow) Initial() {
 
 	// table row
 	row := container.New(layout.NewHBoxLayout(),
-
 		container.NewGridWrap(fyne.NewSize(float32(d.Action.Length), 30), d.Action.Object),
 		GUIVerticalSeparator(),
-		//container.NewGridWrap(fyne.NewSize(float32(d.Index.Length), 30), IndexCell),
 		container.NewGridWrap(fyne.NewSize(float32(d.Index.Length), 30), container.NewCenter(d.Index.Object)),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.Seq.Length), 30), container.NewCenter(d.Seq.Object)),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.Status.Length), 30), container.NewCenter(d.Status.Object)),
 		GUIVerticalSeparator(),
-		container.NewGridWrap(fyne.NewSize(float32(d.Resolver.Length), 30), d.Resolver.Object),
+		container.NewGridWrap(fyne.NewSize(float32(d.Resolver.Length), 30), container.NewCenter(d.Resolver.Object)),
 		GUIVerticalSeparator(),
-		container.NewGridWrap(fyne.NewSize(float32(d.Query.Length), 30), d.Query.Object),
+		container.NewGridWrap(fyne.NewSize(float32(d.Query.Length), 30), container.NewCenter(d.Query.Object)),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.Response.Length), 30), d.Response.Object),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.RTT.Length), 30), container.NewCenter(d.RTT.Object)),
 		GUIVerticalSeparator(),
-		container.NewGridWrap(fyne.NewSize(float32(d.SendTime.Length), 30), container.NewCenter(d.SendTime.Object)),
+		container.NewGridWrap(fyne.NewSize(float32(d.StartTime.Length), 30), container.NewCenter(d.StartTime.Object)),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.Fail.Length), 30), container.NewCenter(d.Fail.Object)),
-		GUIVerticalSeparator(),
-		container.NewGridWrap(fyne.NewSize(float32(d.MinRTT.Length), 30), container.NewCenter(d.MinRTT.Object)),
-		GUIVerticalSeparator(),
-		container.NewGridWrap(fyne.NewSize(float32(d.MaxRTT.Length), 30), container.NewCenter(d.MaxRTT.Object)),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.AvgRTT.Length), 30), container.NewCenter(d.AvgRTT.Object)),
 		GUIVerticalSeparator(),
@@ -183,13 +159,9 @@ func (d *dnsGUIRow) GenerateHeaderRow() *fyne.Container {
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.RTT.Length), 30), widget.NewLabelWithStyle(d.RTT.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
 		GUIVerticalSeparator(),
-		container.NewGridWrap(fyne.NewSize(float32(d.SendTime.Length), 30), widget.NewLabelWithStyle(d.SendTime.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
+		container.NewGridWrap(fyne.NewSize(float32(d.StartTime.Length), 30), widget.NewLabelWithStyle(d.StartTime.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.Fail.Length), 30), widget.NewLabelWithStyle(d.Fail.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
-		GUIVerticalSeparator(),
-		container.NewGridWrap(fyne.NewSize(float32(d.MinRTT.Length), 30), widget.NewLabelWithStyle(d.MinRTT.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
-		GUIVerticalSeparator(),
-		container.NewGridWrap(fyne.NewSize(float32(d.MaxRTT.Length), 30), widget.NewLabelWithStyle(d.MaxRTT.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.AvgRTT.Length), 30), widget.NewLabelWithStyle(d.AvgRTT.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
 		GUIVerticalSeparator(),
@@ -226,16 +198,6 @@ func (d *dnsGUIRow) UpdateRow(p *ntPinger.Packet) {
 	}
 	d.Status.Object.(*canvas.Text).Refresh()
 
-	// Resolver
-	d.Resolver.Object.(*widget.Label).Text = (*p).(*ntPinger.PacketDNS).DestHost
-	d.Resolver.Object.(*widget.Label).Wrapping = fyne.TextWrap(fyne.TextTruncateClip)
-	d.Resolver.Object.(*widget.Label).Refresh()
-
-	// Query
-	d.Query.Object.(*widget.Label).Text = (*p).(*ntPinger.PacketDNS).Dns_query
-	d.Query.Object.(*widget.Label).Wrapping = fyne.TextWrap(fyne.TextTruncateClip)
-	d.Query.Object.(*widget.Label).Refresh()
-
 	// Response
 	d.Response.Object.(*widget.Label).Text = (*p).(*ntPinger.PacketDNS).Dns_response
 	d.Response.Object.(*widget.Label).Wrapping = fyne.TextWrap(fyne.TextTruncateClip)
@@ -249,21 +211,9 @@ func (d *dnsGUIRow) UpdateRow(p *ntPinger.Packet) {
 	}
 	d.RTT.Object.(*widget.Label).Refresh()
 
-	// SendTime
-	d.SendTime.Object.(*widget.Label).Text = (*p).(*ntPinger.PacketDNS).SendTime.Format("15:04:05")
-	d.SendTime.Object.(*widget.Label).Refresh()
-
 	// Fail Rate
 	d.Fail.Object.(*widget.Label).Text = fmt.Sprintf("%.2f%%", (*p).(*ntPinger.PacketDNS).PacketLoss*100)
 	d.Fail.Object.(*widget.Label).Refresh()
-
-	// MinRTT
-	d.MinRTT.Object.(*widget.Label).Text = (*p).(*ntPinger.PacketDNS).MinRtt.String()
-	d.MinRTT.Object.(*widget.Label).Refresh()
-
-	// MaxRTT
-	d.MaxRTT.Object.(*widget.Label).Text = (*p).(*ntPinger.PacketDNS).MaxRtt.String()
-	d.MaxRTT.Object.(*widget.Label).Refresh()
 
 	// AvgRTT
 	d.AvgRTT.Object.(*widget.Label).Text = (*p).(*ntPinger.PacketDNS).AvgRtt.String()

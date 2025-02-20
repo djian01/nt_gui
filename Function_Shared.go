@@ -110,3 +110,11 @@ func NtCmdGenerator(recording bool, iv ntPinger.InputVars) string {
 
 	return ntCmd
 }
+
+// TruncateString truncates a string to a maximum length and appends "..." if it exceeds the max length
+func TruncateString(s string, maxLength int) string {
+	if len(s) > maxLength {
+		return s[:maxLength-3] + "..." // Subtract 3 to account for "..."
+	}
+	return s
+}

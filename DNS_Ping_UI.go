@@ -57,7 +57,8 @@ func DNSPingContainer(a fyne.App, w fyne.Window) *fyne.Container {
 
 	// dnsPingAddBtn action
 	dnsPingAddBtn.OnTapped = func() {
-		go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable)
+		NewTest(a, "dns", ntGlobal.dnsTable)
+		//go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable)
 	}
 
 	// Return your DNS ping interface components here

@@ -45,7 +45,7 @@ type Summary struct {
 	Type            string
 	DestHost        string
 	StartTime       time.Time
-	EndTime         time.Time
+	EndTime         time.Time // if the test is still on-going, Endtime is "--"
 	PacketSent      int
 	SuccessResponse int
 	FailRate        string

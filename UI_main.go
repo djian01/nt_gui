@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"net/url"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -101,9 +100,4 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.Entry) {
 
 	w.SetContent(mainContainer)
 
-}
-
-func parseURL(urlStr string) *url.URL {
-	link, _ := url.Parse(urlStr)
-	return link
 }

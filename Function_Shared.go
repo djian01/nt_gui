@@ -3,9 +3,15 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"net/url"
+	"strconv"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 	"github.com/djian01/nt/pkg/ntPinger"
 )
 
@@ -117,4 +123,87 @@ func TruncateString(s string, maxLength int) string {
 		return s[:maxLength-3] + "..." // Subtract 3 to account for "..."
 	}
 	return s
+}
+
+// func Prsae URL
+func parseURL(urlStr string) *url.URL {
+	link, _ := url.Parse(urlStr)
+	return link
+}
+
+// func: New Test Input
+func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
+
+	// Initial New Test Input Var Window
+	newTestWindow := a.NewWindow(fmt.Sprintf("New %s Test", testType))
+	newTestWindow.Resize(fyne.NewSize(1200, 650))
+
+	// error message
+	errMsg := canvas.NewText("", color.RGBA{255, 0, 0, 255})
+	errMsg.TextStyle.Bold = true
+	errMsg.Text = ""
+	errMsgContainer := container.New(layout.NewVBoxLayout(), errMsg)
+
+	// common container (common for all test types)
+	// Interval
+	intervalLabel := widget.NewLabel("Interval (s)")
+	intervalEntry := widget.NewEntry()
+	intervalEntry.Text = "1"
+	intervalEntry.OnChanged = func(text string) {
+		// Convert text to an integer
+		num, err := strconv.Atoi(intervalEntry.Text)
+		if err != nil || num < 1 {
+			errMsg.Text = "Interval should always be Int and larger than 0"
+			errMsg.Refresh()
+		} else {
+			errMsg.Text = ""
+			errMsg.Refresh()
+		}
+	}
+	intervalContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(100, 40)), intervalEntry)
+	intervalCell := formCell(intervalLabel, intervalContainer)
+
+	// Timeout
+	timeoutLabel := widget.NewLabel("Timeout (s)")
+	timeoutEntry := widget.NewEntry()
+	timeoutEntry.Text = "4"
+	timeoutEntry.OnChanged = func(text string) {
+		// Convert text to an integer
+		num, err := strconv.Atoi(timeoutEntry.Text)
+		if err != nil || num < 1 {
+			errMsg.Text = "Timeout should always be Int and larger than 0"
+			errMsg.Refresh()
+		} else {
+			errMsg.Text = ""
+			errMsg.Refresh()
+		}
+	}
+	timeoutContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(100, 40)), timeoutEntry)
+	timeoutCell := formCell(timeoutLabel, timeoutContainer)
+	commonContainer := container.NewHBox(intervalCell, timeoutCell)
+
+	// Specific Vars
+	specificContainer := container.NewHBox()
+
+	// btns
+	cancelBtn := widget.NewButtonWithIcon("Cancel", theme.CancelIcon(), func() {})
+	cancelBtn.Importance = widget.WarningImportance
+	submitBtn := widget.NewButtonWithIcon("Submit", theme.ConfirmIcon(), func() {})
+	submitBtn.Importance = widget.HighImportance
+	btnContainer := formCell(cancelBtn, submitBtn)
+
+	// New Test Input Container
+	newTestSpaceHolder := widget.NewLabel("                     ")
+	newTestContainerInner := container.New(layout.NewVBoxLayout(), commonContainer, specificContainer, btnContainer, errMsgContainer)
+	newTestContainerOuter := container.New(layout.NewBorderLayout(newTestSpaceHolder, newTestSpaceHolder, newTestSpaceHolder, newTestSpaceHolder), newTestSpaceHolder, newTestContainerInner)
+	newTestWindow.SetContent(newTestContainerOuter)
+	newTestWindow.Show()
+
+}
+
+// func: create a 2 x Column form cell
+func formCell(obj1, obj2 fyne.CanvasObject) *fyne.Container {
+	//formCellContainer := container.NewCenter(container.NewGridWrap(fyne.NewSize(length, 30), container.New(layout.NewHBoxLayout(), obj1, obj2)))
+	formCellContainer := container.NewCenter(container.New(layout.NewHBoxLayout(), obj1, obj2))
+	return formCellContainer
 }

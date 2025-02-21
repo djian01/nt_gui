@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"net"
 	"net/url"
+	"regexp"
 	"strconv"
 
 	"fyne.io/fyne/v2"
@@ -149,48 +151,91 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 	intervalLabel := widget.NewLabel("Interval (s)")
 	intervalEntry := widget.NewEntry()
 	intervalEntry.Text = "1"
-	intervalEntry.OnChanged = func(text string) {
+	intervalEntry.Validator = func(s string) error {
 		// Convert text to an integer
-		num, err := strconv.Atoi(intervalEntry.Text)
+		num, err := strconv.Atoi(s)
 		if err != nil || num < 1 {
-			errMsg.Text = "Interval should always be Int and larger than 0"
+			msg := "interval should always be Int and larger than 0"
+			errMsg.Text = msg
 			errMsg.Refresh()
+			return fmt.Errorf("validation error: %s", msg)
 		} else {
 			errMsg.Text = ""
 			errMsg.Refresh()
+			return nil
 		}
 	}
+
 	intervalContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(100, 40)), intervalEntry)
-	intervalCell := formCell(intervalLabel, intervalContainer)
+	intervalCell := formCell(intervalLabel, 100, intervalContainer, 100)
 
 	// Timeout
 	timeoutLabel := widget.NewLabel("Timeout (s)")
 	timeoutEntry := widget.NewEntry()
 	timeoutEntry.Text = "4"
-	timeoutEntry.OnChanged = func(text string) {
+	timeoutEntry.Validator = func(s string) error {
 		// Convert text to an integer
-		num, err := strconv.Atoi(timeoutEntry.Text)
+		num, err := strconv.Atoi(s)
 		if err != nil || num < 1 {
-			errMsg.Text = "Timeout should always be Int and larger than 0"
+			msg := "Timeout should always be Int and larger than 0"
+			errMsg.Text = msg
 			errMsg.Refresh()
+			return fmt.Errorf("validation error: %s", msg)
 		} else {
 			errMsg.Text = ""
 			errMsg.Refresh()
+			return nil
 		}
 	}
-	timeoutContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(100, 40)), timeoutEntry)
-	timeoutCell := formCell(timeoutLabel, timeoutContainer)
-	commonContainer := container.NewHBox(intervalCell, timeoutCell)
+	timeoutCell := formCell(timeoutLabel, 100, timeoutEntry, 100)
+
+	// recording
+	recording := false
+	recordingLabel := widget.NewLabel("Result Recording")
+	recordingCheck := widget.NewCheck("", func(b bool) {
+		if b {
+			recording = true
+		} else {
+			recording = false
+		}
+		fmt.Println(recording)
+	})
+	recordingCell := formCell(recordingLabel, 150, recordingCheck, 50)
+
+	commonContainer := container.NewVBox(recordingCell, intervalCell, timeoutCell)
 
 	// Specific Vars
-	specificContainer := container.NewHBox()
+	specificContainer := container.NewVBox()
+
+	switch testType {
+	case "dns":
+		dnsServers := []string{}
+		dnsServerEntry := widget.NewMultiLineEntry()
+
+		dnsServerEntry.Validator = func(s string) error {
+			dnsServerTemp := regexp.MustCompile(`\r?\n`).Split(s, -1)
+			dnsServers = dnsServerTemp
+
+			for _, i := range dnsServers {
+				fmt.Println(i)
+			}
+			return nil
+		}
+
+		specificContainer.Add(dnsServerEntry)
+
+	case "http":
+	case "tcp":
+	case "icmp":
+
+	}
 
 	// btns
 	cancelBtn := widget.NewButtonWithIcon("Cancel", theme.CancelIcon(), func() {})
 	cancelBtn.Importance = widget.WarningImportance
 	submitBtn := widget.NewButtonWithIcon("Submit", theme.ConfirmIcon(), func() {})
 	submitBtn.Importance = widget.HighImportance
-	btnContainer := formCell(cancelBtn, submitBtn)
+	btnContainer := formCell(cancelBtn, 100, submitBtn, 100)
 
 	// New Test Input Container
 	newTestSpaceHolder := widget.NewLabel("                     ")
@@ -202,8 +247,37 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 }
 
 // func: create a 2 x Column form cell
-func formCell(obj1, obj2 fyne.CanvasObject) *fyne.Container {
+func formCell(obj1 fyne.CanvasObject, length1 float32, obj2 fyne.CanvasObject, length2 float32) *fyne.Container {
 	//formCellContainer := container.NewCenter(container.NewGridWrap(fyne.NewSize(length, 30), container.New(layout.NewHBoxLayout(), obj1, obj2)))
-	formCellContainer := container.NewCenter(container.New(layout.NewHBoxLayout(), obj1, obj2))
+
+	// object 1
+	obj1Container := container.New(layout.NewGridWrapLayout(fyne.NewSize(length1, 40)), obj1)
+
+	// object 2
+	obj2Container := container.New(layout.NewGridWrapLayout(fyne.NewSize(length2, 40)), obj2)
+
+	// form Cell Container
+
+	formCellContainer := container.NewCenter(container.New(layout.NewHBoxLayout(), obj1Container, obj2Container))
 	return formCellContainer
+}
+
+// func: ValidateAndResolve checks if the input string is a valid IP or a resolvable DNS name
+func ValidateAndResolve(input string, requiredResolve bool) (string, error) {
+	// Step 1: Check if the string is a valid IP
+	if ip := net.ParseIP(input); ip != nil {
+		return input, nil // Valid IP, return as is
+	}
+
+	// Step 2: Check if the string is a resolvable DNS name
+	ips, err := net.LookupIP(input)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve DNS: %v", input) // Unresolvable DNS
+	}
+
+	// Step 3: Return based on requiredResolve flag
+	if requiredResolve {
+		return ips[0].String(), nil // Return the first resolved IP
+	}
+	return input, nil // Return original string if no resolution is required
 }

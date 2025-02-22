@@ -138,7 +138,18 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 
 	// Initial New Test Input Var Window
 	newTestWindow := a.NewWindow(fmt.Sprintf("New %s Test", testType))
-	newTestWindow.Resize(fyne.NewSize(1200, 650))
+	newTestWindow.Resize(fyne.NewSize(710, 550))
+	newTestWindow.CenterOnScreen()
+
+	// btns
+	cancelBtn := widget.NewButtonWithIcon("Cancel", theme.CancelIcon(), func() {})
+	cancelBtn.Importance = widget.WarningImportance
+	cancelBtn.OnTapped = func() {
+		newTestWindow.Close()
+	}
+	submitBtn := widget.NewButtonWithIcon("Submit", theme.ConfirmIcon(), func() {})
+	submitBtn.Importance = widget.HighImportance
+	btnContainer := formCell(cancelBtn, 100, submitBtn, 100)
 
 	// error message
 	errMsg := canvas.NewText("", color.RGBA{255, 0, 0, 255})
@@ -148,7 +159,7 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 
 	// common container (common for all test types)
 	// Interval
-	intervalLabel := widget.NewLabel("Interval (s)")
+	intervalLabel := widget.NewLabel("Interval (s):")
 	intervalEntry := widget.NewEntry()
 	intervalEntry.Text = "1"
 	intervalEntry.Validator = func(s string) error {
@@ -170,7 +181,7 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 	intervalCell := formCell(intervalLabel, 100, intervalContainer, 100)
 
 	// Timeout
-	timeoutLabel := widget.NewLabel("Timeout (s)")
+	timeoutLabel := widget.NewLabel("Timeout (s):")
 	timeoutEntry := widget.NewEntry()
 	timeoutEntry.Text = "4"
 	timeoutEntry.Validator = func(s string) error {
@@ -191,7 +202,7 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 
 	// recording
 	recording := false
-	recordingLabel := widget.NewLabel("Result Recording")
+	recordingLabel := widget.NewLabel("Result Recording:")
 	recordingCheck := widget.NewCheck("", func(b bool) {
 		if b {
 			recording = true
@@ -202,27 +213,56 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 	})
 	recordingCell := formCell(recordingLabel, 150, recordingCheck, 50)
 
-	commonContainer := container.NewVBox(recordingCell, intervalCell, timeoutCell)
+	// common Container
+	commonContainerSub := formCell(intervalCell, 250, timeoutCell, 250)
+	commonContainer := container.NewVBox(recordingCell, commonContainerSub)
 
 	// Specific Vars
 	specificContainer := container.NewVBox()
 
 	switch testType {
 	case "dns":
-		dnsServers := []string{}
+		// target server
+		dnsServerLabel := widget.NewLabel("DNS Server IP/Host(s):")
 		dnsServerEntry := widget.NewMultiLineEntry()
+		dnsServerEntryContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(504, 150)), dnsServerEntry)
+		dnsServerContainer := container.New(layout.NewVBoxLayout(), dnsServerLabel, dnsServerEntryContainer)
 
-		dnsServerEntry.Validator = func(s string) error {
-			dnsServerTemp := regexp.MustCompile(`\r?\n`).Split(s, -1)
-			dnsServers = dnsServerTemp
+		// dns query
+		dnsQueryLabel := widget.NewLabel("DNS Query:")
+		dnsQueryEntry := widget.NewEntry()
+		dnsQueryEntry.PlaceHolder = "Please input the DNS query domain name"
+		dnsQueryCell := formCell(dnsQueryLabel, 100, dnsQueryEntry, 400)
+
+		// dns protocol
+		dnsProtocol := "udp"
+		dnsProtocolLabel := widget.NewLabel("DNS Protocol:")
+		dnsProtocolSelect := widget.NewSelect([]string{"udp", "tcp"}, func(s string) { dnsProtocol = s })
+		dnsProtocolSelect.Selected = "udp"
+		dnsProtocolCell := formCell(dnsProtocolLabel, 100, dnsProtocolSelect, 150)
+
+		// specific container
+		specificContainer.Add(dnsServerContainer)
+		specificContainer.Add(dnsQueryCell)
+		specificContainer.Add(dnsProtocolCell)
+
+		// submit on Tap Action
+		submitBtn.OnTapped = func() {
+			dnsServers, err := targetHostValidator(dnsServerEntry.Text, true)
+			if err != nil {
+				errMsg.Text = err.Error()
+				errMsg.Refresh()
+				return
+			} else {
+				errMsg.Text = ""
+				errMsg.Refresh()
+			}
 
 			for _, i := range dnsServers {
 				fmt.Println(i)
 			}
-			return nil
+			fmt.Println(dnsProtocol)
 		}
-
-		specificContainer.Add(dnsServerEntry)
 
 	case "http":
 	case "tcp":
@@ -230,26 +270,18 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 
 	}
 
-	// btns
-	cancelBtn := widget.NewButtonWithIcon("Cancel", theme.CancelIcon(), func() {})
-	cancelBtn.Importance = widget.WarningImportance
-	submitBtn := widget.NewButtonWithIcon("Submit", theme.ConfirmIcon(), func() {})
-	submitBtn.Importance = widget.HighImportance
-	btnContainer := formCell(cancelBtn, 100, submitBtn, 100)
-
 	// New Test Input Container
 	newTestSpaceHolder := widget.NewLabel("                     ")
-	newTestContainerInner := container.New(layout.NewVBoxLayout(), commonContainer, specificContainer, btnContainer, errMsgContainer)
-	newTestContainerOuter := container.New(layout.NewBorderLayout(newTestSpaceHolder, newTestSpaceHolder, newTestSpaceHolder, newTestSpaceHolder), newTestSpaceHolder, newTestContainerInner)
+	newTestContainerInnerUp := container.New(layout.NewVBoxLayout(), commonContainer, specificContainer, errMsgContainer)
+	newTestContainerInnerdown := container.NewCenter(btnContainer)
+	newTestContainerInnerWhole := container.New(layout.NewVBoxLayout(), newTestContainerInnerUp, newTestContainerInnerdown)
+	newTestContainerOuter := container.New(layout.NewBorderLayout(newTestSpaceHolder, newTestSpaceHolder, newTestSpaceHolder, newTestSpaceHolder), newTestSpaceHolder, newTestContainerInnerWhole)
 	newTestWindow.SetContent(newTestContainerOuter)
 	newTestWindow.Show()
-
 }
 
 // func: create a 2 x Column form cell
 func formCell(obj1 fyne.CanvasObject, length1 float32, obj2 fyne.CanvasObject, length2 float32) *fyne.Container {
-	//formCellContainer := container.NewCenter(container.NewGridWrap(fyne.NewSize(length, 30), container.New(layout.NewHBoxLayout(), obj1, obj2)))
-
 	// object 1
 	obj1Container := container.New(layout.NewGridWrapLayout(fyne.NewSize(length1, 40)), obj1)
 
@@ -258,7 +290,7 @@ func formCell(obj1 fyne.CanvasObject, length1 float32, obj2 fyne.CanvasObject, l
 
 	// form Cell Container
 
-	formCellContainer := container.NewCenter(container.New(layout.NewHBoxLayout(), obj1Container, obj2Container))
+	formCellContainer := container.New(layout.NewHBoxLayout(), obj1Container, obj2Container)
 	return formCellContainer
 }
 
@@ -272,12 +304,42 @@ func ValidateAndResolve(input string, requiredResolve bool) (string, error) {
 	// Step 2: Check if the string is a resolvable DNS name
 	ips, err := net.LookupIP(input)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve DNS: %v", input) // Unresolvable DNS
+		return "", fmt.Errorf("Bad IP or unresolvable Domain: %v", input) // Error Message
 	}
 
 	// Step 3: Return based on requiredResolve flag
 	if requiredResolve {
 		return ips[0].String(), nil // Return the first resolved IP
+	} else {
+		return input, nil // Return original string if no resolution is required
 	}
-	return input, nil // Return original string if no resolution is required
+
+}
+
+// func: dns Server Input Validator
+func targetHostValidator(inputTargets string, requiredResolve bool) (targetHosts []string, err error) {
+
+	if inputTargets == "" {
+		return targetHosts, fmt.Errorf("No Input IP/Host Target")
+	}
+
+	targetsTemp := regexp.MustCompile(`\r?\n`).Split(inputTargets, -1)
+
+	for _, input := range targetsTemp {
+		server, err := ValidateAndResolve(input, requiredResolve)
+		if err != nil {
+			return targetHosts, err
+		} else {
+			targetHosts = append(targetHosts, server)
+		}
+	}
+	return targetHosts, nil
+}
+
+// func: create a place holder
+func placeHolderBlock(w, h float32) *canvas.Rectangle {
+	placeholder := canvas.NewRectangle(theme.Color(theme.ColorNameBackground)) // Matches background color
+	placeholder.SetMinSize(fyne.NewSize(w, h))                                 // Set fixed size
+
+	return placeholder
 }

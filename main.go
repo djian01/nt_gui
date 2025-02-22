@@ -59,6 +59,7 @@ func main() {
 	w := a.NewWindow("NT GUI") // w is a pointer
 
 	w.Resize(fyne.NewSize(1650, 900))
+	w.CenterOnScreen()
 
 	// Open NT DB
 	ntDB, err := ntdb.DBOpen("ntdata.db")

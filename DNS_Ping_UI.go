@@ -115,7 +115,8 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	// OnTapped Func - Stop btn
 	myDnsPing.DnsGUI.StopBtn.OnTapped = func() {
 		p.PingerEnd = true
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond) // wait for the test to stop
+
 		myDnsPing.DnsGUI.StopBtn.Disable()
 		myDnsPing.DnsGUI.CloseBtn.Enable()
 		myDnsPing.DnsGUI.ReplayBtn.Enable()

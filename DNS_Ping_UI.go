@@ -57,7 +57,7 @@ func DNSPingContainer(a fyne.App, w fyne.Window) *fyne.Container {
 
 	// dnsPingAddBtn action
 	dnsPingAddBtn.OnTapped = func() {
-		NewTest(a, "dns", ntGlobal.dnsTable)
+		NewTest(a, "dns")
 		//go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable)
 	}
 
@@ -115,6 +115,7 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	// OnTapped Func - Stop btn
 	myDnsPing.DnsGUI.StopBtn.OnTapped = func() {
 		p.PingerEnd = true
+		time.Sleep(200 * time.Millisecond)
 		myDnsPing.DnsGUI.StopBtn.Disable()
 		myDnsPing.DnsGUI.CloseBtn.Enable()
 		myDnsPing.DnsGUI.ReplayBtn.Enable()

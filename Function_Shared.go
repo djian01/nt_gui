@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -134,10 +135,10 @@ func parseURL(urlStr string) *url.URL {
 }
 
 // func: New Test Input
-func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
+func NewTest(a fyne.App, testType string) {
 
 	// Initial New Test Input Var Window
-	newTestWindow := a.NewWindow(fmt.Sprintf("New %s Test", testType))
+	newTestWindow := a.NewWindow(fmt.Sprintf("New %s Test", strings.ToUpper(testType)))
 	newTestWindow.Resize(fyne.NewSize(710, 550))
 	newTestWindow.CenterOnScreen()
 
@@ -159,6 +160,8 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 
 	// common container (common for all test types)
 	// Interval
+	intervalValue := 1
+	intervalCheck := true
 	intervalLabel := widget.NewLabel("Interval (s):")
 	intervalEntry := widget.NewEntry()
 	intervalEntry.Text = "1"
@@ -166,11 +169,14 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 		// Convert text to an integer
 		num, err := strconv.Atoi(s)
 		if err != nil || num < 1 {
+			intervalCheck = false
 			msg := "interval should always be Int and larger than 0"
 			errMsg.Text = msg
 			errMsg.Refresh()
 			return fmt.Errorf("validation error: %s", msg)
 		} else {
+			intervalCheck = true
+			intervalValue = num
 			errMsg.Text = ""
 			errMsg.Refresh()
 			return nil
@@ -181,6 +187,8 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 	intervalCell := formCell(intervalLabel, 100, intervalContainer, 100)
 
 	// Timeout
+	timeoutValue := 4
+	timeoutCheck := true
 	timeoutLabel := widget.NewLabel("Timeout (s):")
 	timeoutEntry := widget.NewEntry()
 	timeoutEntry.Text = "4"
@@ -188,11 +196,14 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 		// Convert text to an integer
 		num, err := strconv.Atoi(s)
 		if err != nil || num < 1 {
+			timeoutCheck = false
 			msg := "Timeout should always be Int and larger than 0"
 			errMsg.Text = msg
 			errMsg.Refresh()
 			return fmt.Errorf("validation error: %s", msg)
 		} else {
+			timeoutCheck = true
+			timeoutValue = num
 			errMsg.Text = ""
 			errMsg.Refresh()
 			return nil
@@ -223,12 +234,14 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 	switch testType {
 	case "dns":
 		// target server
+		dnsServerCheck := false
 		dnsServerLabel := widget.NewLabel("DNS Server IP/Host(s):")
 		dnsServerEntry := widget.NewMultiLineEntry()
 		dnsServerEntryContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(504, 150)), dnsServerEntry)
 		dnsServerContainer := container.New(layout.NewVBoxLayout(), dnsServerLabel, dnsServerEntryContainer)
 
 		// dns query
+		dnsQueryCheck := false
 		dnsQueryLabel := widget.NewLabel("DNS Query:")
 		dnsQueryEntry := widget.NewEntry()
 		dnsQueryEntry.PlaceHolder = "Please input the DNS query domain name"
@@ -248,20 +261,49 @@ func NewTest(a fyne.App, testType string, testTable *fyne.Container) {
 
 		// submit on Tap Action
 		submitBtn.OnTapped = func() {
+			// dns target validation
 			dnsServers, err := targetHostValidator(dnsServerEntry.Text, true)
 			if err != nil {
+				dnsServerCheck = false
 				errMsg.Text = err.Error()
 				errMsg.Refresh()
 				return
 			} else {
+				dnsServerCheck = true
 				errMsg.Text = ""
 				errMsg.Refresh()
 			}
 
-			for _, i := range dnsServers {
-				fmt.Println(i)
+			// dns query validation
+			if dnsQueryEntry.Text == "" {
+				dnsQueryCheck = false
+				errMsg.Text = "DNS Query cannot be empty!"
+				errMsg.Refresh()
+				return
+			} else {
+				dnsQueryCheck = true
+				errMsg.Text = ""
+				errMsg.Refresh()
 			}
-			fmt.Println(dnsProtocol)
+
+			// validation check
+			if intervalCheck && timeoutCheck && dnsServerCheck && dnsQueryCheck {
+				for _, dnsServer := range dnsServers {
+					iv := ntPinger.InputVars{}
+					iv.Type = "dns"
+					iv.Count = 0
+					iv.Dns_Protocol = dnsProtocol
+					iv.Timeout = timeoutValue
+					iv.Interval = intervalValue
+					iv.DestHost = dnsServer
+					iv.Dns_query = dnsQueryEntry.Text
+					// start test
+					go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable)
+					newTestWindow.Close()
+				}
+			} else {
+				return
+			}
 		}
 
 	case "http":

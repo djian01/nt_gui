@@ -179,6 +179,15 @@ func (rs *RangeSlider) updateGraphics() {
 	canvas.Refresh(rs.endHandle)
 }
 
+// func: Refresh()
+func (r *rangeSliderRenderer) Refresh() {
+	r.slider.updateGraphics()
+	canvas.Refresh(r.slider.barBackground)
+	canvas.Refresh(r.slider.barRange)
+	canvas.Refresh(r.slider.startHandle)
+	canvas.Refresh(r.slider.endHandle)
+}
+
 // Custom Renderer for RangeSlider
 type rangeSliderRenderer struct {
 	slider *RangeSlider
@@ -191,14 +200,6 @@ func (r *rangeSliderRenderer) Layout(size fyne.Size) {
 // Fix: Set a static MinSize to avoid infinite recursion
 func (r *rangeSliderRenderer) MinSize() fyne.Size {
 	return fyne.NewSize(200, 40)
-}
-
-func (r *rangeSliderRenderer) Refresh() {
-	r.slider.updateGraphics()
-	canvas.Refresh(r.slider.barBackground)
-	canvas.Refresh(r.slider.barRange)
-	canvas.Refresh(r.slider.startHandle)
-	canvas.Refresh(r.slider.endHandle)
 }
 
 func (r *rangeSliderRenderer) BackgroundColor() color.Color {

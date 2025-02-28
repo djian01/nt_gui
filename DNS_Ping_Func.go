@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"strconv"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -248,4 +249,139 @@ func (d *dnsObject) DisplayChartDataTerminal() {
 	for _, d := range d.ChartData {
 		fmt.Println(d)
 	}
+}
+
+// func: Add Ping Row
+func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dnsTableBody *fyne.Container, recording bool) {
+
+	// ResultGenerateDNS()
+	myDnsPing := dnsObject{}
+	myDnsPing.Initial()
+
+	// update index
+	myPingIndex := strconv.Itoa(*indexPing)
+
+	myDnsPing.DnsGUI.Index.Object.(*widget.Label).Text = myPingIndex
+	myDnsPing.DnsGUI.Index.Object.(*widget.Label).Refresh()
+	*indexPing++
+
+	// Update Resolver
+	myDnsPing.DnsGUI.Resolver.Object.(*widget.Label).Text = TruncateString(inputVars.DestHost, 22)
+	myDnsPing.DnsGUI.Resolver.Object.(*widget.Label).Refresh()
+
+	// Update DNS Query
+	myDnsPing.DnsGUI.Query.Object.(*widget.Label).Text = TruncateString(inputVars.Dns_query, 25)
+	myDnsPing.DnsGUI.Query.Object.(*widget.Label).Refresh()
+
+	// Update StartTime
+	myDnsPing.DnsGUI.StartTime.Object.(*widget.Label).Text = time.Now().Format("2006-01-02 15:04:05 MST")
+	myDnsPing.DnsGUI.StartTime.Object.(*widget.Label).Refresh()
+
+	// update table body
+	dnsTableBody.Add(myDnsPing.DnsGUI.DnsTableRow)
+	dnsTableBody.Refresh()
+
+	// update recording
+	if recording {
+		myDnsPing.DnsGUI.Recording.Object.(*widget.Label).Text = "ON"
+	} else {
+		myDnsPing.DnsGUI.Recording.Object.(*widget.Label).Text = "OFF"
+	}
+	myDnsPing.DnsGUI.Recording.Object.(*widget.Label).Refresh()
+
+	// Add New Entry to DB History
+
+	// ** start ntPinger Probe **
+
+	// Channel - error (for Go Routines)
+	errChan := make(chan error, 1)
+	defer close(errChan)
+
+	// Start Ping Main Command, manually input display Len
+	p, err := ntPinger.NewPinger(*inputVars)
+
+	if err != nil {
+		fmt.Println(err)
+		logger.Println(err)
+		return
+	}
+
+	// OnTapped Func - Chart btn
+	myDnsPing.DnsGUI.ChartBtn.OnTapped = func() {
+		myCmd := NtCmdGenerator(true, *inputVars)
+		fmt.Println(myCmd)
+	}
+
+	// OnTapped Func - Stop btn
+	myDnsPing.DnsGUI.StopBtn.OnTapped = func() {
+		p.PingerEnd = true
+		time.Sleep(200 * time.Millisecond) // wait for the test to stop
+
+		myDnsPing.DnsGUI.StopBtn.Disable()
+		myDnsPing.DnsGUI.CloseBtn.Enable()
+		myDnsPing.DnsGUI.ReplayBtn.Enable()
+
+		myDnsPing.DnsGUI.Status.Object.(*canvas.Text).Text = "Stop"
+		myDnsPing.DnsGUI.Status.Object.(*canvas.Text).Color = color.RGBA{165, 42, 42, 255}
+		myDnsPing.DnsGUI.Status.Object.(*canvas.Text).Refresh()
+
+	}
+
+	// OnTapped Func - Replay btn
+	myDnsPing.DnsGUI.ReplayBtn.OnTapped = func() {
+		// re-launch a new go routine for DnsAddPingRow with the same InputVar
+		go DnsAddPingRow(a, indexPing, inputVars, dnsTableBody, recording)
+	}
+
+	// OnTapped Func - close btn
+	myDnsPing.DnsGUI.CloseBtn.OnTapped = func() {
+		dnsTableBody.Remove(myDnsPing.DnsGUI.DnsTableRow)
+		dnsTableBody.Refresh()
+	}
+
+	// start ping go routing
+	go p.Run(errChan)
+
+	// harvest the result
+	loopClose := false
+
+	for {
+		// check loopClose Flag
+		if loopClose {
+			break
+		}
+
+		// select option
+		select {
+
+		// ends this test when app is closing
+		case <-appCtx.Done():
+			p.PingerEnd = true
+			loopClose = true
+			//fmt.Printf("Closing Testing: %s\n", myPingIndex)
+
+		// harvest the Probe results
+		case pkt, ok := <-p.ProbeChan:
+
+			// if p.ProbeChan is closed, exit
+			if !ok {
+				loopClose = true
+				break // break select, bypass following code in the same case
+			}
+			myDnsPing.DnsGUI.UpdateRow(&pkt)
+			myDnsPing.UpdateChartData(&pkt)
+
+			// Add test result entry to DB is "recording" is "ON"
+
+		// harvest the errChan input
+		case err := <-errChan:
+			logger.Println(err)
+			return
+		}
+	}
+
+	// update test table when test is closed
+
+	// deal with the recordingChan when test is closed
+
 }

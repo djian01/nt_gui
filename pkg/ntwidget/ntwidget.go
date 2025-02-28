@@ -87,6 +87,7 @@ func (rs *RangeSlider) CreateRenderer() fyne.WidgetRenderer {
 	return &rangeSliderRenderer{slider: rs}
 }
 
+// Implements desktop.Mouseable interface
 // MouseDown: Detect which handle is clicked and start dragging
 func (rs *RangeSlider) MouseDown(e *desktop.MouseEvent) {
 	if e.Button == desktop.MouseButtonPrimary {
@@ -94,11 +95,13 @@ func (rs *RangeSlider) MouseDown(e *desktop.MouseEvent) {
 	}
 }
 
+// Implements desktop.Mouseable interface
 // MouseUp: Stop dragging when mouse is released
 func (rs *RangeSlider) MouseUp(e *desktop.MouseEvent) {
 	rs.dragging = "" // => reset the rs.dragging to be ""
 }
 
+// Imlements fyne.Draggable interface
 // Dragged: Move the selected handle based on mouse movement and refresh UI
 func (rs *RangeSlider) Dragged(e *fyne.DragEvent) {
 	width := rs.Size().Width
@@ -134,6 +137,7 @@ func (rs *RangeSlider) Dragged(e *fyne.DragEvent) {
 	}
 }
 
+// Imlements fyne.Draggable interface
 // DragEnd: Stop dragging
 func (rs *RangeSlider) DragEnd() {
 	//fmt.Println("DragEnd called")
@@ -179,6 +183,11 @@ func (rs *RangeSlider) updateGraphics() {
 	canvas.Refresh(rs.endHandle)
 }
 
+// Custom Renderer for RangeSlider
+type rangeSliderRenderer struct {
+	slider *RangeSlider
+}
+
 // func: Refresh()
 func (r *rangeSliderRenderer) Refresh() {
 	r.slider.updateGraphics()
@@ -186,11 +195,6 @@ func (r *rangeSliderRenderer) Refresh() {
 	canvas.Refresh(r.slider.barRange)
 	canvas.Refresh(r.slider.startHandle)
 	canvas.Refresh(r.slider.endHandle)
-}
-
-// Custom Renderer for RangeSlider
-type rangeSliderRenderer struct {
-	slider *RangeSlider
 }
 
 func (r *rangeSliderRenderer) Layout(size fyne.Size) {

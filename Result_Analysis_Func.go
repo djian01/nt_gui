@@ -300,9 +300,9 @@ func RaNtCmdGenerator(RaType string, pk ntPinger.Packet) string {
 		httpUrl := ntPinger.ConstructURL(myPk.Http_scheme, myPk.DestHost, myPk.Http_path, myPk.DestPort)
 
 		if myPk.Http_method != "GET" {
-			ntCmd = fmt.Sprintf("nt -r http -m %v %v %v", myPk.Http_method, myPk.DestHost, httpUrl)
+			ntCmd = fmt.Sprintf("nt -r http -m %v %v", myPk.Http_method, httpUrl)
 		} else {
-			ntCmd = fmt.Sprintf("nt -r http %v %v", myPk.DestHost, httpUrl)
+			ntCmd = fmt.Sprintf("nt -r http %v ", httpUrl)
 		}
 
 	case "tcp":

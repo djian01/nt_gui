@@ -75,7 +75,7 @@ func NtCmdGenerator(recording bool, iv ntPinger.InputVars) string {
 		httpUrl := ntPinger.ConstructURL(iv.Http_scheme, iv.DestHost, iv.Http_path, iv.DestPort)
 
 		// ntCmd
-		ntCmd = fmt.Sprintf("nt%s http%s%s%s %s %s", CmdRecording, CmdHttpMethod, CmdInterval, CmdTimeout, iv.DestHost, httpUrl)
+		ntCmd = fmt.Sprintf("nt%s http%s%s%s %s", CmdRecording, CmdHttpMethod, CmdInterval, CmdTimeout, httpUrl)
 
 	case "tcp":
 		// Interval

@@ -114,8 +114,7 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, cha
 			(*Summary).UpdateUI()
 
 			// update slider card
-			slider.rangeSlider.Max = float64(len(*chartData) - 1)
-			slider.rangeSlider.Min = 0
+			slider.rangeSlider.UpdateValues(0, float64(len(*chartData)-1), 0, float64(len(*chartData)-1))
 			slider.update()
 			slider.sliderCard.Hidden = false
 

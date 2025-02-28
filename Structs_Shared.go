@@ -199,9 +199,11 @@ func (s *Slider) Initial(min, max, start, end float64) {
 	s.rangeSlider = ntwidget.NewRangeSlider(min, max, start, end)
 
 	s.startIndicate = widget.NewLabel("From: ")
+	s.startIndicate.TextStyle = fyne.TextStyle{Bold: true}
 	s.startValue = widget.NewLabel("")
 
 	s.endIndicate = widget.NewLabel("To: ")
+	s.endIndicate.TextStyle = fyne.TextStyle{Bold: true}
 	s.endValue = widget.NewLabel("")
 
 	s.chartUpdateBtn = widget.NewButton("Update Chart", func() {})
@@ -227,7 +229,9 @@ func (s *Slider) CreateCard() {
 
 func (s *Slider) update() {
 	s.startValue.Text = (*s.chartData)[int(s.rangeSlider.Start)].XValues.Format("2006-01-02 15:04:05 MST")
+	s.startValue.Refresh()
 	s.endValue.Text = (*s.chartData)[int(s.rangeSlider.End)].XValues.Format("2006-01-02 15:04:05 MST")
+	s.endValue.Refresh()
 	s.rangeSlider.Layout(s.rangeSlider.Size())
 }
 

@@ -48,6 +48,14 @@ func NewRangeSlider(min, max, start, end float64) *RangeSlider {
 	return rs
 }
 
+// update range slider values: Min, Max, Start, End
+func (rs *RangeSlider) UpdateValues(min, max, start, end float64) {
+	rs.Min = min
+	rs.Max = max
+	rs.Start = start
+	rs.End = end
+}
+
 // Layout positions/size the components, ensuring the handles are circular
 func (rs *RangeSlider) Layout(size fyne.Size) {
 	barHeight := float32(4)

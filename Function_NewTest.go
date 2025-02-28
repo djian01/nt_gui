@@ -96,12 +96,7 @@ func NewTest(a fyne.App, testType string) {
 	recording := false
 	recordingLabel := widget.NewLabel("Result Recording:")
 	recordingCheck := widget.NewCheck("", func(b bool) {
-		if b {
-			recording = true
-		} else {
-			recording = false
-		}
-		fmt.Println(recording)
+		recording = b
 	})
 	recordingCell := formCell(recordingLabel, 150, recordingCheck, 50)
 
@@ -178,8 +173,11 @@ func NewTest(a fyne.App, testType string) {
 					iv.Interval = intervalValue
 					iv.DestHost = dnsServer
 					iv.Dns_query = dnsQueryEntry.Text
+
 					// start test
-					go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable)
+					go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording)
+
+					// close new test window
 					newTestWindow.Close()
 				}
 			} else {

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"image/color"
 	"strconv"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	ntchart "github.com/djian01/nt_gui/pkg/chart"
+	"github.com/djian01/nt_gui/pkg/ntwidget"
 )
 
 // ********* Chart ***************
@@ -181,83 +181,63 @@ type Slider struct {
 	chartData       *[]ntchart.ChartPoint
 	sliderChartData []ntchart.ChartPoint
 
-	sliderLeft         *widget.Slider
-	sliderLeftIndicate *widget.Label
-	sliderLeftValue    *widget.Label
+	rangeSlider *ntwidget.RangeSlider
 
-	sliderRight         *widget.Slider
-	sliderRightIndicate *widget.Label
-	sliderRightValue    *widget.Label
+	startIndicate *widget.Label
+	startValue    *widget.Label
+
+	endIndicate *widget.Label
+	endValue    *widget.Label
 
 	chartUpdateBtn *widget.Button
 	chartResetBtn  *widget.Button
 
-	ErrLabel *canvas.Text
-
 	sliderCard *widget.Card
 }
 
-func (s *Slider) Initial() {
-	s.sliderLeft = widget.NewSlider(0, 100)
-	s.sliderLeftIndicate = widget.NewLabel("From: ")
-	s.sliderLeftValue = widget.NewLabel("")
+func (s *Slider) Initial(min, max, start, end float64) {
+	s.rangeSlider = ntwidget.NewRangeSlider(min, max, start, end)
 
-	s.sliderRight = widget.NewSlider(0, 100)
-	s.sliderRightIndicate = widget.NewLabel("To: ")
-	s.sliderRightValue = widget.NewLabel("")
+	s.startIndicate = widget.NewLabel("From: ")
+	s.startValue = widget.NewLabel("")
+
+	s.endIndicate = widget.NewLabel("To: ")
+	s.endValue = widget.NewLabel("")
 
 	s.chartUpdateBtn = widget.NewButton("Update Chart", func() {})
 	s.chartUpdateBtn.Importance = widget.HighImportance
 
 	s.chartResetBtn = widget.NewButton("Reset Chart", func() {})
 	s.chartResetBtn.Importance = widget.WarningImportance
-
-	s.ErrLabel = canvas.NewText("No Error:", color.RGBA{255, 0, 0, 255})
-	s.ErrLabel.Hidden = true
-}
-
-func (s *Slider) initialSetMax(Max float64) {
-	s.sliderLeft.Min = 0
-	s.sliderLeft.Max = Max - 2
-	s.sliderRight.Min = 0 + 2
-	s.sliderRight.Max = Max
-	s.sliderLeft.SetValue(0)
-	s.sliderRight.SetValue(Max)
-	s.sliderUpdate()
 }
 
 func (s *Slider) CreateCard() {
-	sliderLeftContainerIn := container.New(layout.NewGridLayoutWithColumns(2), s.sliderLeft, s.sliderLeftValue)
-	sliderLeftContainerOut := container.New(layout.NewBorderLayout(nil, nil, s.sliderLeftIndicate, nil), s.sliderLeftIndicate, sliderLeftContainerIn)
+	spaceHolder := widget.NewLabel("              ")
+	RangeSliderContainer := container.New(layout.NewBorderLayout(nil, nil, spaceHolder, spaceHolder), spaceHolder, s.rangeSlider)
 
-	sliderRightContainerIn := container.New(layout.NewGridLayoutWithColumns(2), s.sliderRight, s.sliderRightValue)
-	sliderRightContainerOut := container.New(layout.NewBorderLayout(nil, nil, s.sliderRightIndicate, nil), s.sliderRightIndicate, sliderRightContainerIn)
-
-	sliderContainerIn := container.New(layout.NewGridLayoutWithColumns(2), sliderLeftContainerOut, sliderRightContainerOut)
-
+	startContainer := formCell(s.startIndicate, 50, s.startValue, 500)
+	endContainer := formCell(s.endIndicate, 50, s.endValue, 500)
+	startEndContainer := container.New(layout.NewHBoxLayout(), startContainer, endContainer)
 	btnContainer := container.New(layout.NewGridLayoutWithColumns(2), s.chartUpdateBtn, s.chartResetBtn)
-
-	sliderContainerOut := container.New(layout.NewBorderLayout(nil, nil, nil, btnContainer), btnContainer, sliderContainerIn)
-
-	sliderContainerMain := container.New(layout.NewBorderLayout(nil, s.ErrLabel, nil, nil), sliderContainerOut, s.ErrLabel)
+	sliderActionItems := container.New(layout.NewBorderLayout(nil, nil, nil, btnContainer), btnContainer, startEndContainer)
+	sliderContainerMain := container.New(layout.NewVBoxLayout(), RangeSliderContainer, sliderActionItems)
 
 	s.sliderCard = widget.NewCard("", "", sliderContainerMain)
 }
 
-func (s *Slider) sliderUpdate() {
-	s.sliderLeftValue.Text = (*s.chartData)[int(s.sliderLeft.Value)].XValues.Format("2006-01-02 15:04:05 MST")
-	s.sliderRightValue.Text = (*s.chartData)[int(s.sliderRight.Value)].XValues.Format("2006-01-02 15:04:05 MST")
-	s.sliderRight.Min = s.sliderLeft.Value + 2
-	s.sliderLeft.Max = s.sliderRight.Value - 2
+func (s *Slider) update() {
+	s.startValue.Text = (*s.chartData)[int(s.rangeSlider.Start)].XValues.Format("2006-01-02 15:04:05 MST")
+	s.endValue.Text = (*s.chartData)[int(s.rangeSlider.End)].XValues.Format("2006-01-02 15:04:05 MST")
+	s.rangeSlider.Layout(s.rangeSlider.Size())
 }
 
 func (s *Slider) BuildSliderChartData() {
 	s.sliderChartData = []ntchart.ChartPoint{}
 	for i, data := range *s.chartData {
-		if i >= int(s.sliderLeft.Value) {
+		if i >= int(s.rangeSlider.Start) {
 			s.sliderChartData = append(s.sliderChartData, data)
 		}
-		if i > int(s.sliderRight.Value) {
+		if i > int(s.rangeSlider.End) {
 			break
 		}
 	}
@@ -269,7 +249,9 @@ func (s *Slider) UpdateChartImage(RaType string, chart *Chart) {
 }
 
 func (s *Slider) ResetChartImage(RaType string, chart *Chart) {
-	s.initialSetMax(float64(len(*(s.chartData)) - 1))
+	s.rangeSlider.Start = s.rangeSlider.Min
+	s.rangeSlider.End = s.rangeSlider.Max
+	s.update()
 	(*chart).ChartUpdate(RaType, s.chartData)
 }
 

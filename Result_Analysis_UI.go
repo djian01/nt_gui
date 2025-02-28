@@ -43,7 +43,7 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 
 	// Slider Card
 	slider := Slider{}
-	slider.Initial()
+	slider.Initial(0, 100, 0, 100)
 	slider.chartData = &chartData
 	slider.CreateCard()
 	slider.sliderCard.Hidden = true
@@ -57,8 +57,7 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(w, &inputResultPackets, &chartData, &chart, &Summary, inputResultCSVFilePath, &slider)
 
 	// Slider Update
-	slider.sliderLeft.OnChanged = func(f float64) { slider.sliderUpdate() }
-	slider.sliderRight.OnChanged = func(f float64) { slider.sliderUpdate() }
+	slider.rangeSlider.OnChanged = func() { slider.update() }
 
 	// Return your result analysis interface components here
 	return RaMainContainerOuter // Temporary empty container, replace with your actual UI
@@ -115,7 +114,9 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, cha
 			(*Summary).UpdateUI()
 
 			// update slider card
-			(*slider).initialSetMax(float64(len(*chartData) - 1))
+			slider.rangeSlider.Max = float64(len(*chartData) - 1)
+			slider.rangeSlider.Min = 0
+			slider.update()
 			slider.sliderCard.Hidden = false
 
 			// slider update chart image btn

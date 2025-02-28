@@ -66,7 +66,7 @@ func DNSPingContainer(a fyne.App, w fyne.Window) *fyne.Container {
 }
 
 // func: Add Ping Row
-func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dnsTableBody *fyne.Container) {
+func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dnsTableBody *fyne.Container, recording bool) {
 
 	// ResultGenerateDNS()
 	myDnsPing := dnsObject{}
@@ -76,20 +76,34 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	myPingIndex := strconv.Itoa(*indexPing)
 
 	myDnsPing.DnsGUI.Index.Object.(*widget.Label).Text = myPingIndex
+	myDnsPing.DnsGUI.Index.Object.(*widget.Label).Refresh()
 	*indexPing++
 
 	// Update Resolver
 	myDnsPing.DnsGUI.Resolver.Object.(*widget.Label).Text = TruncateString(inputVars.DestHost, 22)
+	myDnsPing.DnsGUI.Resolver.Object.(*widget.Label).Refresh()
 
 	// Update DNS Query
 	myDnsPing.DnsGUI.Query.Object.(*widget.Label).Text = TruncateString(inputVars.Dns_query, 25)
+	myDnsPing.DnsGUI.Query.Object.(*widget.Label).Refresh()
 
 	// Update StartTime
 	myDnsPing.DnsGUI.StartTime.Object.(*widget.Label).Text = time.Now().Format("2006-01-02 15:04:05 MST")
+	myDnsPing.DnsGUI.StartTime.Object.(*widget.Label).Refresh()
 
 	// update table body
 	dnsTableBody.Add(myDnsPing.DnsGUI.DnsTableRow)
 	dnsTableBody.Refresh()
+
+	// update recording
+	if recording {
+		myDnsPing.DnsGUI.Recording.Object.(*widget.Label).Text = "ON"
+	} else {
+		myDnsPing.DnsGUI.Recording.Object.(*widget.Label).Text = "OFF"
+	}
+	myDnsPing.DnsGUI.Recording.Object.(*widget.Label).Refresh()
+
+	// Add New Entry to DB History
 
 	// ** start ntPinger Probe **
 
@@ -130,7 +144,7 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	// OnTapped Func - Replay btn
 	myDnsPing.DnsGUI.ReplayBtn.OnTapped = func() {
 		// re-launch a new go routine for DnsAddPingRow with the same InputVar
-		go DnsAddPingRow(a, indexPing, inputVars, dnsTableBody)
+		go DnsAddPingRow(a, indexPing, inputVars, dnsTableBody, recording)
 	}
 
 	// OnTapped Func - close btn
@@ -170,6 +184,8 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 			}
 			myDnsPing.DnsGUI.UpdateRow(&pkt)
 			myDnsPing.UpdateChartData(&pkt)
+
+			// Add test result entry to DB is "recording" is "ON"
 
 		// harvest the errChan input
 		case err := <-errChan:

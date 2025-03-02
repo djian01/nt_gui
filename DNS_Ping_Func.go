@@ -381,9 +381,9 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 				loopClose = true
 				break // break select, bypass following code in the same case
 			}
-			myDnsPing.DnsGUI.UpdateRow(&pkt)
-			myDnsPing.UpdateChartData(&pkt)
-			myDnsPing.testSummary.UpdateRunning(&pkt)
+			myDnsPing.DnsGUI.UpdateRow(&pkt)          // update row display
+			myDnsPing.UpdateChartData(&pkt)           // update chart Data slide
+			myDnsPing.testSummary.UpdateRunning(&pkt) // update summary Data
 
 			// Add test result entry to DB is "recording" is "ON"
 

@@ -24,7 +24,7 @@ type testGUIRow interface {
 
 // Interace testObject
 type testObject interface {
-	Initial()
+	Initial(*SummaryData)
 	UpdateChartData(pkt *ntPinger.Packet)
 	DisplayChartDataTerminal()
 	Stop(p *ntPinger.Pinger)
@@ -80,8 +80,42 @@ func (sd *SummaryData) Initial(pType, destHost, ntCmd string, startTime time.Tim
 }
 
 // Update Summary Data - Running
-func (sd *SummaryData) UpdateRunning(p *ntPinger.Packet, pType string) {
+func (sd *SummaryData) UpdateRunning(p *ntPinger.Packet) {
+	switch sd.Type {
+	case "dns":
+		myPacket := (*p).(*ntPinger.PacketDNS)
+		sd.PacketSent = myPacket.PacketsSent
+		sd.SuccessResponse = myPacket.PacketsRecv
+		sd.FailRate = fmt.Sprintf("%.2f%%", float64(myPacket.PacketLoss*100))
+		sd.MinRTT = myPacket.MinRtt
+		sd.MaxRTT = myPacket.MaxRtt
+		sd.AvgRtt = myPacket.AvgRtt
+	case "http":
+		myPacket := (*p).(*ntPinger.PacketHTTP)
+		sd.PacketSent = myPacket.PacketsSent
+		sd.SuccessResponse = myPacket.PacketsRecv
+		sd.FailRate = fmt.Sprintf("%.2f%%", float64(myPacket.PacketLoss*100))
+		sd.MinRTT = myPacket.MinRtt
+		sd.MaxRTT = myPacket.MaxRtt
+		sd.AvgRtt = myPacket.AvgRtt
+	case "tcp":
+		myPacket := (*p).(*ntPinger.PacketTCP)
+		sd.PacketSent = myPacket.PacketsSent
+		sd.SuccessResponse = myPacket.PacketsRecv
+		sd.FailRate = fmt.Sprintf("%.2f%%", float64(myPacket.PacketLoss*100))
+		sd.MinRTT = myPacket.MinRtt
+		sd.MaxRTT = myPacket.MaxRtt
+		sd.AvgRtt = myPacket.AvgRtt
+	case "icmp":
+		myPacket := (*p).(*ntPinger.PacketICMP)
+		sd.PacketSent = myPacket.PacketsSent
+		sd.SuccessResponse = myPacket.PacketsRecv
+		sd.FailRate = fmt.Sprintf("%.2f%%", float64(myPacket.PacketLoss*100))
+		sd.MinRTT = myPacket.MinRtt
+		sd.MaxRTT = myPacket.MaxRtt
+		sd.AvgRtt = myPacket.AvgRtt
 
+	}
 }
 
 // *********** Summary UI **********

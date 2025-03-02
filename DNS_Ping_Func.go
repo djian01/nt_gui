@@ -228,14 +228,15 @@ func (d *dnsGUIRow) UpdateRow(p *ntPinger.Packet) {
 // ******* struct dnsObject ********
 
 type dnsObject struct {
-	testSummary SummaryData
+	testSummary *SummaryData
 	ChartData   []ntchart.ChartPoint
 	DnsGUI      dnsGUIRow
 }
 
-func (d *dnsObject) Initial() {
-	// initial summary
-	d.testSummary = SummaryData{}
+func (d *dnsObject) Initial(testSummary *SummaryData) {
+
+	// test Summary
+	d.testSummary = testSummary
 
 	// ChartData
 	d.ChartData = []ntchart.ChartPoint{}
@@ -272,9 +273,13 @@ func (d *dnsObject) Stop(p *ntPinger.Pinger) {
 // func: Add Ping Row
 func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dnsTableBody *fyne.Container, recording bool) {
 
+	// Create Summary Data
+	mySumData := SummaryData{}
+	mySumData.Initial("dns", inputVars.DestHost, NtCmdGenerator(recording, *inputVars), time.Now())
+
 	// ResultGenerateDNS()
 	myDnsPing := dnsObject{}
-	myDnsPing.Initial()
+	myDnsPing.Initial(&mySumData)
 
 	// update index
 	myPingIndex := strconv.Itoa(*indexPing)
@@ -292,7 +297,7 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	myDnsPing.DnsGUI.Query.Object.(*widget.Label).Refresh()
 
 	// Update StartTime
-	myDnsPing.DnsGUI.StartTime.Object.(*widget.Label).Text = time.Now().Format("2006-01-02 15:04:05 MST")
+	myDnsPing.DnsGUI.StartTime.Object.(*widget.Label).Text = mySumData.StartTime.Format("2006-01-02 15:04:05 MST")
 	myDnsPing.DnsGUI.StartTime.Object.(*widget.Label).Refresh()
 
 	// update table body
@@ -378,6 +383,7 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 			}
 			myDnsPing.DnsGUI.UpdateRow(&pkt)
 			myDnsPing.UpdateChartData(&pkt)
+			myDnsPing.testSummary.UpdateRunning(&pkt)
 
 			// Add test result entry to DB is "recording" is "ON"
 

@@ -16,6 +16,10 @@ import (
 	ntchart "github.com/djian01/nt_gui/pkg/chart"
 )
 
+// check interafce implementation
+var _ testGUIRow = (*dnsGUIRow)(nil)
+var _ testObject = (*dnsObject)(nil)
+
 // ******* struct dnsGUIRow ********
 
 type dnsGUIRow struct {
@@ -224,14 +228,14 @@ func (d *dnsGUIRow) UpdateRow(p *ntPinger.Packet) {
 // ******* struct dnsObject ********
 
 type dnsObject struct {
-	FailCount int
-	ChartData []ntchart.ChartPoint
-	DnsGUI    dnsGUIRow
+	testSummary SummaryData
+	ChartData   []ntchart.ChartPoint
+	DnsGUI      dnsGUIRow
 }
 
 func (d *dnsObject) Initial() {
-	// initial fail count
-	d.FailCount = 0
+	// initial summary
+	d.testSummary = SummaryData{}
 
 	// ChartData
 	d.ChartData = []ntchart.ChartPoint{}
@@ -249,6 +253,20 @@ func (d *dnsObject) DisplayChartDataTerminal() {
 	for _, d := range d.ChartData {
 		fmt.Println(d)
 	}
+}
+
+// Stop the pinger
+func (d *dnsObject) Stop(p *ntPinger.Pinger) {
+	p.PingerEnd = true
+	time.Sleep(200 * time.Millisecond) // wait for the test to stop
+
+	d.DnsGUI.StopBtn.Disable()
+	d.DnsGUI.CloseBtn.Enable()
+	d.DnsGUI.ReplayBtn.Enable()
+
+	d.DnsGUI.Status.Object.(*canvas.Text).Text = "Stop"
+	d.DnsGUI.Status.Object.(*canvas.Text).Color = color.RGBA{165, 42, 42, 255}
+	d.DnsGUI.Status.Object.(*canvas.Text).Refresh()
 }
 
 // func: Add Ping Row
@@ -314,17 +332,7 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 	// OnTapped Func - Stop btn
 	myDnsPing.DnsGUI.StopBtn.OnTapped = func() {
-		p.PingerEnd = true
-		time.Sleep(200 * time.Millisecond) // wait for the test to stop
-
-		myDnsPing.DnsGUI.StopBtn.Disable()
-		myDnsPing.DnsGUI.CloseBtn.Enable()
-		myDnsPing.DnsGUI.ReplayBtn.Enable()
-
-		myDnsPing.DnsGUI.Status.Object.(*canvas.Text).Text = "Stop"
-		myDnsPing.DnsGUI.Status.Object.(*canvas.Text).Color = color.RGBA{165, 42, 42, 255}
-		myDnsPing.DnsGUI.Status.Object.(*canvas.Text).Refresh()
-
+		myDnsPing.Stop(p)
 	}
 
 	// OnTapped Func - Replay btn

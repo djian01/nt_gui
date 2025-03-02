@@ -13,7 +13,7 @@ import (
 )
 
 // func: Append Packet Slide
-func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records *[][]string, chartData *[]ntchart.ChartPoint, Summary *Summary) {
+func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records *[][]string, chartData *[]ntchart.ChartPoint, Summary *SummaryData) {
 
 	var chartPoint ntchart.ChartPoint
 	recordLen := len(*records)

@@ -10,9 +10,25 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
+	"github.com/djian01/nt/pkg/ntPinger"
 	ntchart "github.com/djian01/nt_gui/pkg/chart"
 	"github.com/djian01/nt_gui/pkg/ntwidget"
 )
+
+// Interface testGUIRow
+type testGUIRow interface {
+	Initial()
+	GenerateHeaderRow() *fyne.Container
+	UpdateRow(p *ntPinger.Packet)
+}
+
+// Interace testObject
+type testObject interface {
+	Initial()
+	UpdateChartData(pkt *ntPinger.Packet)
+	DisplayChartDataTerminal()
+	Stop(p *ntPinger.Pinger)
+}
 
 // ********* Chart ***************
 type Chart struct {
@@ -39,13 +55,13 @@ func (c *Chart) ChartUpdate(RaType string, chartData *[]ntchart.ChartPoint) {
 	c.chartContainer.Refresh()
 }
 
-// ********* Summary ***************
+// ********* Summary Data ***************
 
-type Summary struct {
+type SummaryData struct {
 	Type            string
 	DestHost        string
 	StartTime       time.Time
-	EndTime         time.Time // if the test is still on-going, Endtime is "--"
+	EndTime         time.Time
 	PacketSent      int
 	SuccessResponse int
 	FailRate        string
@@ -53,26 +69,22 @@ type Summary struct {
 	MaxRTT          time.Duration
 	AvgRtt          time.Duration
 	ntCmd           string
-	UI              SummaryUI
 }
 
-func (s *Summary) UpdateUI() {
-
-	// update summary UI
-	s.UI.typeEntry.SetText((*s).Type)
-	s.UI.destHostEntry.SetText((*s).DestHost)
-
-	s.UI.startTimeEntry.SetText((*s).StartTime.Format(("2006-01-02 15:04:05 MST")))
-	s.UI.endTimeEntry.SetText((*s).EndTime.Format(("2006-01-02 15:04:05 MST")))
-	s.UI.packetSentEntry.SetText(strconv.Itoa((*s).PacketSent))
-	s.UI.successResponseEntry.SetText(strconv.Itoa((*s).SuccessResponse))
-	s.UI.failRateEntry.SetText((*s).FailRate)
-	s.UI.minRttEntry.SetText(fmt.Sprintf("%d ms", (*s).MinRTT.Milliseconds()))
-	s.UI.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*s).MaxRTT.Milliseconds()))
-	s.UI.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*s).AvgRtt.Milliseconds()))
-	s.UI.ntCmdEntry.SetText((*s).ntCmd)
+// Update Summary Data - Initial
+func (sd *SummaryData) Initial(pType, destHost, ntCmd string, startTime time.Time) {
+	sd.Type = pType
+	sd.ntCmd = ntCmd
+	sd.StartTime = startTime
+	sd.DestHost = destHost
 }
 
+// Update Summary Data - Running
+func (sd *SummaryData) UpdateRunning(p *ntPinger.Packet, pType string) {
+
+}
+
+// *********** Summary UI **********
 type SummaryUI struct {
 	typeLabel *widget.Label
 	typeEntry *widget.Entry
@@ -84,7 +96,7 @@ type SummaryUI struct {
 	startTimeEntry *widget.Entry
 
 	endTimeLabel *widget.Label
-	endTimeEntry *widget.Entry
+	endTimeEntry *widget.Entry // if the test is still on-going, Endtime is "--"
 
 	packetSentLabel *widget.Label
 	packetSentEntry *widget.Entry
@@ -111,68 +123,116 @@ type SummaryUI struct {
 	summaryCard *widget.Card
 }
 
-func (s *SummaryUI) Initial() {
-	s.typeLabel = widget.NewLabel("Type              ")
-	s.typeEntry = widget.NewEntry()
+func (sui *SummaryUI) Initial() {
+	sui.typeLabel = widget.NewLabel("Type              ")
+	sui.typeEntry = widget.NewEntry()
 
-	s.destHostLabel = widget.NewLabel("Dest Host/IP")
-	s.destHostEntry = widget.NewEntry()
+	sui.destHostLabel = widget.NewLabel("Dest Host/IP")
+	sui.destHostEntry = widget.NewEntry()
 
-	s.startTimeLabel = widget.NewLabel("Start Time    ")
-	s.startTimeEntry = widget.NewEntry()
+	sui.startTimeLabel = widget.NewLabel("Start Time    ")
+	sui.startTimeEntry = widget.NewEntry()
 
-	s.endTimeLabel = widget.NewLabel("End Time      ")
-	s.endTimeEntry = widget.NewEntry()
+	sui.endTimeLabel = widget.NewLabel("End Time      ")
+	sui.endTimeEntry = widget.NewEntry()
 
-	s.packetSentLabel = widget.NewLabel("Packets Sent")
-	s.packetSentEntry = widget.NewEntry()
+	sui.packetSentLabel = widget.NewLabel("Packets Sent")
+	sui.packetSentEntry = widget.NewEntry()
 
-	s.successRespLabel = widget.NewLabel("Success Probs")
-	s.successResponseEntry = widget.NewEntry()
+	sui.successRespLabel = widget.NewLabel("Success Probs")
+	sui.successResponseEntry = widget.NewEntry()
 
-	s.failRateLabel = widget.NewLabel("Fail Rate    ")
-	s.failRateEntry = widget.NewEntry()
+	sui.failRateLabel = widget.NewLabel("Fail Rate    ")
+	sui.failRateEntry = widget.NewEntry()
 
-	s.minRttLabel = widget.NewLabel("Min RTT        ")
-	s.minRttEntry = widget.NewEntry()
+	sui.minRttLabel = widget.NewLabel("Min RTT        ")
+	sui.minRttEntry = widget.NewEntry()
 
-	s.maxRttLabel = widget.NewLabel("Max RTT          ")
-	s.maxRttEntry = widget.NewEntry()
+	sui.maxRttLabel = widget.NewLabel("Max RTT          ")
+	sui.maxRttEntry = widget.NewEntry()
 
-	s.avgRttLabel = widget.NewLabel("Avg RTT     ")
-	s.avgRttEntry = widget.NewEntry()
+	sui.avgRttLabel = widget.NewLabel("Avg RTT     ")
+	sui.avgRttEntry = widget.NewEntry()
 
-	s.ntCmdLabel = widget.NewLabel("nt CMD         ")
-	s.ntCmdEntry = widget.NewEntry()
-	s.ntCmdBtn = widget.NewButton("Relaunch CMD", func() {})
-	s.ntCmdBtn.Importance = widget.HighImportance
+	sui.ntCmdLabel = widget.NewLabel("nt CMD         ")
+	sui.ntCmdEntry = widget.NewEntry()
+	sui.ntCmdBtn = widget.NewButton("Relaunch CMD", func() {})
+	sui.ntCmdBtn.Importance = widget.HighImportance
 }
 
-func (s *SummaryUI) CreateCard() {
+func (sui *SummaryUI) CreateCard() {
 
 	// cell containers
-	typeContainer := container.New(layout.NewBorderLayout(nil, nil, s.typeLabel, nil), s.typeLabel, s.typeEntry)
-	destHostContainer := container.New(layout.NewBorderLayout(nil, nil, s.destHostLabel, nil), s.destHostLabel, s.destHostEntry)
-	startTimeContainer := container.New(layout.NewBorderLayout(nil, nil, s.startTimeLabel, nil), s.startTimeLabel, s.startTimeEntry)
-	endTimeContainer := container.New(layout.NewBorderLayout(nil, nil, s.endTimeLabel, nil), s.endTimeLabel, s.endTimeEntry)
-	packetSentContainer := container.New(layout.NewBorderLayout(nil, nil, s.packetSentLabel, nil), s.packetSentLabel, s.packetSentEntry)
-	successRespContainer := container.New(layout.NewBorderLayout(nil, nil, s.successRespLabel, nil), s.successRespLabel, s.successResponseEntry)
-	failRateContainer := container.New(layout.NewBorderLayout(nil, nil, s.failRateLabel, nil), s.failRateLabel, s.failRateEntry)
-	minRttContainer := container.New(layout.NewBorderLayout(nil, nil, s.minRttLabel, nil), s.minRttLabel, s.minRttEntry)
-	maxRttContainer := container.New(layout.NewBorderLayout(nil, nil, s.maxRttLabel, nil), s.maxRttLabel, s.maxRttEntry)
-	avgRttContainer := container.New(layout.NewBorderLayout(nil, nil, s.avgRttLabel, nil), s.avgRttLabel, s.avgRttEntry)
-	ntCmdContainer := container.New(layout.NewBorderLayout(nil, nil, s.ntCmdLabel, nil), s.ntCmdLabel, s.ntCmdEntry)
+	typeContainer := container.New(layout.NewBorderLayout(nil, nil, sui.typeLabel, nil), sui.typeLabel, sui.typeEntry)
+	destHostContainer := container.New(layout.NewBorderLayout(nil, nil, sui.destHostLabel, nil), sui.destHostLabel, sui.destHostEntry)
+	startTimeContainer := container.New(layout.NewBorderLayout(nil, nil, sui.startTimeLabel, nil), sui.startTimeLabel, sui.startTimeEntry)
+	endTimeContainer := container.New(layout.NewBorderLayout(nil, nil, sui.endTimeLabel, nil), sui.endTimeLabel, sui.endTimeEntry)
+	packetSentContainer := container.New(layout.NewBorderLayout(nil, nil, sui.packetSentLabel, nil), sui.packetSentLabel, sui.packetSentEntry)
+	successRespContainer := container.New(layout.NewBorderLayout(nil, nil, sui.successRespLabel, nil), sui.successRespLabel, sui.successResponseEntry)
+	failRateContainer := container.New(layout.NewBorderLayout(nil, nil, sui.failRateLabel, nil), sui.failRateLabel, sui.failRateEntry)
+	minRttContainer := container.New(layout.NewBorderLayout(nil, nil, sui.minRttLabel, nil), sui.minRttLabel, sui.minRttEntry)
+	maxRttContainer := container.New(layout.NewBorderLayout(nil, nil, sui.maxRttLabel, nil), sui.maxRttLabel, sui.maxRttEntry)
+	avgRttContainer := container.New(layout.NewBorderLayout(nil, nil, sui.avgRttLabel, nil), sui.avgRttLabel, sui.avgRttEntry)
+	ntCmdContainer := container.New(layout.NewBorderLayout(nil, nil, sui.ntCmdLabel, nil), sui.ntCmdLabel, sui.ntCmdEntry)
 
 	// rows
 	summaryRow1 := container.New(layout.NewGridLayoutWithColumns(2), typeContainer, destHostContainer)
 	summaryRow2 := container.New(layout.NewGridLayoutWithColumns(2), startTimeContainer, endTimeContainer)
 	summaryRow3 := container.New(layout.NewGridLayoutWithColumns(3), packetSentContainer, successRespContainer, failRateContainer)
 	summaryRow4 := container.New(layout.NewGridLayoutWithColumns(3), minRttContainer, maxRttContainer, avgRttContainer)
-	summaryRow5 := container.New(layout.NewBorderLayout(nil, nil, nil, s.ntCmdBtn), s.ntCmdBtn, ntCmdContainer)
+	summaryRow5 := container.New(layout.NewBorderLayout(nil, nil, nil, sui.ntCmdBtn), sui.ntCmdBtn, ntCmdContainer)
 
 	// overall container and card
 	summaryContainer := container.New(layout.NewGridLayoutWithRows(5), summaryRow1, summaryRow2, summaryRow3, summaryRow4, summaryRow5)
-	s.summaryCard = widget.NewCard("", "", summaryContainer)
+	sui.summaryCard = widget.NewCard("", "", summaryContainer)
+}
+
+// Update Summary UI with all fields
+func (sui *SummaryUI) UpdateStaticUI(sd *SummaryData) {
+
+	// update summary UI
+	sui.typeEntry.SetText((*sd).Type)
+	sui.destHostEntry.SetText((*sd).DestHost)
+	sui.startTimeEntry.SetText((*sd).StartTime.Format(("2006-01-02 15:04:05 MST")))
+	sui.endTimeEntry.SetText((*sd).EndTime.Format(("2006-01-02 15:04:05 MST")))
+	sui.packetSentEntry.SetText(strconv.Itoa((*sd).PacketSent))
+	sui.successResponseEntry.SetText(strconv.Itoa((*sd).SuccessResponse))
+	sui.failRateEntry.SetText((*sd).FailRate)
+	sui.minRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MinRTT.Milliseconds()))
+	sui.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MaxRTT.Milliseconds()))
+	sui.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).AvgRtt.Milliseconds()))
+	sui.ntCmdEntry.SetText((*sd).ntCmd)
+}
+
+// Update Summary UI Initial - when the test is running.
+func (sui *SummaryUI) UpdateUI_Initial(sd *SummaryData) {
+	// update summary UI
+	sui.typeEntry.SetText((*sd).Type)
+	sui.destHostEntry.SetText((*sd).DestHost)
+	sui.startTimeEntry.SetText((*sd).StartTime.Format(("2006-01-02 15:04:05 MST")))
+	// s.UI.endTimeEntry.SetText("--")
+	// s.UI.packetSentEntry.SetText("--")
+	// s.UI.successResponseEntry.SetText("--")
+	// s.UI.failRateEntry.SetText("--")
+	// s.UI.minRttEntry.SetText("--")
+	// s.UI.maxRttEntry.SetText("--")
+	// s.UI.avgRttEntry.SetText("--")
+	sui.ntCmdEntry.SetText((*sd).ntCmd)
+}
+
+// Update Summary UI Initial - when the test is running.
+func (sui *SummaryUI) UpdateUI_Running(sd *SummaryData) {
+	sui.packetSentEntry.SetText(strconv.Itoa((*sd).PacketSent))
+	sui.successResponseEntry.SetText(strconv.Itoa((*sd).SuccessResponse))
+	sui.failRateEntry.SetText((*sd).FailRate)
+	sui.minRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MinRTT.Milliseconds()))
+	sui.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MaxRTT.Milliseconds()))
+	sui.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).AvgRtt.Milliseconds()))
+}
+
+// Update Summary UI Initial - when the test is ended.
+func (sui *SummaryUI) UpdateUI_Ended(sd *SummaryData) {
+	sui.endTimeEntry.SetText((*sd).EndTime.Format(("2006-01-02 15:04:05 MST")))
 }
 
 // ********* Chart Update Slider ***************

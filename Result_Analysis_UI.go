@@ -33,9 +33,10 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	inputResultCSVFileCard := widget.NewCard("", "Input the existing Result CSV File", inputNSXConfigContainer)
 
 	// Summary Card
-	Summary := Summary{}
-	Summary.UI.Initial()
-	Summary.UI.CreateCard()
+	SumD := SummaryData{}
+	SumUI := SummaryUI{}
+	SumUI.Initial()
+	SumUI.CreateCard()
 
 	// Chart Card (Place Holder)
 	chart := Chart{}
@@ -50,11 +51,11 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 
 	//// Main Container
 	RASpaceHolder := widget.NewLabel("                     ")
-	RaMainContainerInner := container.New(layout.NewVBoxLayout(), inputResultCSVFileCard, Summary.UI.summaryCard, chart.chartCard, slider.sliderCard)
+	RaMainContainerInner := container.New(layout.NewVBoxLayout(), inputResultCSVFileCard, SumUI.summaryCard, chart.chartCard, slider.sliderCard)
 	RaMainContainerOuter := container.New(layout.NewBorderLayout(RASpaceHolder, RASpaceHolder, RASpaceHolder, RASpaceHolder), RASpaceHolder, RaMainContainerInner)
 
 	// Input NSX Config File BTN
-	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(w, &inputResultPackets, &chartData, &chart, &Summary, inputResultCSVFilePath, &slider)
+	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(w, &inputResultPackets, &chartData, &chart, &SumD, &SumUI, inputResultCSVFilePath, &slider)
 
 	// Slider Update
 	slider.rangeSlider.OnChanged = func() { slider.update() }
@@ -64,7 +65,7 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 }
 
 // func: OpenResultCSVFile
-func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chart *Chart, Summary *Summary, inputResultCSVFilePath *widget.Entry, slider *Slider) func() {
+func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chart *Chart, SumD *SummaryData, SumUI *SummaryUI, inputResultCSVFilePath *widget.Entry, slider *Slider) func() {
 	return func() {
 
 		// reset vars
@@ -102,16 +103,16 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, cha
 
 			// Get Result Analysis File Type
 			RaType := records[1][0]
-			(*Summary).Type = RaType
+			(*SumD).Type = RaType
 
-			appendPacket(inputResultPackets, RaType, &records, chartData, Summary)
+			appendPacket(inputResultPackets, RaType, &records, chartData, SumD)
 
 			// Create an image Chart
 			// verify the image.Bounds(), e.g. image bounds: (0,0)-(1024,512) is good. code -> fmt.Println("image bounds:", image.Bounds())
 			(*chart).ChartUpdate(RaType, chartData)
 
-			// update summary
-			(*Summary).UpdateUI()
+			// update summary UI
+			(*SumUI).UpdateStaticUI(SumD)
 
 			// update slider card
 			slider.rangeSlider.UpdateValues(0, float64(len(*chartData)-1), 0, float64(len(*chartData)-1))

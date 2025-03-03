@@ -49,14 +49,6 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 	chartBtnStop := widget.NewButtonWithIcon("Stop Test", theme.MediaStopIcon(), func() {})
 	chartBtnStop.Importance = widget.HighImportance
 	chartBtnStopContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnStop)
-	chartBtnStop.OnTapped = func() { // Stop on tap function
-		testObj.Stop(p)
-		testSummary.testEnded = true
-		chartBtnPause.Disable()
-		chartBtnPlay.Disable()
-		chartBtnStop.Disable()
-		chartBtnRecord.Disable()
-	}
 
 	if testSummary.testEnded { // if test is already stopped, disable the all buttons
 		chartBtnPause.Disable()
@@ -81,13 +73,45 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 	chartSlider.Initial(0, 100, 0, 100)
 	chartSlider.chartData = testChart
 	chartSlider.CreateCard()
-	//chartSlider.sliderCard.Hidden = true
+	chartSlider.sliderCard.Hidden = true
+	chartSlider.rangeSlider.OnChanged = func() { chartSlider.update() }
 
 	// close window Btn Container
 	chartWindowCloseBtn := widget.NewButton("Close Window", func() {
 		newChartWindow.Close()
 	})
 	ChartWindowCloseContainer := container.New(layout.NewCenterLayout(), container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 40)), chartWindowCloseBtn))
+
+	// update btn functions
+	//// Pause Btn Function
+	chartBtnPause.OnTapped = func() {
+
+	}
+	//// Play Btn Function
+	chartBtnPlay.OnTapped = func() {
+
+	}
+	//// Record Btn Function
+	chartBtnRecord.OnTapped = func() {
+
+	}
+
+	//// Stop Btn Function
+	chartBtnStop.OnTapped = func() { // Stop on tap function
+		testObj.Stop(p)
+		testSummary.testEnded = true
+		chartBtnPause.Disable()
+		chartBtnPlay.Disable()
+		chartBtnStop.Disable()
+		chartBtnRecord.Disable()
+		// update slider value
+		chartSlider.rangeSlider.UpdateValues(0, float64(len(*testChart)-1), 0, float64(len(*testChart)-1))
+		chartSlider.update()
+
+		// slider visible
+		chartSlider.sliderCard.Hidden = false
+		chartSlider.sliderCard.Refresh()
+	}
 
 	// New Chart Window Container
 	chartContainerMainIn := container.New(layout.NewVBoxLayout(), testSummaryUI.summaryCard, chartBtnCard, chartBody.chartCard, chartSlider.sliderCard, ChartWindowCloseContainer)

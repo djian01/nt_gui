@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/url"
 	"regexp"
+	"strconv"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -22,8 +24,8 @@ func GUIVerticalSeparator() *canvas.Rectangle {
 	return separator
 }
 
-// Func: Generate NT CMD
-func NtCmdGenerator(recording bool, iv ntPinger.InputVars) string {
+// Func: Generate NT CMD by InputVars
+func Iv2NtCmd(recording bool, iv ntPinger.InputVars) string {
 
 	// initial Cmd
 	ntCmd := ""
@@ -117,6 +119,109 @@ func NtCmdGenerator(recording bool, iv ntPinger.InputVars) string {
 	return ntCmd
 }
 
+// Func: Generate InputVars from NT CMD
+func NtCmd2Iv(cmd string) (bool, ntPinger.InputVars, error) {
+	var iv ntPinger.InputVars
+	var recording bool
+
+	// Split command into parts based on the white spaces
+	parts := strings.Fields(cmd)
+	if len(parts) < 2 || parts[0] != "nt" {
+		return false, iv, fmt.Errorf("invalid command format")
+	}
+
+	// Check for recording flag
+	if parts[1] == "-r" {
+		recording = true
+		parts = append([]string{}, parts[2:]...) // Remove "nt -r"
+	} else if parts[0] == "nt" {
+		parts = parts[1:] // Remove "nt"
+	} else {
+		return false, iv, fmt.Errorf("invalid command format, should start with 'nt'")
+	}
+
+	// Command type
+	if len(parts) < 1 {
+		return false, iv, fmt.Errorf("missing command type")
+	}
+	iv.Type = parts[0]
+	args := parts[1:]
+
+	// Iterate over arguments
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "-c":
+			if i+1 < len(args) {
+				iv.Count, _ = strconv.Atoi(args[i+1])
+			}
+		case "-i":
+			if i+1 < len(args) {
+				iv.Interval, _ = strconv.Atoi(args[i+1])
+			}
+		case "-t":
+			if i+1 < len(args) {
+				iv.Timeout, _ = strconv.Atoi(args[i+1])
+			}
+		case "-o":
+			if i+1 < len(args) && iv.Type == "dns" {
+				iv.Dns_Protocol = args[i+1]
+			}
+		case "-m":
+			if i+1 < len(args) && iv.Type == "http" {
+				iv.Http_method = args[i+1]
+			}
+		case "-s":
+			if i+1 < len(args) && iv.Type == "icmp" {
+				iv.PayLoadSize, _ = strconv.Atoi(args[i+1])
+			}
+		case "-d":
+			if iv.Type == "icmp" {
+				iv.Icmp_DF = true
+			}
+		default:
+			// Assign destination and additional parameters
+
+			if iv.Type == "icmp" {
+				iv.DestHost = args[len(args)-1]
+			} else if iv.Type == "tcp" {
+				iv.DestHost = args[len(args)-2]
+				iv.DestPort, _ = strconv.Atoi(args[len(args)-1])
+			} else if iv.Type == "http" {
+				httpVars, _ := ParseURL2HttpVars(args[len(args)-1])
+				iv.DestHost = httpVars.Hostname
+				iv.Http_path = httpVars.Path
+				iv.Http_scheme = httpVars.Scheme
+				iv.DestPort = httpVars.Port
+
+			} else if iv.Type == "dns" {
+				iv.DestHost = args[len(args)-2]
+				iv.Dns_query = args[len(args)-1]
+			}
+		}
+	}
+
+	// Set default values if not specified
+	if iv.Interval == 0 {
+		switch iv.Type {
+		case "icmp", "dns", "tcp":
+			iv.Interval = 1
+		case "http":
+			iv.Interval = 5
+		}
+	}
+	if iv.Timeout == 0 {
+		iv.Timeout = 4
+	}
+	if iv.Http_method == "" && iv.Type == "http" {
+		iv.Http_method = "GET"
+	}
+	if iv.PayLoadSize == 0 && iv.Type == "icmp" {
+		iv.PayLoadSize = 32
+	}
+
+	return recording, iv, nil
+}
+
 // TruncateString truncates a string to a maximum length and appends "..." if it exceeds the max length
 func TruncateString(s string, maxLength int) string {
 	if len(s) > maxLength {
@@ -177,6 +282,15 @@ func targetHostValidator(inputTargets string, requiredResolve bool) (targetHosts
 	targetsTemp := regexp.MustCompile(`\r?\n`).Split(inputTargets, -1)
 
 	for _, input := range targetsTemp {
+		// ignore any whitespace line(s)
+		if input == "" {
+			continue
+		}
+
+		// drop whitespace inside the string
+		input = strings.TrimSpace(input)
+
+		// Validate and Resolve
 		server, err := ValidateAndResolve(input, requiredResolve)
 		if err != nil {
 			return targetHosts, err
@@ -193,4 +307,37 @@ func placeHolderBlock(w, h float32) *canvas.Rectangle {
 	placeholder.SetMinSize(fyne.NewSize(w, h))                                 // Set fixed size
 
 	return placeholder
+}
+
+// ParseURL extracts scheme, hostname, port, and path from a URL and build a new HttpVars
+func ParseURL2HttpVars(inputURL string) (HttpVars, error) {
+
+	HttpVarNew := HttpVars{}
+
+	parsedURL, err := url.Parse(inputURL)
+
+	if err != nil {
+		return HttpVarNew, err
+	}
+
+	HttpVarNew.Scheme = parsedURL.Scheme
+	HttpVarNew.Hostname = parsedURL.Hostname()
+
+	// Handle default ports for http and https
+	if parsedURL.Port() != "" {
+		HttpVarNew.Port, err = strconv.Atoi(parsedURL.Port())
+		if err != nil {
+			return HttpVarNew, err
+		}
+	} else if HttpVarNew.Scheme == "http" {
+		HttpVarNew.Port = 80
+	} else if HttpVarNew.Scheme == "https" {
+		HttpVarNew.Port = 443
+	}
+
+	if parsedURL.Path != "" {
+		HttpVarNew.Path = parsedURL.Path
+	}
+
+	return HttpVarNew, nil
 }

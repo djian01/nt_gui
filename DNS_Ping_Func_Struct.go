@@ -233,6 +233,18 @@ type dnsObject struct {
 	DnsGUI      dnsGUIRow
 }
 
+func (d *dnsObject) GetType() string {
+	return d.testSummary.Type
+}
+
+func (d *dnsObject) GetSummary() *SummaryData {
+	return d.testSummary
+}
+
+func (d *dnsObject) GetChartData() *[]ntchart.ChartPoint {
+	return &d.ChartData
+}
+
 func (d *dnsObject) Initial(testSummary *SummaryData) {
 
 	// test Summary
@@ -275,7 +287,7 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 	// Create Summary Data
 	mySumData := SummaryData{}
-	mySumData.Initial("dns", inputVars.DestHost, NtCmdGenerator(recording, *inputVars), time.Now())
+	mySumData.Initial("dns", inputVars.DestHost, Iv2NtCmd(recording, *inputVars), time.Now())
 
 	// ResultGenerateDNS()
 	myDnsPing := dnsObject{}
@@ -331,12 +343,12 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 	// OnTapped Func - Chart btn
 	myDnsPing.DnsGUI.ChartBtn.OnTapped = func() {
-		myCmd := NtCmdGenerator(true, *inputVars)
-		fmt.Println(myCmd)
+		NewChartWindow(a, &myDnsPing, recording, p)
 	}
 
 	// OnTapped Func - Stop btn
 	myDnsPing.DnsGUI.StopBtn.OnTapped = func() {
+		myDnsPing.testSummary.testEnded = true
 		myDnsPing.Stop(p)
 	}
 
@@ -360,7 +372,7 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 	for {
 		// check loopClose Flag
-		if loopClose {
+		if loopClose || p.PingerEnd {
 			break
 		}
 
@@ -378,6 +390,9 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 			// if p.ProbeChan is closed, exit
 			if !ok {
+				loopClose = true
+				break // break select, bypass following code in the same case
+			} else if mySumData.testEnded {
 				loopClose = true
 				break // break select, bypass following code in the same case
 			}

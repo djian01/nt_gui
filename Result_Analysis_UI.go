@@ -104,6 +104,7 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, cha
 			// Get Result Analysis File Type
 			RaType := records[1][0]
 			(*SumD).Type = RaType
+			(*SumD).testEnded = true
 
 			appendPacket(inputResultPackets, RaType, &records, chartData, SumD)
 

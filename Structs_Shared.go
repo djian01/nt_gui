@@ -28,6 +28,9 @@ type testObject interface {
 	UpdateChartData(pkt *ntPinger.Packet)
 	DisplayChartDataTerminal()
 	Stop(p *ntPinger.Pinger)
+	GetType() string
+	GetSummary() *SummaryData
+	GetChartData() *[]ntchart.ChartPoint
 }
 
 // ********* Chart ***************
@@ -69,6 +72,7 @@ type SummaryData struct {
 	MaxRTT          time.Duration
 	AvgRtt          time.Duration
 	ntCmd           string
+	testEnded       bool
 }
 
 // Update Summary Data - Initial
@@ -77,6 +81,7 @@ func (sd *SummaryData) Initial(pType, destHost, ntCmd string, startTime time.Tim
 	sd.ntCmd = ntCmd
 	sd.StartTime = startTime
 	sd.DestHost = destHost
+	sd.testEnded = false
 }
 
 // Update Summary Data - Running
@@ -191,6 +196,7 @@ func (sui *SummaryUI) Initial() {
 	sui.ntCmdLabel = widget.NewLabel("nt CMD         ")
 	sui.ntCmdEntry = widget.NewEntry()
 	sui.ntCmdBtn = widget.NewButton("Relaunch CMD", func() {})
+	sui.ntCmdBtn.Disable()
 	sui.ntCmdBtn.Importance = widget.HighImportance
 }
 
@@ -236,6 +242,13 @@ func (sui *SummaryUI) UpdateStaticUI(sd *SummaryData) {
 	sui.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MaxRTT.Milliseconds()))
 	sui.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).AvgRtt.Milliseconds()))
 	sui.ntCmdEntry.SetText((*sd).ntCmd)
+
+	// ntCmdBtn
+	if sd.testEnded {
+		sui.ntCmdBtn.Enable()
+	} else {
+		sui.ntCmdBtn.Disable()
+	}
 }
 
 // Update Summary UI Initial - when the test is running.
@@ -373,4 +386,12 @@ type ntGUIGlboal struct {
 
 	icmpTable *fyne.Container
 	icmpIndex int
+}
+
+// ************ Http Vars **************
+type HttpVars struct {
+	Scheme   string
+	Hostname string
+	Port     int
+	Path     string
 }

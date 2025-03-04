@@ -15,6 +15,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"github.com/djian01/nt/pkg/ntPinger"
+	ntchart "github.com/djian01/nt_gui/pkg/chart"
 )
 
 // Func: Create a vertical separator
@@ -340,4 +341,16 @@ func ParseURL2HttpVars(inputURL string) (HttpVars, error) {
 	}
 
 	return HttpVarNew, nil
+}
+
+// func: slice clone for []ntchart.ChartPoint
+func CloneChartPoints(chartPoints *[]ntchart.ChartPoint) []ntchart.ChartPoint {
+
+	// create a new snapshot slice with fixed length
+	chartPointSnapshot := make([]ntchart.ChartPoint, len(*chartPoints))
+
+	// copy the chartPoints to snapshot
+	copy(chartPointSnapshot, *chartPoints)
+
+	return chartPointSnapshot
 }

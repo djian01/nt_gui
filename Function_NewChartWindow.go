@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -14,15 +16,25 @@ import (
 
 func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.Pinger) {
 
+	// Create a global cancelable context
+	var testCtx, testCancelFunc = context.WithCancel(context.Background())
+
+	// pause flag
+	chartPauseFlag := false
+
 	// Initial Vars
 	testType := testObj.GetType()
 	testSummary := testObj.GetSummary()
-	testChart := testObj.GetChartData()
+	testChartData := testObj.GetChartData()
 
 	// Initial New Chart Window
 	newChartWindow := a.NewWindow(fmt.Sprintf("%s Chart", strings.ToUpper(testType)))
 	newChartWindow.Resize(fyne.NewSize(1400, 900))
 	newChartWindow.CenterOnScreen()
+	newChartWindow.SetOnClosed(func() {
+		// call the cancel func to close the go routine
+		testCancelFunc()
+	})
 
 	// summary Card
 	testSummaryUI := SummaryUI{}
@@ -33,10 +45,23 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 	// Chart card
 	chartBtnPause := widget.NewButtonWithIcon("Pause Chart Update", theme.MediaPauseIcon(), func() {})
 	chartBtnPause.Importance = widget.WarningImportance
+
+	if !chartPauseFlag {
+		chartBtnPause.Enable()
+	} else {
+		chartBtnPause.Disable()
+	}
+
 	chartBtnPauseContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnPause)
 
 	chartBtnPlay := widget.NewButtonWithIcon("Continue Chart Update", theme.MediaPlayIcon(), func() {})
 	chartBtnPlay.Importance = widget.WarningImportance
+
+	if chartPauseFlag {
+		chartBtnPlay.Enable()
+	} else {
+		chartBtnPlay.Disable()
+	}
 	chartBtnPlayContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnPlay)
 
 	chartBtnRecord := widget.NewButtonWithIcon("Record Test", theme.MediaRecordIcon(), func() {})
@@ -50,19 +75,9 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 	chartBtnStop.Importance = widget.HighImportance
 	chartBtnStopContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnStop)
 
-	if testSummary.testEnded { // if test is already stopped, disable the all buttons
-		chartBtnPause.Disable()
-		chartBtnPlay.Disable()
-		chartBtnStop.Disable()
-		chartBtnRecord.Disable()
-	}
-
 	chartBtnContainerIn := container.New(layout.NewHBoxLayout(), chartBtnPauseContainer, chartBtnPlayContainer, chartBtnRecordContainer, chartBtnStopContainer)
 	chartBtnContainerOut := container.New(layout.NewCenterLayout(), chartBtnContainerIn)
 	chartBtnCard := widget.NewCard("", "", chartBtnContainerOut)
-
-	//// chart update pause flag
-	//chartUpdatePause := false
 
 	//// chart body
 	chartBody := Chart{}
@@ -71,7 +86,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 	// Slider Card
 	chartSlider := Slider{}
 	chartSlider.Initial(0, 100, 0, 100)
-	chartSlider.chartData = testChart
+	chartSlider.chartData = testChartData
 	chartSlider.CreateCard()
 	chartSlider.sliderCard.Hidden = true
 	chartSlider.rangeSlider.OnChanged = func() { chartSlider.update() }
@@ -80,16 +95,86 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 	chartWindowCloseBtn := widget.NewButton("Close Window", func() {
 		newChartWindow.Close()
 	})
+	chartWindowCloseBtn.Importance = widget.HighImportance
 	ChartWindowCloseContainer := container.New(layout.NewCenterLayout(), container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 40)), chartWindowCloseBtn))
 
+	// if the test is already ended
+	if testSummary.testEnded {
+		// disable the all buttons
+		chartBtnPause.Disable()
+		chartBtnPlay.Disable()
+		chartBtnStop.Disable()
+		chartBtnRecord.Disable()
+
+		// chart
+		(chartBody).ChartUpdate(testType, testChartData)
+
+		// update slider
+		chartSlider.sliderCard.Hidden = false
+		chartSlider.rangeSlider.UpdateValues(0, float64(len(*testChartData)-1), 0, float64(len(*testChartData)-1))
+		chartSlider.update()
+
+		// slider update chart image btn
+		chartSlider.chartUpdateBtn.OnTapped = func() {
+			chartSlider.BuildSliderChartData()
+			chartSlider.UpdateChartImage(testType, &chartBody)
+		}
+
+		// slider reset chart image
+		chartSlider.chartResetBtn.OnTapped = func() {
+			chartSlider.ResetChartImage(testType, &chartBody)
+		}
+
+		// update summary UI
+		(testSummaryUI).UpdateStaticUI(testSummary)
+
+	} else {
+		// kickoff the go routine for chart/summary update
+		go NewChartUpdate(testCtx, &chartPauseFlag, &testObj, &testSummaryUI, &chartBody)
+	}
+
 	// update btn functions
-	//// Pause Btn Function
+	//// Pause btn Function
 	chartBtnPause.OnTapped = func() {
 
+		chartPauseFlag = true
+		chartBtnPause.Disable()
+		chartBtnPlay.Enable()
+
+		// chartDataSnapshot
+		chartDataSnapshot := CloneChartPoints(testChartData)
+
+		// chart
+		(chartBody).ChartUpdate(testType, &chartDataSnapshot)
+
+		// update slider value
+		chartSlider.chartData = &chartDataSnapshot
+		chartSlider.rangeSlider.UpdateValues(0, float64(len(chartDataSnapshot)-1), 0, float64(len(chartDataSnapshot)-1))
+		chartSlider.update()
+
+		// slider visible
+		chartSlider.sliderCard.Hidden = false
+		chartSlider.sliderCard.Refresh()
+
+		// slider btn
+		chartSlider.chartUpdateBtn.OnTapped = func() {
+			chartSlider.BuildSliderChartData()
+			chartSlider.UpdateChartImage(testType, &chartBody)
+		}
+		chartSlider.chartResetBtn.OnTapped = func() {
+			chartSlider.ResetChartImage(testType, &chartBody)
+		}
 	}
 	//// Play Btn Function
 	chartBtnPlay.OnTapped = func() {
 
+		chartPauseFlag = false
+		chartBtnPause.Enable()
+		chartBtnPlay.Disable()
+
+		// slider visible
+		chartSlider.sliderCard.Hidden = true
+		chartSlider.sliderCard.Refresh()
 	}
 	//// Record Btn Function
 	chartBtnRecord.OnTapped = func() {
@@ -104,13 +189,31 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 		chartBtnPlay.Disable()
 		chartBtnStop.Disable()
 		chartBtnRecord.Disable()
+
+		// chart
+		(chartBody).ChartUpdate(testType, testChartData)
+
 		// update slider value
-		chartSlider.rangeSlider.UpdateValues(0, float64(len(*testChart)-1), 0, float64(len(*testChart)-1))
+		chartSlider.chartData = testChartData
+		chartSlider.rangeSlider.UpdateValues(0, float64(len(*testChartData)-1), 0, float64(len(*testChartData)-1))
 		chartSlider.update()
 
 		// slider visible
 		chartSlider.sliderCard.Hidden = false
 		chartSlider.sliderCard.Refresh()
+
+		// slider btns
+		chartSlider.chartUpdateBtn.OnTapped = func() {
+			chartSlider.BuildSliderChartData()
+			chartSlider.UpdateChartImage(testType, &chartBody)
+		}
+		chartSlider.chartResetBtn.OnTapped = func() {
+			chartSlider.ResetChartImage(testType, &chartBody)
+		}
+
+		// update summary
+		testSummary.EndTime = time.Now()
+		testSummaryUI.UpdateUI_Ended(testSummary)
 	}
 
 	// New Chart Window Container
@@ -121,4 +224,41 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 
 	newChartWindow.SetContent(chartContainerMainOut)
 	newChartWindow.Show()
+}
+
+// Func: Chart Update Go Routine
+func NewChartUpdate(testCtx context.Context, pauseFlag *bool, testObj *testObject, testSummaryUI *SummaryUI, testChart *Chart) {
+
+	testType := (*testObj).GetType()
+	testSummary := (*testObj).GetSummary()
+	testChartData := (*testObj).GetChartData()
+
+	for {
+		// if pauseFlag is true, sleep for 1 sec and skip the current loop
+		if *pauseFlag {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		// if the test is ended, exit
+		if testSummary.testEnded {
+			return
+		}
+
+		select {
+		// if the chart window closed, exit
+		case <-testCtx.Done():
+			return
+		// if the ntGUI app closed, exit
+		case <-appCtx.Done():
+			return
+		default:
+			// update summary
+			(*testSummaryUI).UpdateUI_Running(testSummary)
+			// update chart
+			(*testChart).ChartUpdate(testType, testChartData)
+
+			time.Sleep(1 * time.Second)
+		}
+	}
 }

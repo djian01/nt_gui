@@ -25,7 +25,7 @@ func ConvertFromPacketToChartPoint(pkt ntPinger.Packet) ChartPoint {
 	cp := ChartPoint{}
 
 	cp.XValues = pkt.GetSendTime()
-	cp.YValues = float64(pkt.GetRtt())
+	cp.YValues = (float64((pkt.GetRtt()).Nanoseconds())) / 1e6
 	cp.Status = pkt.GetStatus()
 
 	return cp

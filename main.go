@@ -69,7 +69,7 @@ func main() {
 	defer ntDB.Close()
 
 	// Entry Chan
-	entryChan := make(chan ntdb.Entry)
+	entryChan := make(chan ntdb.DbEntry)
 	defer close(entryChan)
 
 	// run Insert Entry Go routine

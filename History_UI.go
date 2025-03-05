@@ -13,7 +13,7 @@ import (
 	ntdb "github.com/djian01/nt_gui/pkg/ntdb"
 )
 
-func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.Entry) *fyne.Container {
+func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry) *fyne.Container {
 
 	// Return your History interface components here
 	insertBtn := widget.NewButton("Insert Entry", func() {})
@@ -34,11 +34,10 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 
 		Now := time.Now()
 		he.TableName = "history"
-		he.Date = Now.Format("2006-01-02")
-		he.Time = Now.Format("15:04:05 MST")
-		he.Type = "dns"
+		he.DateTime = Now.Format("2006-01-02 15:04:05 MST")
+		he.TestType = "dns"
 		he.Command = "nt -r dns 8.8.8.8 google.com"
-		//he.Info = "No Error"
+		he.UUID = ntdb.GenerateShortUUID()
 
 		// insert to entryChan
 		entryChan <- &he

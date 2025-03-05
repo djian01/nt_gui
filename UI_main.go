@@ -16,7 +16,7 @@ import (
 var ntGlobal ntGUIGlboal
 
 // func makeUI: make the UI body
-func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.Entry) {
+func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry) {
 
 	// set theme variable
 	currentTheme := "light"

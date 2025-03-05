@@ -128,6 +128,23 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 		// update summary UI
 		(testSummaryUI).UpdateStaticUI(testSummary)
 
+		// relaunch btn
+		testSummaryUI.ntCmdBtn.OnTapped = func() {
+			_, iv, err := NtCmd2Iv(testSummary.ntCmd)
+			if err != nil {
+				logger.Println(err)
+			}
+
+			// launch new test
+			switch testType {
+			case "dns":
+				go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording)
+			case "http":
+			case "tcp":
+			case "icmp":
+			}
+			testSummaryUI.ntCmdBtn.Disable()
+		}
 	} else {
 		// kickoff the go routine for chart/summary update
 		go NewChartUpdate(testCtx, &chartPauseFlag, &testObj, &testSummaryUI, &chartBody)
@@ -214,6 +231,25 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 		// update summary
 		testSummary.EndTime = time.Now()
 		testSummaryUI.UpdateUI_Ended(testSummary)
+
+		// relaunch btn
+		testSummaryUI.ntCmdBtn.Enable()
+		testSummaryUI.ntCmdBtn.OnTapped = func() {
+			_, iv, err := NtCmd2Iv(testSummary.ntCmd)
+			if err != nil {
+				logger.Println(err)
+			}
+
+			// launch new test
+			switch testType {
+			case "dns":
+				go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording)
+			case "http":
+			case "tcp":
+			case "icmp":
+			}
+			testSummaryUI.ntCmdBtn.Disable()
+		}
 	}
 
 	// New Chart Window Container

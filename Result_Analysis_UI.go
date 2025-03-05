@@ -55,7 +55,7 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	RaMainContainerOuter := container.New(layout.NewBorderLayout(RASpaceHolder, RASpaceHolder, RASpaceHolder, RASpaceHolder), RASpaceHolder, RaMainContainerInner)
 
 	// Input NSX Config File BTN
-	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(w, &inputResultPackets, &chartData, &chart, &SumD, &SumUI, inputResultCSVFilePath, &slider)
+	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(a, w, &inputResultPackets, &chartData, &chart, &SumD, &SumUI, inputResultCSVFilePath, &slider)
 
 	// Slider Update
 	slider.rangeSlider.OnChanged = func() { slider.update() }
@@ -65,7 +65,7 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 }
 
 // func: OpenResultCSVFile
-func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chart *Chart, SumD *SummaryData, SumUI *SummaryUI, inputResultCSVFilePath *widget.Entry, slider *Slider) func() {
+func OpenResultCSVFile(a fyne.App, w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chart *Chart, SumD *SummaryData, SumUI *SummaryUI, inputResultCSVFilePath *widget.Entry, slider *Slider) func() {
 	return func() {
 
 		// reset vars
@@ -114,6 +114,23 @@ func OpenResultCSVFile(w fyne.Window, inputResultPackets *[]ntPinger.Packet, cha
 
 			// update summary UI
 			(*SumUI).UpdateStaticUI(SumD)
+
+			(*SumUI).ntCmdBtn.OnTapped = func() {
+				_, iv, err := NtCmd2Iv(SumD.ntCmd)
+				if err != nil {
+					logger.Println(err)
+				}
+
+				// launch new test
+				switch RaType {
+				case "dns":
+					go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, true)
+				case "http":
+				case "tcp":
+				case "icmp":
+				}
+				(*SumUI).ntCmdBtn.Disable()
+			}
 
 			// update slider card
 			slider.rangeSlider.UpdateValues(0, float64(len(*chartData)-1), 0, float64(len(*chartData)-1))

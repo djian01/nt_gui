@@ -121,9 +121,7 @@ func Iv2NtCmd(recording bool, iv ntPinger.InputVars) string {
 }
 
 // Func: Generate InputVars from NT CMD
-func NtCmd2Iv(cmd string) (bool, ntPinger.InputVars, error) {
-	var iv ntPinger.InputVars
-	var recording bool
+func NtCmd2Iv(cmd string) (recording bool, iv ntPinger.InputVars, err error) {
 
 	// Split command into parts based on the white spaces
 	parts := strings.Fields(cmd)
@@ -197,6 +195,9 @@ func NtCmd2Iv(cmd string) (bool, ntPinger.InputVars, error) {
 			} else if iv.Type == "dns" {
 				iv.DestHost = args[len(args)-2]
 				iv.Dns_query = args[len(args)-1]
+				if iv.Dns_Protocol == "" {
+					iv.Dns_Protocol = "udp"
+				}
 			}
 		}
 	}

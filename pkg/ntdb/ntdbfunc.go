@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"math/big"
-	"time"
 )
 
 // GenerateShortUUID generates a 6-character alphanumeric (Base-62) UUID
@@ -20,50 +19,6 @@ func GenerateShortUUID() string {
 	}
 
 	return string(result)
-}
-
-// func: create Summary table if it does not exist
-func EnsureSummaryTableExist(db *sql.DB) error {
-	// Ensure summary table exists
-	_, err := db.Exec(`
-		CREATE TABLE IF NOT EXISTS summary (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			start_datetime TEXT NOT NULL,
-			test_type TEXT NOT NULL,
-			test_uuID TEXT NOT NULL,
-			command TEXT NOT NULL,
-			recording_status BOOLEAN,
-		);`)
-	return err
-}
-
-// AddSummaryEntry inserts a new summary entry and creates a separate test result table if recording is enabled
-func AddSummaryEntry(db *sql.DB, testUUID, testType, command string, recording bool) error {
-
-	// ensure Summary Table exists
-	err := EnsureSummaryTableExist(db)
-	if err != nil {
-		return err
-	}
-
-	// startTime
-	startTime := time.Now().Format("2006-01-02 15:04:05")
-
-	// recording satus
-	recording_Status := ""
-	if recording {
-		recording_Status = "ON"
-	} else {
-		recording_Status = "OFF"
-	}
-
-	// Insert into summary table
-	_, err = db.Exec(`INSERT INTO summary (start_datetime, test_type, test_uuID, command, recording_status) VALUES (?, ?, ?, ?, ?)`,
-		startTime, testType, testUUID, command, recording_Status)
-	if err != nil {
-		return fmt.Errorf("failed to insert summary: %v", err)
-	}
-	return nil
 }
 
 // createTestResultsTable creates a unique test results table for each summary entry

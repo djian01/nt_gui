@@ -62,7 +62,8 @@ func createHistoryTable(db *sql.DB) error {
 		testtype TEXT NOT NULL,
 		datetime TEXT NOT NULL,
 		command TEXT NOT NULL,
-		uuid TEXT NOT NULL
+		uuid TEXT NOT NULL,
+		recorded INTEGER NOT NULL DEFAULT 0
 	);`
 	_, err := db.Exec(query)
 	return err
@@ -82,10 +83,18 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry) error {
 		case "history":
 			he := entry.(*HistoryEntry)
 			// Construct SQL query with the dynamic table name, default table name is "history"
-			query := `INSERT INTO history (tablename, testtype, datetime, command, uuid) VALUES (?, ?, ?, ?, ?);`
+			query := `INSERT INTO history (tablename, testtype, datetime, command, uuid, recorded) VALUES (?, ?, ?, ?, ?, ?);`
+
+			// setup temporary variable for recorded
+			var recordedInt int // temporary variable to store the INT value of recorded
+			if he.Recorded {
+				recordedInt = 1
+			} else {
+				recordedInt = 0
+			}
 
 			// Execute the query safely with placeholders for values
-			_, err = ntdb.Exec(query, he.TableName, he.TestType, he.DateTime, he.Command, he.UUID)
+			_, err = ntdb.Exec(query, he.TableName, he.TestType, he.DateTime, he.Command, he.UUID, recordedInt)
 		}
 	}
 	return err
@@ -98,7 +107,7 @@ func ReadHistoryTable(db *sql.DB, historyEntries *[]HistoryEntry) error {
 	*historyEntries = []HistoryEntry{}
 
 	// Construct query dynamically
-	query := "SELECT id, tablename, testtype, datetime, command, uuid FROM history;"
+	query := "SELECT id, tablename, testtype, datetime, command, uuid, recorded FROM history;"
 
 	// Execute the query
 	rows, err := db.Query(query)
@@ -110,11 +119,19 @@ func ReadHistoryTable(db *sql.DB, historyEntries *[]HistoryEntry) error {
 	// Iterate over rows and scan data into struct
 	for rows.Next() {
 		var entry HistoryEntry
+		var recordedInt int // temporary variable to store the INT value of recorded
 
 		// The rows.Scan() function in Go is used to map database query results into Go variables
-		if err := rows.Scan(&entry.Id, &entry.TableName, &entry.TestType, &entry.DateTime, &entry.Command, &entry.UUID); err != nil {
+		if err := rows.Scan(&entry.Id, &entry.TableName, &entry.TestType, &entry.DateTime, &entry.Command, &entry.UUID, &recordedInt); err != nil {
 			return err
 		}
+		// update recorded
+		if recordedInt == 1 {
+			entry.Recorded = true
+		} else {
+			entry.Recorded = false
+		}
+
 		*historyEntries = append(*historyEntries, entry) // Modify the original slice
 	}
 
@@ -126,7 +143,7 @@ func ReadHistoryTable(db *sql.DB, historyEntries *[]HistoryEntry) error {
 	return nil
 }
 
-// DeleteEntryByID deletes an entry from the given table using its ID
+// DeleteEntryByID deletes an entry from the given table using its ID for an given table
 func DeleteEntryByID(db *sql.DB, tableName string, id int) error {
 	// Construct the delete query dynamically (tableName must be validated)
 	query := fmt.Sprintf("DELETE FROM %s WHERE id = ?;", tableName)
@@ -151,12 +168,37 @@ func DeleteEntryByID(db *sql.DB, tableName string, id int) error {
 	return nil
 }
 
+// delete entry from "history" table by UUID
+func DeleteHistoryEntryByUUID(db *sql.DB, uuid string) error {
+	// Construct the delete query dynamically (tableName must be validated)
+	query := fmt.Sprintf("DELETE FROM %s WHERE UUID = ?;", "history")
+
+	// Execute the delete statement
+	result, err := db.Exec(query, uuid)
+	if err != nil {
+		return fmt.Errorf("error deleting entry from %s: %v", "history", err)
+	}
+
+	// Check how many rows were affected
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error retrieving affected rows: %v", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("no entry found with UUID %s in table %s", uuid, "history")
+	}
+
+	//fmt.Printf("Successfully deleted entry with ID %d from table %s.\n", id, tableName)
+	return nil
+}
+
 // display History Entries in Console
 func ShowHistoryTableConsole(historyEntries *[]HistoryEntry) {
 	// Print the history entries
 	fmt.Println("")
 	fmt.Println("History Entries:")
 	for _, entry := range *historyEntries {
-		fmt.Printf("ID: %s, TableName: %s, TestType: %s, DateTime: %s, Command: %s, UUID: %s\n", entry.Id, entry.TableName, entry.TestType, entry.DateTime, entry.Command, entry.UUID)
+		fmt.Printf("ID: %s, TableName: %s, TestType: %s, DateTime: %s, Command: %s, UUID: %s, Recorded: %v\n", entry.Id, entry.TableName, entry.TestType, entry.DateTime, entry.Command, entry.UUID, entry.Recorded)
 	}
 }

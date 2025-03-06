@@ -386,6 +386,8 @@ type ntGUIGlboal struct {
 
 	icmpTable *fyne.Container
 	icmpIndex int
+
+	historyTable *fyne.Container
 }
 
 // ************ Http Vars **************

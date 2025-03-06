@@ -15,6 +15,28 @@ import (
 
 func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry) *fyne.Container {
 
+	// history table column: id, type, start time, command, btn: record, delete, replay
+
+	// ** Refresh-Button Card **
+	historyRefreshBtn := widget.NewButtonWithIcon("Rresh", theme.ViewRefreshIcon(), func() {})
+	historyRefreshBtn.Importance = widget.HighImportance
+	historyRefreshBtnContainer := container.New(layout.NewBorderLayout(nil, nil, historyRefreshBtn, nil), historyRefreshBtn)
+	historyRefreshBtnBtncard := widget.NewCard("", "", historyRefreshBtnContainer)
+
+	// ** Table Container **
+	dnsHeader := dnsGUIRow{}
+	dnsHeader.Initial()
+	dnsHeaderRow := dnsHeader.GenerateHeaderRow()
+
+	historyTableBody := container.New(layout.NewVBoxLayout())
+	ntGlobal.historyTable = historyTableBody
+
+	dnsTableScroll := container.NewScroll(ntGlobal.dnsTable)
+	dnsTableContainer := container.New(layout.NewBorderLayout(dnsHeaderRow, nil, nil, nil), dnsHeaderRow, dnsTableScroll)
+
+	// ** Table Card **
+	dnsTableCard := widget.NewCard("", "", dnsTableContainer)
+
 	// Return your History interface components here
 	insertBtn := widget.NewButton("Insert Entry", func() {})
 	refreshBtn := widget.NewButtonWithIcon("View Refresh", theme.ViewRefreshIcon(), func() {})
@@ -38,14 +60,10 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 		he.TestType = "dns"
 		he.Command = "nt -r dns 8.8.8.8 google.com"
 		he.UUID = ntdb.GenerateShortUUID()
+		he.Recorded = true
 
 		// insert to entryChan
 		entryChan <- &he
-
-		err := historyRefresh(db, &historyEntries)
-		if err != nil {
-			logger.Println(err)
-		}
 	}
 
 	// refresh table Btn

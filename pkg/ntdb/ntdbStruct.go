@@ -16,6 +16,7 @@ type HistoryEntry struct {
 	DateTime  string
 	Command   string
 	UUID      string
+	Recorded  bool
 }
 
 func (h *HistoryEntry) GetSubRecordTableName() string {

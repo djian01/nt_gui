@@ -13,7 +13,8 @@ type HistoryEntry struct {
 	Id        string
 	TableName string
 	TestType  string
-	DateTime  string
+	StartTime string
+	EndTime   string
 	Command   string
 	UUID      string
 	Recorded  bool

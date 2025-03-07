@@ -60,7 +60,8 @@ func createHistoryTable(db *sql.DB) error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		tablename TEXT NOT NULL,
 		testtype TEXT NOT NULL,
-		datetime TEXT NOT NULL,
+		starttime TEXT NOT NULL,
+		endtime TEXT,
 		command TEXT NOT NULL,
 		uuid TEXT NOT NULL,
 		recorded INTEGER NOT NULL DEFAULT 0
@@ -83,7 +84,7 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry) error {
 		case "history":
 			he := entry.(*HistoryEntry)
 			// Construct SQL query with the dynamic table name, default table name is "history"
-			query := `INSERT INTO history (tablename, testtype, datetime, command, uuid, recorded) VALUES (?, ?, ?, ?, ?, ?);`
+			query := `INSERT INTO history (tablename, testtype, starttime, command, uuid, recorded) VALUES (?, ?, ?, ?, ?, ?);`
 
 			// setup temporary variable for recorded
 			var recordedInt int // temporary variable to store the INT value of recorded
@@ -94,7 +95,7 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry) error {
 			}
 
 			// Execute the query safely with placeholders for values
-			_, err = ntdb.Exec(query, he.TableName, he.TestType, he.DateTime, he.Command, he.UUID, recordedInt)
+			_, err = ntdb.Exec(query, he.TableName, he.TestType, he.StartTime, he.Command, he.UUID, recordedInt)
 		}
 	}
 	return err
@@ -107,7 +108,7 @@ func ReadHistoryTable(db *sql.DB, historyEntries *[]HistoryEntry) error {
 	*historyEntries = []HistoryEntry{}
 
 	// Construct query dynamically
-	query := "SELECT id, tablename, testtype, datetime, command, uuid, recorded FROM history;"
+	query := "SELECT id, tablename, testtype, starttime, endtime, command, uuid, recorded FROM history;"
 
 	// Execute the query
 	rows, err := db.Query(query)
@@ -122,7 +123,7 @@ func ReadHistoryTable(db *sql.DB, historyEntries *[]HistoryEntry) error {
 		var recordedInt int // temporary variable to store the INT value of recorded
 
 		// The rows.Scan() function in Go is used to map database query results into Go variables
-		if err := rows.Scan(&entry.Id, &entry.TableName, &entry.TestType, &entry.DateTime, &entry.Command, &entry.UUID, &recordedInt); err != nil {
+		if err := rows.Scan(&entry.Id, &entry.TableName, &entry.TestType, &entry.StartTime, &entry.EndTime, &entry.Command, &entry.UUID, &recordedInt); err != nil {
 			return err
 		}
 		// update recorded
@@ -199,6 +200,6 @@ func ShowHistoryTableConsole(historyEntries *[]HistoryEntry) {
 	fmt.Println("")
 	fmt.Println("History Entries:")
 	for _, entry := range *historyEntries {
-		fmt.Printf("ID: %s, TableName: %s, TestType: %s, DateTime: %s, Command: %s, UUID: %s, Recorded: %v\n", entry.Id, entry.TableName, entry.TestType, entry.DateTime, entry.Command, entry.UUID, entry.Recorded)
+		fmt.Printf("ID: %s, TableName: %s, TestType: %s, StartTime: %s, EndTime: %s, Command: %s, UUID: %s, Recorded: %v\n", entry.Id, entry.TableName, entry.TestType, entry.StartTime, entry.EndTime, entry.Command, entry.UUID, entry.Recorded)
 	}
 }

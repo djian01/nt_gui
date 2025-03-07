@@ -72,7 +72,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 	chartBtnRecordContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnRecord)
 
 	chartBtnStop := widget.NewButtonWithIcon("Stop Test", theme.MediaStopIcon(), func() {})
-	chartBtnStop.Importance = widget.HighImportance
+	chartBtnStop.Importance = widget.DangerImportance
 	chartBtnStopContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnStop)
 
 	chartBtnContainerIn := container.New(layout.NewHBoxLayout(), chartBtnPauseContainer, chartBtnPlayContainer, chartBtnRecordContainer, chartBtnStopContainer)

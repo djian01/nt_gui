@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/rand"
 	"fmt"
 	"image/color"
+	"math/big"
 	"net"
 	"net/url"
 	"regexp"
@@ -354,4 +356,38 @@ func CloneChartPoints(chartPoints *[]ntchart.ChartPoint) []ntchart.ChartPoint {
 	copy(chartPointSnapshot, *chartPoints)
 
 	return chartPointSnapshot
+}
+
+// Test Register Func: Check if the given UUID exists in the Test Register
+func existingTestCheck(testRegister *[]string, uuid string) bool {
+	for _, str := range *testRegister {
+		if str == uuid {
+			return true
+		}
+	}
+	return false
+}
+
+// Test Register Func: delete UUID from a Test Register
+func RemoveUUID(testRegister *[]string, uuid string) {
+	newSlice := (*testRegister)[:0] // Keep the same underlying array
+	for _, str := range *testRegister {
+		if str != uuid {
+			newSlice = append(newSlice, str)
+		}
+	}
+	*testRegister = newSlice // Update the original slice
+}
+
+// GenerateShortUUID generates a 6-character alphanumeric (Base-62) UUID
+func GenerateShortUUID() string {
+	const charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	result := make([]byte, 6)
+
+	for i := range result {
+		num, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		result[i] = charset[num.Int64()]
+	}
+
+	return string(result)
 }

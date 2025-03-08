@@ -31,6 +31,7 @@ type testObject interface {
 	GetType() string
 	GetSummary() *SummaryData
 	GetChartData() *[]ntchart.ChartPoint
+	GetUUID() string
 }
 
 // ********* Chart ***************

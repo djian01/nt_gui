@@ -228,6 +228,7 @@ func (d *dnsGUIRow) UpdateRow(p *ntPinger.Packet) {
 // ******* struct dnsObject ********
 
 type dnsObject struct {
+	uuid        string
 	testSummary *SummaryData
 	ChartData   []ntchart.ChartPoint
 	DnsGUI      dnsGUIRow
@@ -245,7 +246,17 @@ func (d *dnsObject) GetChartData() *[]ntchart.ChartPoint {
 	return &d.ChartData
 }
 
+func (d *dnsObject) GetUUID() string {
+	return d.uuid
+}
+
 func (d *dnsObject) Initial(testSummary *SummaryData) {
+
+	// create test uuid
+	d.uuid = GenerateShortUUID()
+
+	// update test register
+	testRegister = append(testRegister, d.uuid)
 
 	// test Summary
 	d.testSummary = testSummary
@@ -280,6 +291,9 @@ func (d *dnsObject) Stop(p *ntPinger.Pinger) {
 	d.DnsGUI.Status.Object.(*canvas.Text).Text = "Stop"
 	d.DnsGUI.Status.Object.(*canvas.Text).Color = color.RGBA{165, 42, 42, 255}
 	d.DnsGUI.Status.Object.(*canvas.Text).Refresh()
+
+	// remove uuid from test register
+	RemoveUUID(&testRegister, d.uuid)
 }
 
 // func: Add Ping Row

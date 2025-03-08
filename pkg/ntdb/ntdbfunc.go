@@ -1,25 +1,10 @@
 package ntdb
 
 import (
-	"crypto/rand"
 	"database/sql"
 	"fmt"
 	"log"
-	"math/big"
 )
-
-// GenerateShortUUID generates a 6-character alphanumeric (Base-62) UUID
-func GenerateShortUUID() string {
-	const charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	result := make([]byte, 6)
-
-	for i := range result {
-		num, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
-		result[i] = charset[num.Int64()]
-	}
-
-	return string(result)
-}
 
 // createTestResultsTable creates a unique test results table for each summary entry
 func createTestResultsTable(db *sql.DB, testType, testUUID string) error {

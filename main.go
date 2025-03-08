@@ -21,6 +21,9 @@ var (
 // Create a global cancelable context
 var appCtx, cancelFunc = context.WithCancel(context.Background())
 
+// create a test register
+var testRegister []string
+
 func main() {
 
 	// create or open the output.txt file for logging

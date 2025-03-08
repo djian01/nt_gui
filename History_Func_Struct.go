@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"image/color"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -34,15 +35,15 @@ func (d *historyGUIRow) Initial() {
 	d.Index.Object = widget.NewLabelWithStyle("--", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 
 	d.TestType.Label = "TestType"
-	d.TestType.Length = 50
+	d.TestType.Length = 120
 	d.TestType.Object = widget.NewLabelWithStyle("--", fyne.TextAlignCenter, fyne.TextStyle{Bold: false})
 
 	d.StartTime.Label = "StartTime"
-	d.StartTime.Length = 190
+	d.StartTime.Length = 250
 	d.StartTime.Object = widget.NewLabel("--")
 
 	d.Command.Label = "NTCommand"
-	d.Command.Length = 250
+	d.Command.Length = 450
 	d.Command.Object = widget.NewLabel("--")
 
 	d.ReplayBtn = widget.NewButtonWithIcon("", theme.MediaReplayIcon(), func() {})
@@ -56,7 +57,7 @@ func (d *historyGUIRow) Initial() {
 	d.DeleteBtn.Importance = widget.DangerImportance
 
 	d.Action.Label = "Action"
-	d.Action.Length = 110
+	d.Action.Length = 180
 	d.Action.Object = container.New(layout.NewGridLayoutWithColumns(3), d.ReplayBtn, d.RecordBtn, d.ReplayBtn)
 
 	// table row
@@ -122,7 +123,7 @@ func (d *historyGUIRow) UpdateRow(h *ntdb.HistoryEntry) {
 	d.TestType.Object.(*widget.Label).Refresh()
 
 	// Start Time
-	d.StartTime.Object.(*widget.Label).Text = h.DateTime
+	d.StartTime.Object.(*widget.Label).Text = h.StartTime
 	d.StartTime.Object.(*widget.Label).Refresh()
 
 	// Command
@@ -136,14 +137,48 @@ func (d *historyGUIRow) UpdateRow(h *ntdb.HistoryEntry) {
 
 }
 
-func historyRefresh(db *sql.DB, historyEntries *[]ntdb.HistoryEntry) error {
+// ******* struct historyObject ********
+type historyObject struct {
+	historyEntry *ntdb.HistoryEntry
+	historyGUI   historyGUIRow
+}
 
+// Func: add history row
+func historyAddRow(a fyne.App, h *ntdb.HistoryEntry, historyTableBody *fyne.Container) {
+
+	// create history object
+	he := historyObject{}
+	he.historyGUI.Initial()
+	he.historyGUI.UpdateRow(h)
+
+	// update table body
+	historyTableBody.Add(he.historyGUI.historyTableRow)
+	historyTableBody.Refresh()
+
+}
+
+// Func: history table refresh
+func historyRefresh(a fyne.App, db *sql.DB, historyEntries *[]ntdb.HistoryEntry) error {
+
+	// clean up all the items in ntGlobal.historyTable
+	ntGlobal.historyTable.Objects = nil // Remove all child objects
+
+	// read the DB and obtain the historyEntries
 	err := ntdb.ReadHistoryTable(db, historyEntries)
 	if err != nil {
 		return err
 	}
-	// show all the history table in console
-	ntdb.ShowHistoryTableConsole(historyEntries)
+
+	// update history table body
+	if len(*historyEntries) == 0 {
+		return nil
+	} else {
+		for i := 0; i < len(*historyEntries); i++ {
+			go historyAddRow(a, &(*historyEntries)[i], ntGlobal.historyTable)
+			// add some delays between each row to let the table sort by Id sequence
+			time.Sleep(5 * time.Millisecond)
+		}
+	}
 
 	return nil
 }

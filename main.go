@@ -21,7 +21,7 @@ var (
 // Create a global cancelable context
 var appCtx, cancelFunc = context.WithCancel(context.Background())
 
-// create a test register
+// test register: records all the active testing UUIDs
 var testRegister []string
 
 func main() {

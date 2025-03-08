@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -13,12 +14,36 @@ import (
 
 func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry) *fyne.Container {
 
+	// Initial History Entries Slice
+	historyEntries := []ntdb.HistoryEntry{}
+
+	//// test code start
+	insertBtn := widget.NewButton("Insert Entry", func() {})
+	// insert Btn functions
+	insertBtn.OnTapped = func() {
+		he := ntdb.HistoryEntry{}
+
+		Now := time.Now()
+		he.TableName = "history"
+		he.StartTime = Now.Format("2006-01-02 15:04:05 MST")
+		he.TestType = "dns"
+		he.Command = "nt -r dns 8.8.8.8 google.com"
+		he.UUID = GenerateShortUUID()
+		he.Recorded = true
+
+		// insert to entryChan
+		entryChan <- &he
+	}
+
+	//// test code ends
+
 	// history table column: id, type, start time, command, btn: record, delete, replay
 
 	// ** Refresh-Button Card **
 	historyRefreshBtn := widget.NewButtonWithIcon("Rresh", theme.ViewRefreshIcon(), func() {})
 	historyRefreshBtn.Importance = widget.HighImportance
-	historyRefreshBtnContainer := container.New(layout.NewBorderLayout(nil, nil, historyRefreshBtn, nil), historyRefreshBtn)
+	historyRefreshBtnContainerInner := container.NewGridWrap(fyne.NewSize(120, 30), historyRefreshBtn)
+	historyRefreshBtnContainer := container.New(layout.NewBorderLayout(nil, nil, historyRefreshBtnContainerInner, nil), historyRefreshBtnContainerInner, insertBtn)
 	historyRefreshBtnBtncard := widget.NewCard("", "", historyRefreshBtnContainer)
 
 	// ** Table Container **
@@ -34,6 +59,21 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 
 	// ** Table Card **
 	historyTableCard := widget.NewCard("", "", hisotryTableContainer)
+
+	// btn functions:
+	//// history refresh btn
+	historyRefreshBtn.OnTapped = func() {
+		err := historyRefresh(a, db, &historyEntries)
+		if err != nil {
+			logger.Println(err)
+		}
+	}
+
+	// update the history table at the beginning
+	err := historyRefresh(a, db, &historyEntries)
+	if err != nil {
+		logger.Println(err)
+	}
 
 	// ** Main Container **
 	HistorySpaceHolder := widget.NewLabel("    ")

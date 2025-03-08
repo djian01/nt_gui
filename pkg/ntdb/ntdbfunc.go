@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"sort"
+	"strconv"
 )
 
 // createTestResultsTable creates a unique test results table for each summary entry
@@ -43,6 +45,21 @@ func createTestResultsTable(db *sql.DB, testType, testUUID string) error {
 	}
 	log.Println("Created test results table:", tableName)
 	return nil
+}
+
+// SortItems sorts the slice of Items by Index in ascending order.
+func SortHistoryEntries(HistoryEntries *[]HistoryEntry) {
+	sort.Slice(*HistoryEntries, func(i, j int) bool {
+		indexI, errI := strconv.Atoi((*HistoryEntries)[i].Id)
+		indexJ, errJ := strconv.Atoi((*HistoryEntries)[j].Id)
+
+		// Handle conversion errors (place invalid indices at the end)
+		if errI != nil || errJ != nil {
+			return errI == nil // If errI is valid and errJ is invalid, keep it first
+		}
+
+		return indexI < indexJ // Sort by integer value of Index
+	})
 }
 
 // AddTestResults inserts test results into a dynamically created test results table

@@ -29,7 +29,7 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 		he.TestType = "dns"
 		he.Command = "nt -r dns 8.8.8.8 google.com"
 		he.UUID = GenerateShortUUID()
-		he.Recorded = true
+		he.Recorded = false
 
 		// insert to entryChan
 		entryChan <- &he

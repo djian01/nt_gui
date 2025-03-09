@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"image/color"
 	"time"
 
@@ -58,7 +59,7 @@ func (d *historyGUIRow) Initial() {
 
 	d.Action.Label = "Action"
 	d.Action.Length = 180
-	d.Action.Object = container.New(layout.NewGridLayoutWithColumns(3), d.ReplayBtn, d.RecordBtn, d.ReplayBtn)
+	d.Action.Object = container.New(layout.NewGridLayoutWithColumns(3), d.ReplayBtn, d.RecordBtn, d.DeleteBtn)
 
 	// table row
 	row := container.New(layout.NewHBoxLayout(),
@@ -144,17 +145,50 @@ type historyObject struct {
 }
 
 // Func: add history row
-func historyAddRow(a fyne.App, h *ntdb.HistoryEntry, historyTableBody *fyne.Container) {
+func historyAddRow(a fyne.App, h *ntdb.HistoryEntry, hs *[]ntdb.HistoryEntry, historyTableBody *fyne.Container, db *sql.DB) {
 
 	// create history object
 	he := historyObject{}
+	he.historyEntry = h
 	he.historyGUI.Initial()
 	he.historyGUI.UpdateRow(h)
 
-	// update table body
-	historyTableBody.Add(he.historyGUI.historyTableRow)
-	historyTableBody.Refresh()
+	// check if the UUID is NOT in the registered running test, add the record in the history table
+	if !existingTestCheck(&testRegister, h.UUID) {
+		// update table body
+		historyTableBody.Add(he.historyGUI.historyTableRow)
+		historyTableBody.Refresh()
+	}
 
+	// update record btn
+	if h.Recorded {
+		he.historyGUI.RecordBtn.Enable()
+	} else {
+		he.historyGUI.RecordBtn.Disable()
+	}
+
+	he.historyGUI.RecordBtn.OnTapped = func() {
+
+	}
+
+	// update replay btn
+	he.historyGUI.ReplayBtn.OnTapped = func() {
+		fmt.Println(he.historyEntry.UUID)
+	}
+
+	// update delete btn
+	he.historyGUI.DeleteBtn.OnTapped = func() {
+		// delete entry
+		err := ntdb.DeleteEntry(db, "history", "uuid", he.historyEntry.UUID)
+		if err != nil {
+			logger.Println(err)
+		}
+		// refresh table
+		err = historyRefresh(a, db, hs)
+		if err != nil {
+			logger.Println(err)
+		}
+	}
 }
 
 // Func: history table refresh
@@ -174,7 +208,7 @@ func historyRefresh(a fyne.App, db *sql.DB, historyEntries *[]ntdb.HistoryEntry)
 		return nil
 	} else {
 		for i := 0; i < len(*historyEntries); i++ {
-			go historyAddRow(a, &(*historyEntries)[i], ntGlobal.historyTable)
+			go historyAddRow(a, &(*historyEntries)[i], historyEntries, ntGlobal.historyTable, db)
 			// add some delays between each row to let the table sort by Id sequence
 			time.Sleep(5 * time.Millisecond)
 		}

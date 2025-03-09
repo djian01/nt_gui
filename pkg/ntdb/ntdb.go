@@ -143,15 +143,15 @@ func ReadHistoryTable(db *sql.DB, historyEntries *[]HistoryEntry) error {
 	return nil
 }
 
-// DeleteEntryByID deletes an entry from the given table using its ID for an given table
-func DeleteEntryByID(db *sql.DB, tableName string, id int) error {
+// Func: Delete entry from "table" by "key" & "value"
+func DeleteEntry(db *sql.DB, table, key, value string) error {
 	// Construct the delete query dynamically (tableName must be validated)
-	query := fmt.Sprintf("DELETE FROM %s WHERE id = ?;", tableName)
+	query := fmt.Sprintf("DELETE FROM %s WHERE %s = ?;", table, key)
 
 	// Execute the delete statement
-	result, err := db.Exec(query, id)
+	result, err := db.Exec(query, value)
 	if err != nil {
-		return fmt.Errorf("error deleting entry from %s: %v", tableName, err)
+		return fmt.Errorf("error deleting entry from %s: %v", table, err)
 	}
 
 	// Check how many rows were affected
@@ -161,32 +161,7 @@ func DeleteEntryByID(db *sql.DB, tableName string, id int) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("no entry found with ID %d in table %s", id, tableName)
-	}
-
-	//fmt.Printf("Successfully deleted entry with ID %d from table %s.\n", id, tableName)
-	return nil
-}
-
-// delete entry from "history" table by UUID
-func DeleteHistoryEntryByUUID(db *sql.DB, uuid string) error {
-	// Construct the delete query dynamically (tableName must be validated)
-	query := fmt.Sprintf("DELETE FROM %s WHERE UUID = ?;", "history")
-
-	// Execute the delete statement
-	result, err := db.Exec(query, uuid)
-	if err != nil {
-		return fmt.Errorf("error deleting entry from %s: %v", "history", err)
-	}
-
-	// Check how many rows were affected
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("error retrieving affected rows: %v", err)
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("no entry found with UUID %s in table %s", uuid, "history")
+		return fmt.Errorf("no entry found with %s: %s in table %s", key, value, table)
 	}
 
 	//fmt.Printf("Successfully deleted entry with ID %d from table %s.\n", id, tableName)

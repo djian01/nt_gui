@@ -4,7 +4,10 @@ import (
 	"context"
 	"log"
 	"os"
+	"os/signal"
+	"runtime"
 	"runtime/debug"
+	"syscall"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -12,6 +15,9 @@ import (
 
 	ntdb "github.com/djian01/nt_gui/pkg/ntdb"
 )
+
+// GUI mode (no terminal attached) for Windows ONLY
+// go build -ldflags="-H=windowsgui" -o nt_gui.exe
 
 // create a global logger pointer
 var (
@@ -53,11 +59,25 @@ func main() {
 
 	// Ensure cleanup when the app closes
 	a.Lifecycle().SetOnStopped(func() {
+		logger.Println("Application stopping gracefully.")
 		// call cancelFunc() to signal the go routines
 		cancelFunc()
 		// give time for go routines to exit
 		time.Sleep(1 * time.Second)
 	})
+
+	// Capture Ctrl+C only for Linux/Mac, skip for Windows
+	if runtime.GOOS != "windows" {
+		signalChan := make(chan os.Signal, 1)
+		defer close(signalChan)
+		signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+		go func() {
+			for s := range signalChan {
+				logger.Println("Received shutdown signal (Ctrl+C),", s)
+				a.Quit() // Trigger app stop
+			}
+		}()
+	}
 
 	w := a.NewWindow("NT GUI") // w is a pointer
 

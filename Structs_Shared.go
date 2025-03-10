@@ -73,16 +73,18 @@ type SummaryData struct {
 	MaxRTT          time.Duration
 	AvgRtt          time.Duration
 	ntCmd           string
-	testEnded       bool
+	uuid            string
+	//testEnded       bool
 }
 
 // Update Summary Data - Initial
-func (sd *SummaryData) Initial(pType, destHost, ntCmd string, startTime time.Time) {
+func (sd *SummaryData) Initial(pType, destHost, ntCmd string, startTime time.Time, uuid string) {
 	sd.Type = pType
 	sd.ntCmd = ntCmd
 	sd.StartTime = startTime
 	sd.DestHost = destHost
-	sd.testEnded = false
+	sd.uuid = uuid
+	//sd.testEnded = false
 }
 
 // Update Summary Data - Running
@@ -122,6 +124,11 @@ func (sd *SummaryData) UpdateRunning(p *ntPinger.Packet) {
 		sd.AvgRtt = myPacket.AvgRtt
 
 	}
+}
+
+// func: get UUID
+func (sd *SummaryData) GetUUID() string {
+	return sd.uuid
 }
 
 // *********** Summary UI **********
@@ -245,7 +252,7 @@ func (sui *SummaryUI) UpdateStaticUI(sd *SummaryData) {
 	sui.ntCmdEntry.SetText((*sd).ntCmd)
 
 	// ntCmdBtn
-	if sd.testEnded {
+	if !existingTestCheck(&testRegister, sd.GetUUID()) {
 		sui.ntCmdBtn.Enable()
 	} else {
 		sui.ntCmdBtn.Disable()

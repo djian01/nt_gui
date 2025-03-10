@@ -369,7 +369,7 @@ func existingTestCheck(testRegister *[]string, uuid string) bool {
 }
 
 // Test Register Func: delete UUID from a Test Register
-func RemoveUUID(testRegister *[]string, uuid string) {
+func UnregisterTest(testRegister *[]string, uuid string) {
 	newSlice := (*testRegister)[:0] // Keep the same underlying array
 	for _, str := range *testRegister {
 		if str != uuid {

@@ -98,8 +98,8 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 	chartWindowCloseBtn.Importance = widget.HighImportance
 	ChartWindowCloseContainer := container.New(layout.NewCenterLayout(), container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 40)), chartWindowCloseBtn))
 
-	// if the test is already ended
-	if testSummary.testEnded {
+	// if the test is already stopped.
+	if !existingTestCheck(&testRegister, testObj.GetUUID()) {
 		// disable the all buttons
 		chartBtnPause.Disable()
 		chartBtnPlay.Disable()
@@ -200,8 +200,11 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 
 	//// Stop Btn Function
 	chartBtnStop.OnTapped = func() { // Stop on tap function
-		testObj.Stop(p)
-		testSummary.testEnded = true
+		// if the test has not yet stopped, stop it
+		if existingTestCheck(&testRegister, testObj.GetUUID()) {
+			testObj.Stop(p)
+		}
+
 		chartBtnPause.Disable()
 		chartBtnPlay.Disable()
 		chartBtnStop.Disable()
@@ -277,7 +280,7 @@ func NewChartUpdate(testCtx context.Context, pauseFlag *bool, testObj *testObjec
 		}
 
 		// if the test is ended, exit
-		if testSummary.testEnded {
+		if !existingTestCheck(&testRegister, (*testObj).GetUUID()) {
 			return
 		}
 

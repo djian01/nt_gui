@@ -226,9 +226,7 @@ func (d *dnsGUIRow) UpdateRow(p *ntPinger.Packet) {
 }
 
 // ******* struct dnsObject ********
-
 type dnsObject struct {
-	uuid        string
 	testSummary *SummaryData
 	ChartData   []ntchart.ChartPoint
 	DnsGUI      dnsGUIRow
@@ -247,16 +245,10 @@ func (d *dnsObject) GetChartData() *[]ntchart.ChartPoint {
 }
 
 func (d *dnsObject) GetUUID() string {
-	return d.uuid
+	return d.testSummary.GetUUID()
 }
 
 func (d *dnsObject) Initial(testSummary *SummaryData) {
-
-	// create test uuid
-	d.uuid = GenerateShortUUID()
-
-	// update test register
-	testRegister = append(testRegister, d.uuid)
 
 	// test Summary
 	d.testSummary = testSummary
@@ -292,16 +284,22 @@ func (d *dnsObject) Stop(p *ntPinger.Pinger) {
 	d.DnsGUI.Status.Object.(*canvas.Text).Color = color.RGBA{165, 42, 42, 255}
 	d.DnsGUI.Status.Object.(*canvas.Text).Refresh()
 
-	// remove uuid from test register
-	RemoveUUID(&testRegister, d.uuid)
+	// Unregister test from test register
+	UnregisterTest(&testRegister, d.GetUUID())
 }
 
 // func: Add Ping Row
 func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dnsTableBody *fyne.Container, recording bool) {
 
+	// test uuid
+	testUUID := GenerateShortUUID()
+
+	// Register Test
+	testRegister = append(testRegister, testUUID)
+
 	// Create Summary Data
 	mySumData := SummaryData{}
-	mySumData.Initial("dns", inputVars.DestHost, Iv2NtCmd(recording, *inputVars), time.Now())
+	mySumData.Initial("dns", inputVars.DestHost, Iv2NtCmd(recording, *inputVars), time.Now(), testUUID)
 
 	// ResultGenerateDNS()
 	myDnsPing := dnsObject{}
@@ -362,7 +360,6 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 	// OnTapped Func - Stop btn
 	myDnsPing.DnsGUI.StopBtn.OnTapped = func() {
-		myDnsPing.testSummary.testEnded = true
 		myDnsPing.testSummary.EndTime = time.Now()
 		myDnsPing.Stop(p)
 	}
@@ -407,7 +404,8 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 			if !ok {
 				loopClose = true
 				break // break select, bypass following code in the same case
-			} else if mySumData.testEnded {
+				// if the current test is NOT in the test register, exit
+			} else if !existingTestCheck(&testRegister, myDnsPing.GetUUID()) {
 				loopClose = true
 				break // break select, bypass following code in the same case
 			}

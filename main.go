@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"syscall"
@@ -32,11 +33,20 @@ var testRegister []string
 
 func main() {
 
+	// get the config file path
+	// macOS: ~/Library/Application Support/<appName>
+	// Windows & Linux: the config file path is the same as the executable path
+	configPath, err := getConfigFilePath("nt_gui")
+	if err != nil {
+		log.Fatal("Failed to get log file path:", err)
+		return
+	}
+
 	// create or open the output.txt file for logging
 	// "os.O_RDWR": open file to read and write
 	// "os.O_CREATE": Create the file with the mode permissions if file does not exist. Cursor is at the beginning.
 	// "os.O_APPEND": Only allow write past end of file
-	logFile, err := os.OpenFile("logFile.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	logFile, err := os.OpenFile(filepath.Join(configPath, "logFile.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatal("Error opening log file: ", err)
 		return
@@ -85,7 +95,7 @@ func main() {
 	w.CenterOnScreen()
 
 	// Open NT DB
-	ntDB, err := ntdb.DBOpen("ntdata.db")
+	ntDB, err := ntdb.DBOpen(filepath.Join(configPath, "ntdata.db"))
 	if err != nil {
 		logger.Println(err)
 	}

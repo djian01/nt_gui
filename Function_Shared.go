@@ -7,7 +7,10 @@ import (
 	"math/big"
 	"net"
 	"net/url"
+	"os"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -19,6 +22,36 @@ import (
 	"github.com/djian01/nt/pkg/ntPinger"
 	ntchart "github.com/djian01/nt_gui/pkg/chart"
 )
+
+// Func: get the config file path for different OS
+func getConfigFilePath(appName string) (string, error) {
+	var configDir string
+	var err error
+
+	if runtime.GOOS == "darwin" {
+		// macOS: ~/Library/Application Support/<appName> (/Users/<User Name>/Library/Application Support/<appName>)
+		configDir, err = os.UserConfigDir()
+		if err != nil {
+			return "", err
+		}
+		configDir = filepath.Join(configDir, appName)
+	} else {
+		// Windows/Linux: directory where executable resides
+		exePath, err := os.Executable()
+		if err != nil {
+			return "", err
+		}
+		configDir = filepath.Dir(exePath)
+	}
+
+	// Ensure the config directory exists
+	if err := os.MkdirAll(configDir, os.ModePerm); err != nil {
+		return "", err
+	}
+
+	// Return full path for config file
+	return configDir, nil
+}
 
 // Func: Create a vertical separator
 func GUIVerticalSeparator() *canvas.Rectangle {

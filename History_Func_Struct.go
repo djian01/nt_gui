@@ -47,18 +47,18 @@ func (d *historyGUIRow) Initial() {
 	d.Command.Length = 450
 	d.Command.Object = widget.NewLabel("--")
 
-	d.ReplayBtn = widget.NewButtonWithIcon("", theme.MediaReplayIcon(), func() {})
+	d.ReplayBtn = widget.NewButtonWithIcon("Re-Run", theme.MediaReplayIcon(), func() {})
 	d.ReplayBtn.Importance = widget.HighImportance
 
-	d.RecordBtn = widget.NewButtonWithIcon("", theme.FileIcon(), func() {})
+	d.RecordBtn = widget.NewButtonWithIcon("Show Details", theme.FileIcon(), func() {})
 	d.RecordBtn.Importance = widget.WarningImportance
 	d.RecordBtn.Disable()
 
-	d.DeleteBtn = widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {})
+	d.DeleteBtn = widget.NewButtonWithIcon("Delete", theme.DeleteIcon(), func() {})
 	d.DeleteBtn.Importance = widget.DangerImportance
 
 	d.Action.Label = "Action"
-	d.Action.Length = 180
+	d.Action.Length = 380
 	d.Action.Object = container.New(layout.NewGridLayoutWithColumns(3), d.ReplayBtn, d.RecordBtn, d.DeleteBtn)
 
 	// table row

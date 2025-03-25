@@ -9,6 +9,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -54,12 +55,12 @@ func (d *historyGUIRow) Initial() {
 	d.RecordBtn.Importance = widget.WarningImportance
 	d.RecordBtn.Disable()
 
-	d.DeleteBtn = widget.NewButtonWithIcon("Delete", theme.DeleteIcon(), func() {})
+	d.DeleteBtn = widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {})
 	d.DeleteBtn.Importance = widget.DangerImportance
 
 	d.Action.Label = "Action"
-	d.Action.Length = 380
-	d.Action.Object = container.New(layout.NewGridLayoutWithColumns(3), d.ReplayBtn, d.RecordBtn, d.DeleteBtn)
+	d.Action.Length = 300
+	d.Action.Object = container.New(layout.NewBorderLayout(nil, nil, nil, d.DeleteBtn), container.New(layout.NewGridLayoutWithColumns(2), d.ReplayBtn, d.RecordBtn), d.DeleteBtn)
 
 	// table row
 	row := container.New(layout.NewHBoxLayout(),
@@ -145,7 +146,7 @@ type historyObject struct {
 }
 
 // Func: add history row
-func historyAddRow(a fyne.App, h *ntdb.HistoryEntry, hs *[]ntdb.HistoryEntry, historyTableBody *fyne.Container, db *sql.DB) {
+func historyAddRow(a fyne.App, w fyne.Window, h *ntdb.HistoryEntry, hs *[]ntdb.HistoryEntry, historyTableBody *fyne.Container, db *sql.DB, entryChan chan ntdb.DbEntry) {
 
 	// create history object
 	he := historyObject{}
@@ -160,7 +161,24 @@ func historyAddRow(a fyne.App, h *ntdb.HistoryEntry, hs *[]ntdb.HistoryEntry, hi
 		historyTableBody.Refresh()
 	}
 
-	// update record btn
+	// update replay btn
+	he.historyGUI.ReplayBtn.OnTapped = func() {
+		// fmt.Println(he.historyEntry.UUID)
+		// re-launch a new go routine for DnsAddPingRow with the same InputVar
+
+		// generate iv
+		recording, iv, _ := NtCmd2Iv(h.Command)
+
+		switch h.TestType {
+		case "dns":
+			go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording, db, entryChan)
+		case "http":
+		case "tcp":
+		case "icmp":
+		}
+	}
+
+	// update show record details btn
 	if h.Recorded {
 		he.historyGUI.RecordBtn.Enable()
 	} else {
@@ -171,28 +189,30 @@ func historyAddRow(a fyne.App, h *ntdb.HistoryEntry, hs *[]ntdb.HistoryEntry, hi
 
 	}
 
-	// update replay btn
-	he.historyGUI.ReplayBtn.OnTapped = func() {
-		fmt.Println(he.historyEntry.UUID)
-	}
-
 	// update delete btn
 	he.historyGUI.DeleteBtn.OnTapped = func() {
-		// delete entry
-		err := ntdb.DeleteEntry(db, "history", "uuid", he.historyEntry.UUID)
-		if err != nil {
-			logger.Println(err)
-		}
-		// refresh table
-		err = historyRefresh(a, db, hs)
-		if err != nil {
-			logger.Println(err)
-		}
+
+		confirm := dialog.NewConfirm("Please Confirm", fmt.Sprintf("Do you want to delete the history record of \n \"%s\" ?", h.Command), func(b bool) {
+			if b {
+				// delete entry
+				err := ntdb.DeleteEntry(db, "history", "uuid", he.historyEntry.UUID)
+				if err != nil {
+					logger.Println(err)
+				}
+				// refresh table
+				err = historyRefresh(a, w, hs, db, entryChan)
+				if err != nil {
+					logger.Println(err)
+				}
+			}
+		}, w)
+
+		confirm.Show()
 	}
 }
 
 // Func: history table refresh
-func historyRefresh(a fyne.App, db *sql.DB, historyEntries *[]ntdb.HistoryEntry) error {
+func historyRefresh(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryEntry, db *sql.DB, entryChan chan ntdb.DbEntry) error {
 
 	// clean up all the items in ntGlobal.historyTable
 	ntGlobal.historyTable.Objects = nil // Remove all child objects
@@ -208,7 +228,7 @@ func historyRefresh(a fyne.App, db *sql.DB, historyEntries *[]ntdb.HistoryEntry)
 		return nil
 	} else {
 		for i := 0; i < len(*historyEntries); i++ {
-			go historyAddRow(a, &(*historyEntries)[i], historyEntries, ntGlobal.historyTable, db)
+			go historyAddRow(a, w, &(*historyEntries)[i], historyEntries, ntGlobal.historyTable, db, entryChan)
 			// add some delays between each row to let the table sort by Id sequence
 			time.Sleep(5 * time.Millisecond)
 		}

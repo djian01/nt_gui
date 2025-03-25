@@ -75,6 +75,9 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry) 
 
 	ToolbarContainer := container.New(layout.NewVBoxLayout(), ToolbarWidget)
 
+	// initial history entries
+	historyEntries := []ntdb.HistoryEntry{}
+
 	// Create resource from SVG file
 	icmpIcon := theme.NewThemedResource(resourceIcmpIconSvg)
 	tcpIcon := theme.NewThemedResource(resourceTcpIconSvg)
@@ -85,15 +88,25 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry) 
 
 	// AppTabContainer
 	AppTabContainer := container.NewAppTabs(
-		container.NewTabItemWithIcon("ICMP Ping", icmpIcon, ICMPPingContainer(a, w)),
-		container.NewTabItemWithIcon("TCP Ping", tcpIcon, TCPPingContainer(a, w)),
-		container.NewTabItemWithIcon("HTTP Ping", httpIcon, HTTPPingContainer(a, w)),
-		container.NewTabItemWithIcon("DNS Ping", dnsIcon, DNSPingContainer(a, w)),
-		container.NewTabItemWithIcon("Result Analysis", analyIcon, ResultAnalysisContainer(a, w)),
-		container.NewTabItemWithIcon("History", historyIcon, HistoryContainer(a, w, db, entryChan)),
+		container.NewTabItemWithIcon("ICMP Ping", icmpIcon, ICMPPingContainer(a, w, db, entryChan)),
+		container.NewTabItemWithIcon("TCP Ping", tcpIcon, TCPPingContainer(a, w, db, entryChan)),
+		container.NewTabItemWithIcon("HTTP Ping", httpIcon, HTTPPingContainer(a, w, db, entryChan)),
+		container.NewTabItemWithIcon("DNS Ping", dnsIcon, DNSPingContainer(a, w, db, entryChan)),
+		container.NewTabItemWithIcon("Result Analysis", analyIcon, ResultAnalysisContainer(a, w, db, entryChan)),
+		container.NewTabItemWithIcon("History", historyIcon, HistoryContainer(a, w, &historyEntries, db, entryChan)),
 	)
 
 	AppTabContainer.SetTabLocation(container.TabLocationLeading) // left
+
+	AppTabContainer.OnSelected = func(ti *container.TabItem) {
+		if ti.Text == "History" {
+			// refresh History table
+			err := historyRefresh(a, w, &historyEntries, db, entryChan)
+			if err != nil {
+				logger.Println(err)
+			}
+		}
+	}
 
 	// MainContainer
 	mainContainer := container.NewBorder(ToolbarContainer, nil, nil, nil, AppTabContainer)

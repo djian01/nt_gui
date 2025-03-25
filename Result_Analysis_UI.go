@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/csv"
 	"os"
 	"path/filepath"
@@ -16,9 +17,10 @@ import (
 	"github.com/djian01/nt/pkg/ntPinger"
 
 	ntchart "github.com/djian01/nt_gui/pkg/chart"
+	"github.com/djian01/nt_gui/pkg/ntdb"
 )
 
-func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
+func ResultAnalysisContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry) *fyne.Container {
 
 	// Initial slides
 	inputResultPackets := []ntPinger.Packet{}
@@ -54,8 +56,8 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	RaMainContainerInner := container.New(layout.NewVBoxLayout(), inputResultCSVFileCard, SumUI.summaryCard, chart.chartCard, slider.sliderCard)
 	RaMainContainerOuter := container.New(layout.NewBorderLayout(RASpaceHolder, RASpaceHolder, RASpaceHolder, RASpaceHolder), RASpaceHolder, RaMainContainerInner)
 
-	// Input NSX Config File BTN
-	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(a, w, &inputResultPackets, &chartData, &chart, &SumD, &SumUI, inputResultCSVFilePath, &slider)
+	// Open Previous Test Record CSV Config File BTN
+	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(a, w, &inputResultPackets, &chartData, &chart, &SumD, &SumUI, inputResultCSVFilePath, &slider, db, entryChan)
 
 	// Slider Update
 	slider.rangeSlider.OnChanged = func() { slider.update() }
@@ -65,7 +67,7 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window) *fyne.Container {
 }
 
 // func: OpenResultCSVFile
-func OpenResultCSVFile(a fyne.App, w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chart *Chart, SumD *SummaryData, SumUI *SummaryUI, inputResultCSVFilePath *widget.Entry, slider *Slider) func() {
+func OpenResultCSVFile(a fyne.App, w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chart *Chart, SumD *SummaryData, SumUI *SummaryUI, inputResultCSVFilePath *widget.Entry, slider *Slider, db *sql.DB, entryChan chan ntdb.DbEntry) func() {
 	return func() {
 
 		// reset vars
@@ -124,7 +126,7 @@ func OpenResultCSVFile(a fyne.App, w fyne.Window, inputResultPackets *[]ntPinger
 				// launch new test
 				switch RaType {
 				case "dns":
-					go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, true)
+					go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, true, db, entryChan)
 				case "http":
 				case "tcp":
 				case "icmp":

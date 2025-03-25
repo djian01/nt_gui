@@ -1,14 +1,17 @@
 package main
 
 import (
+	"database/sql"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/djian01/nt_gui/pkg/ntdb"
 )
 
-func DNSPingContainer(a fyne.App, w fyne.Window) *fyne.Container {
+func DNSPingContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry) *fyne.Container {
 
 	// index
 	ntGlobal.dnsIndex = 1
@@ -41,7 +44,7 @@ func DNSPingContainer(a fyne.App, w fyne.Window) *fyne.Container {
 	// dnsPingAddBtn action
 	dnsPingAddBtn.OnTapped = func() {
 		// NewTest will call "go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable)"
-		NewTest(a, "dns")
+		NewTest(a, "dns", db, entryChan)
 	}
 
 	// Return your DNS ping interface components here

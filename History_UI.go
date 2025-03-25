@@ -12,10 +12,10 @@ import (
 	ntdb "github.com/djian01/nt_gui/pkg/ntdb"
 )
 
-func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry) *fyne.Container {
+func HistoryContainer(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryEntry, db *sql.DB, entryChan chan ntdb.DbEntry) *fyne.Container {
 
 	// Initial History Entries Slice
-	historyEntries := []ntdb.HistoryEntry{}
+	//historyEntries := []ntdb.HistoryEntry{}
 
 	//// test code start
 	insertBtn := widget.NewButton("Insert Entry", func() {})
@@ -63,14 +63,14 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 	// btn functions:
 	//// history refresh btn
 	historyRefreshBtn.OnTapped = func() {
-		err := historyRefresh(a, db, &historyEntries)
+		err := historyRefresh(a, w, historyEntries, db, entryChan)
 		if err != nil {
 			logger.Println(err)
 		}
 	}
 
 	// update the history table at the beginning
-	err := historyRefresh(a, db, &historyEntries)
+	err := historyRefresh(a, w, historyEntries, db, entryChan)
 	if err != nil {
 		logger.Println(err)
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"image/color"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/djian01/nt/pkg/ntPinger"
 	ntchart "github.com/djian01/nt_gui/pkg/chart"
+	"github.com/djian01/nt_gui/pkg/ntdb"
 )
 
 // check interafce implementation
@@ -289,7 +291,7 @@ func (d *dnsObject) Stop(p *ntPinger.Pinger) {
 }
 
 // func: Add Ping Row
-func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dnsTableBody *fyne.Container, recording bool) {
+func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dnsTableBody *fyne.Container, recording bool, db *sql.DB, entryChan chan ntdb.DbEntry) {
 
 	// test uuid
 	testUUID := GenerateShortUUID()
@@ -300,6 +302,17 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	// Create Summary Data
 	mySumData := SummaryData{}
 	mySumData.Initial("dns", inputVars.DestHost, Iv2NtCmd(recording, *inputVars), time.Now(), testUUID)
+
+	// Add History DB record
+	historyRecord := ntdb.HistoryEntry{}
+	historyRecord.TableName = "history"
+	historyRecord.StartTime = time.Now().Format("2006-01-02 15:04:05 MST")
+	historyRecord.TestType = mySumData.Type
+	historyRecord.Command = mySumData.ntCmd
+	historyRecord.UUID = testUUID
+	historyRecord.Recorded = recording
+
+	entryChan <- &historyRecord
 
 	// ResultGenerateDNS()
 	myDnsPing := dnsObject{}
@@ -355,7 +368,7 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 	// OnTapped Func - Chart btn
 	myDnsPing.DnsGUI.ChartBtn.OnTapped = func() {
-		NewChartWindow(a, &myDnsPing, recording, p)
+		NewChartWindow(a, &myDnsPing, recording, p, db, entryChan)
 	}
 
 	// OnTapped Func - Stop btn
@@ -367,7 +380,7 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	// OnTapped Func - Replay btn
 	myDnsPing.DnsGUI.ReplayBtn.OnTapped = func() {
 		// re-launch a new go routine for DnsAddPingRow with the same InputVar
-		go DnsAddPingRow(a, indexPing, inputVars, dnsTableBody, recording)
+		go DnsAddPingRow(a, indexPing, inputVars, dnsTableBody, recording, db, entryChan)
 	}
 
 	// OnTapped Func - close btn

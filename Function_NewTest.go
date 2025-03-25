@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"image/color"
 	"strconv"
@@ -13,10 +14,11 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/djian01/nt/pkg/ntPinger"
+	"github.com/djian01/nt_gui/pkg/ntdb"
 )
 
 // func: New Test Input
-func NewTest(a fyne.App, testType string) {
+func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntry) {
 
 	// Initial New Test Input Var Window
 	newTestWindow := a.NewWindow(fmt.Sprintf("New %s Test", strings.ToUpper(testType)))
@@ -175,7 +177,7 @@ func NewTest(a fyne.App, testType string) {
 					iv.Dns_query = dnsQueryEntry.Text
 
 					// start test
-					go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording)
+					go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording, db, entryChan)
 
 					// close new test window
 					newTestWindow.Close()

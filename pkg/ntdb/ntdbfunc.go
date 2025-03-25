@@ -3,47 +3,46 @@ package ntdb
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"sort"
 	"strconv"
 )
 
 // createTestResultsTable creates a unique test results table for each summary entry
-func createTestResultsTable(db *sql.DB, testType, testUUID string) error {
+func CreateTestResultsTable(db *sql.DB, testType, tesTableName string) error {
 
-	// generate table name
-	tableName := fmt.Sprintf("table_%s", testUUID)
+	// initial query
+	query := ""
 
 	// careate table based on test type
 	switch testType {
 	case "dns":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			seq INTEGER,
+			status TEXT,
+			dns_resolver TEXT,
+			dns_query TEXT,
+			dns_response TEXT,
+			record TEXT,
+			response_time TEXT,
+			send_datetime TEXT,
+			success_response TEXT,
+			failure_rate TEXT,
+			min_rtt TEXT,
+			max_rtt TEXT,
+			avg_rtt TEXT,
+			additional_info TEXT
+		);`, tesTableName)
 	case "http":
 	case "tcp":
 	case "icmp":
 	}
-	query := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		seq INTEGER,
-		status TEXT,
-		dns_resolver TEXT,
-		dns_query TEXT,
-		dns_response TEXT,
-		record TEXT,
-		response_time TEXT,
-		send_datetime TEXT,
-		success_response TEXT,
-		failure_rate TEXT,
-		min_rtt TEXT,
-		max_rtt TEXT,
-		avg_rtt TEXT,
-		additional_info TEXT
-	);`, tableName)
 
 	_, err := db.Exec(query)
 	if err != nil {
-		return fmt.Errorf("failed to create table %s: %v", tableName, err)
+		return fmt.Errorf("failed to create table %s: %v", tesTableName, err)
 	}
-	log.Println("Created test results table:", tableName)
+
 	return nil
 }
 

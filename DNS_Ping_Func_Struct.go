@@ -314,6 +314,16 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 	entryChan <- &historyRecord
 
+	// build recording table if "recording" is true
+	recordingTableName := fmt.Sprintf("%s_%s", historyRecord.TestType, historyRecord.UUID)
+	if recording {
+		err := ntdb.CreateTestResultsTable(db, "dns", recordingTableName)
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+	}
+
 	// ResultGenerateDNS()
 	myDnsPing := dnsObject{}
 	myDnsPing.Initial(&mySumData)

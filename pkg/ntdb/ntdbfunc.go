@@ -8,7 +8,7 @@ import (
 )
 
 // createTestResultsTable creates a unique test results table for each summary entry
-func CreateTestResultsTable(db *sql.DB, testType, tesTableName string) error {
+func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
 
 	// initial query
 	query := ""
@@ -30,7 +30,7 @@ func CreateTestResultsTable(db *sql.DB, testType, tesTableName string) error {
 			max_rtt TEXT,
 			avg_rtt TEXT,
 			additional_info TEXT
-		);`, tesTableName)
+		);`, testTableName)
 	case "http":
 		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,7 +46,7 @@ func CreateTestResultsTable(db *sql.DB, testType, tesTableName string) error {
 			max_rtt TEXT,
 			avg_rtt TEXT,
 			additional_info TEXT
-		);`, tesTableName)
+		);`, testTableName)
 	case "tcp":
 		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,7 +60,7 @@ func CreateTestResultsTable(db *sql.DB, testType, tesTableName string) error {
 			max_rtt TEXT,
 			avg_rtt TEXT,
 			additional_info TEXT
-		);`, tesTableName)
+		);`, testTableName)
 	case "icmp":
 		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,12 +74,12 @@ func CreateTestResultsTable(db *sql.DB, testType, tesTableName string) error {
 			max_rtt TEXT,
 			avg_rtt TEXT,
 			additional_info TEXT
-		);`, tesTableName)
+		);`, testTableName)
 	}
 
 	_, err := db.Exec(query)
 	if err != nil {
-		return fmt.Errorf("failed to create table %s: %v", tesTableName, err)
+		return fmt.Errorf("failed to create table %s: %v", testTableName, err)
 	}
 
 	return nil

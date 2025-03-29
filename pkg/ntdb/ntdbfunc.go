@@ -20,8 +20,6 @@ func CreateTestResultsTable(db *sql.DB, testType, tesTableName string) error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			seq INTEGER,
 			status TEXT,
-			dns_resolver TEXT,
-			dns_query TEXT,
 			dns_response TEXT,
 			record TEXT,
 			response_time TEXT,
@@ -34,8 +32,49 @@ func CreateTestResultsTable(db *sql.DB, testType, tesTableName string) error {
 			additional_info TEXT
 		);`, tesTableName)
 	case "http":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			seq INTEGER,
+			status TEXT,
+			response_code TEXT,
+			response_phase TEXT,
+			response_time TEXT,
+			send_datetime TEXT,
+			sessionsuccess TEXT,
+			failure_rate TEXT,
+			min_rtt TEXT,
+			max_rtt TEXT,
+			avg_rtt TEXT,
+			additional_info TEXT
+		);`, tesTableName)
 	case "tcp":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			seq INTEGER,
+			status TEXT,
+			rtt TEXT,
+			send_datetime TEXT,
+			packetrecv TEXT,
+			packetloss TEXT,
+			min_rtt TEXT,
+			max_rtt TEXT,
+			avg_rtt TEXT,
+			additional_info TEXT
+		);`, tesTableName)
 	case "icmp":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			seq INTEGER,
+			status TEXT,
+			RTT TEXT,
+			send_datetime TEXT,
+			packetrecv TEXT,
+			packetloss TEXT,
+			min_rtt TEXT,
+			max_rtt TEXT,
+			avg_rtt TEXT,
+			additional_info TEXT
+		);`, tesTableName)
 	}
 
 	_, err := db.Exec(query)

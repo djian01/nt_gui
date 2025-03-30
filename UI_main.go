@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
@@ -40,8 +41,17 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry) 
 			}
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
+
+			// fyne bundle -append Icon.png >> Resource_Shared.go
+			appImage := canvas.NewImageFromResource(resourceIconPng) // auto-generated name
+			//appImage.Resize(fyne.NewSize(50, 50))
+			appImage.FillMode = canvas.ImageFillContain
+			//appImage := canvas.NewRectangle(color.NRGBA{R: 255, G: 0, B: 0, A: 255})
+			appImage.SetMinSize(fyne.NewSize(90, 90))
+
 			// Create about dialog with left-aligned text
 			aboutContent := container.NewVBox(
+				appImage,
 				widget.NewLabel("Version:  1.0.0"),
 				widget.NewLabel("Developed By:   Dennis Jian"),
 				container.NewHBox(
@@ -52,21 +62,21 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry) 
 				widget.NewLabel(""), // Add a blank line
 			)
 
-			aboutOkButton := widget.NewButton("           OK          ", nil)
-			aboutOkButton.Importance = widget.HighImportance
+			// aboutOkButton := widget.NewButton("           OK          ", nil)
+			// aboutOkButton.Importance = widget.HighImportance
 
 			aboutDialog := dialog.NewCustom(
 				"About NT (Net-Test) GUI",
-				"", // Empty string since we'll use our custom button
+				"           OK          ",
 				container.NewVBox(
 					aboutContent,
-					container.NewPadded(container.NewCenter(aboutOkButton)),
+					// container.NewPadded(container.NewCenter(aboutOkButton)),
 				),
 				w)
 
-			aboutOkButton.OnTapped = func() {
-				aboutDialog.Hide()
-			}
+			// aboutOkButton.OnTapped = func() {
+			// 	aboutDialog.Hide()
+			// }
 
 			aboutDialog.Resize(fyne.NewSize(500, 100))
 			aboutDialog.Show()

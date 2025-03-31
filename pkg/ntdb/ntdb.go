@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	_ "modernc.org/sqlite" // Import SQLite driver
 )
@@ -82,8 +83,8 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry) error {
 		// history table
 		case "history":
 			he := entry.(*HistoryEntry)
-			// Construct SQL query with the dynamic table name, default table name is "history"
-			query := `INSERT INTO history (tablename, testtype, starttime, command, uuid, recorded) VALUES (?, ?, ?, ?, ?, ?);`
+			// Construct SQL query with the dynamic table name
+			query := fmt.Sprintf("INSERT INTO %s (tablename, testtype, starttime, command, uuid, recorded) VALUES (?, ?, ?, ?, ?, ?);", tableName)
 
 			// setup temporary variable for recorded
 			var recordedInt int // temporary variable to store the INT value of recorded
@@ -95,6 +96,42 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry) error {
 
 			// Execute the query safely with placeholders for values
 			_, err = ntdb.Exec(query, he.TableName, he.TestType, he.StartTime, he.Command, he.UUID, recordedInt)
+		default:
+			// recording table name example "dns_U4S2CP"
+			tableNameSlice := strings.Split(tableName, "_")
+
+			if len(tableNameSlice) == 2 {
+				switch tableNameSlice[0] {
+				case "dns":
+					en := entry.(*RecordDNSEntry)
+					// Construct SQL query with the dynamic table name
+					query := fmt.Sprintf("INSERT INTO %s (seq, status, dns_response, record, response_time, send_datetime, failure_rate, min_rtt, max_rtt, avg_rtt, additinal_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
+					// Execute the query safely with placeholders for values
+					_, err = ntdb.Exec(query, en.Seq, en.Status, en.DnsResponse, en.DnsRecord, en.ResponseTime, en.SendDateTime, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRtt, en.AddInfo)
+
+				case "http":
+					en := entry.(*RecordHTTPEntry)
+					// Construct SQL query with the dynamic table name
+					query := fmt.Sprintf("INSERT INTO %s (seq, status, response_code, response_phase, response_time, send_datetime, successresponse, failure_rate, min_rtt, max_rtt, avg_rtt, additinal_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
+					// Execute the query safely with placeholders for values
+					_, err = ntdb.Exec(query, en.Seq, en.Status, en.ResponseCode, en.ResponsePhase, en.ResponseTime, en.SendDateTime, en.SuccessResponse, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRtt, en.AddInfo)
+
+				case "tcp":
+					en := entry.(*RecordTCPEntry)
+					// Construct SQL query with the dynamic table name
+					query := fmt.Sprintf("INSERT INTO %s (seq, status, rtt, send_datetime, packetrecv, packetloss, min_rtt, max_rtt, avg_rtt, additinal_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
+					// Execute the query safely with placeholders for values
+					_, err = ntdb.Exec(query, en.Seq, en.Status, en.RTT, en.SendDateTime, en.PacketRecv, en.PacketLoss, en.MinRTT, en.MaxRTT, en.AvgRtt, en.AddInfo)
+
+				case "icmp":
+					en := entry.(*RecordICMPEntry)
+					// Construct SQL query with the dynamic table name
+					query := fmt.Sprintf("INSERT INTO %s (seq, status, rtt, send_datetime, packetrecv, packetloss, min_rtt, max_rtt, avg_rtt, additinal_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
+					// Execute the query safely with placeholders for values
+					_, err = ntdb.Exec(query, en.Seq, en.Status, en.RTT, en.SendDateTime, en.PacketRecv, en.PacketLoss, en.MinRTT, en.MaxRTT, en.AvgRtt, en.AddInfo)
+
+				}
+			}
 		}
 	}
 	return err

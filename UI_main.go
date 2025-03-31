@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -52,7 +53,7 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry) 
 			// Create about dialog with left-aligned text
 			aboutContent := container.NewVBox(
 				appImage,
-				widget.NewLabel("Version:  1.0.0"),
+				widget.NewLabel(fmt.Sprintf("Version:  %s", appVersion)),
 				widget.NewLabel("Developed By:   Dennis Jian"),
 				container.NewHBox(
 					widget.NewLabel("Project Home: "),

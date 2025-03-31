@@ -36,12 +36,14 @@ type RecordDNSEntry struct {
 	Id              string
 	TableName       string
 	TestType        string
+	Seq             string
 	Status          string
 	DnsResponse     string
 	DnsRecord       string
 	ResponseTime    string
-	SendTime        string
+	SendDateTime    string
 	SuccessResponse string
+	FailRate        string
 	MinRTT          string
 	MaxRTT          string
 	AvgRtt          string
@@ -53,5 +55,82 @@ func (r *RecordDNSEntry) GetTableName() string {
 }
 
 func (r *RecordDNSEntry) GetTestType() string {
+	return r.TestType
+}
+
+// ** Record Table Entry: HTTP Record Entry **
+type RecordHTTPEntry struct {
+	Id              string
+	TableName       string
+	TestType        string
+	Seq             string
+	Status          string
+	ResponseCode    string
+	ResponsePhase   string
+	ResponseTime    string
+	SendDateTime    string
+	SuccessResponse string
+	FailRate        string
+	MinRTT          string
+	MaxRTT          string
+	AvgRtt          string
+	AddInfo         string
+}
+
+func (r *RecordHTTPEntry) GetTableName() string {
+	return r.TableName
+}
+
+func (r *RecordHTTPEntry) GetTestType() string {
+	return r.TestType
+}
+
+// ** Record Table Entry: TCP Record Entry **
+type RecordTCPEntry struct {
+	Id           string
+	TableName    string
+	TestType     string
+	Seq          string
+	Status       string
+	RTT          string
+	SendDateTime string
+	PacketRecv   string
+	PacketLoss   string
+	MinRTT       string
+	MaxRTT       string
+	AvgRtt       string
+	AddInfo      string
+}
+
+func (r *RecordTCPEntry) GetTableName() string {
+	return r.TableName
+}
+
+func (r *RecordTCPEntry) GetTestType() string {
+	return r.TestType
+}
+
+// ** Record Table Entry: ICMP Record Entry **
+type RecordICMPEntry struct {
+	Id           string
+	TableName    string
+	TestType     string
+	Seq          string
+	Status       string
+	RTT          string
+	SendDateTime string
+	PacketRecv   string
+	PacketLoss   string
+	MinRTT       string
+	MaxRTT       string
+	AvgRtt       string
+	AddInfo      string
+}
+
+func (r *RecordICMPEntry) GetTableName() string {
+	return r.TableName
+}
+
+func (r *RecordICMPEntry) GetTestType() string {
 	return r.TestType
 }

@@ -436,6 +436,11 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 			myDnsPing.UpdateChartData(&pkt)           // update chart Data slide
 			myDnsPing.testSummary.UpdateRunning(&pkt) // update summary Data
 
+			// if recording is true, add the &pkt to DB table
+			if recording {
+
+			}
+
 			// Add test result entry to DB is "recording" is "ON"
 
 		// harvest the errChan input

@@ -25,6 +25,8 @@ var (
 	logger *log.Logger
 )
 
+var appVersion string = "1.0.0"
+
 // Create a global cancelable context
 var appCtx, cancelFunc = context.WithCancel(context.Background())
 

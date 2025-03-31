@@ -40,7 +40,7 @@ func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
 			response_phase TEXT,
 			response_time TEXT,
 			send_datetime TEXT,
-			sessionsuccess TEXT,
+			successresponse TEXT,
 			failure_rate TEXT,
 			min_rtt TEXT,
 			max_rtt TEXT,

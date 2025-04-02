@@ -25,6 +25,7 @@ var (
 	logger *log.Logger
 )
 
+// app Version
 var appVersion string = "1.0.0"
 
 // Create a global cancelable context
@@ -58,8 +59,8 @@ func main() {
 	// create a new logger
 	logger = log.New(logFile, "", log.LstdFlags)
 
-	// create a error chan and error handling
-	errChan := make(chan error)
+	// create an error chan and error handling
+	errChan := make(chan error, 5)
 	defer close(errChan)
 
 	// launch the error catch go routine

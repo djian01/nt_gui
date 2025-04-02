@@ -18,7 +18,7 @@ import (
 )
 
 // func: New Test Input
-func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntry) {
+func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) {
 
 	// Initial New Test Input Var Window
 	newTestWindow := a.NewWindow(fmt.Sprintf("New %s Test", strings.ToUpper(testType)))
@@ -177,7 +177,7 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 					iv.Dns_query = dnsQueryEntry.Text
 
 					// start test
-					go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording, db, entryChan)
+					go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording, db, entryChan, errChan)
 
 					// close new test window
 					newTestWindow.Close()

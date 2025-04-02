@@ -146,32 +146,32 @@ type historyObject struct {
 }
 
 // Func: add history row
-func historyAddRow(a fyne.App, w fyne.Window, h *ntdb.HistoryEntry, hs *[]ntdb.HistoryEntry, historyTableBody *fyne.Container, db *sql.DB, entryChan chan ntdb.DbEntry) {
+func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.HistoryEntry, historyTableBody *fyne.Container, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) {
 
 	// create history object
-	he := historyObject{}
-	he.historyEntry = h
-	he.historyGUI.Initial()
-	he.historyGUI.UpdateRow(h)
+	ho := historyObject{}
+	ho.historyEntry = he
+	ho.historyGUI.Initial()
+	ho.historyGUI.UpdateRow(he)
 
 	// check if the UUID is NOT in the registered running test, add the record in the history table
-	if !existingTestCheck(&testRegister, h.UUID) {
+	if !existingTestCheck(&testRegister, he.UUID) {
 		// update table body
-		historyTableBody.Add(he.historyGUI.historyTableRow)
+		historyTableBody.Add(ho.historyGUI.historyTableRow)
 		historyTableBody.Refresh()
 	}
 
 	// update replay btn
-	he.historyGUI.ReplayBtn.OnTapped = func() {
+	ho.historyGUI.ReplayBtn.OnTapped = func() {
 		// fmt.Println(he.historyEntry.UUID)
 		// re-launch a new go routine for DnsAddPingRow with the same InputVar
 
 		// generate iv
-		recording, iv, _ := NtCmd2Iv(h.Command)
+		recording, iv, _ := NtCmd2Iv(he.Command)
 
-		switch h.TestType {
+		switch he.TestType {
 		case "dns":
-			go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording, db, entryChan)
+			go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording, db, entryChan, errChan)
 		case "http":
 		case "tcp":
 		case "icmp":
@@ -179,30 +179,41 @@ func historyAddRow(a fyne.App, w fyne.Window, h *ntdb.HistoryEntry, hs *[]ntdb.H
 	}
 
 	// update show record details btn
-	if h.Recorded {
-		he.historyGUI.RecordBtn.Enable()
+	if he.Recorded {
+		ho.historyGUI.RecordBtn.Enable()
 	} else {
-		he.historyGUI.RecordBtn.Disable()
+		ho.historyGUI.RecordBtn.Disable()
 	}
 
-	he.historyGUI.RecordBtn.OnTapped = func() {
+	ho.historyGUI.RecordBtn.OnTapped = func() {
 
 	}
 
 	// update delete btn
-	he.historyGUI.DeleteBtn.OnTapped = func() {
+	ho.historyGUI.DeleteBtn.OnTapped = func() {
 
-		confirm := dialog.NewConfirm("Please Confirm", fmt.Sprintf("Do you want to delete the history record of \n \"%s\" ?", h.Command), func(b bool) {
+		confirm := dialog.NewConfirm("Please Confirm", fmt.Sprintf("Do you want to delete the history record of \n \"%s\" ?", he.Command), func(b bool) {
 			if b {
 				// delete entry
-				err := ntdb.DeleteEntry(db, "history", "uuid", he.historyEntry.UUID)
+				err := ntdb.DeleteEntry(db, "history", "uuid", ho.historyEntry.UUID)
 				if err != nil {
-					logger.Println(err)
+					errChan <- err
+					return
 				}
+
+				// delete record table
+				if he.Recorded {
+					err = ntdb.DeleteTable(db, fmt.Sprintf("%s_%s", he.TestType, he.UUID))
+					if err != nil {
+						errChan <- err
+						return
+					}
+				}
+
 				// refresh table
-				err = historyRefresh(a, w, hs, db, entryChan)
+				err = historyRefresh(a, w, hs, db, entryChan, errChan)
 				if err != nil {
-					logger.Println(err)
+					errChan <- err
 				}
 			}
 		}, w)
@@ -212,7 +223,7 @@ func historyAddRow(a fyne.App, w fyne.Window, h *ntdb.HistoryEntry, hs *[]ntdb.H
 }
 
 // Func: history table refresh
-func historyRefresh(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryEntry, db *sql.DB, entryChan chan ntdb.DbEntry) error {
+func historyRefresh(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryEntry, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) error {
 
 	// clean up all the items in ntGlobal.historyTable
 	ntGlobal.historyTable.Objects = nil // Remove all child objects
@@ -228,7 +239,7 @@ func historyRefresh(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryEnt
 		return nil
 	} else {
 		for i := 0; i < len(*historyEntries); i++ {
-			go historyAddRow(a, w, &(*historyEntries)[i], historyEntries, ntGlobal.historyTable, db, entryChan)
+			go historyAddRow(a, w, &(*historyEntries)[i], historyEntries, ntGlobal.historyTable, db, entryChan, errChan)
 			// add some delays between each row to let the table sort by Id sequence
 			time.Sleep(5 * time.Millisecond)
 		}

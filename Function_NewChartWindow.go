@@ -16,7 +16,7 @@ import (
 	"github.com/djian01/nt_gui/pkg/ntdb"
 )
 
-func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.Pinger, db *sql.DB, entryChan chan ntdb.DbEntry) {
+func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.Pinger, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) {
 
 	// Create a global cancelable context
 	var testCtx, testCancelFunc = context.WithCancel(context.Background())
@@ -140,7 +140,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 			// launch new test
 			switch testType {
 			case "dns":
-				go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording, db, entryChan)
+				go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording, db, entryChan, errChan)
 			case "http":
 			case "tcp":
 			case "icmp":
@@ -248,7 +248,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 			// launch new test
 			switch testType {
 			case "dns":
-				go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording, db, entryChan)
+				go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording, db, entryChan, errChan)
 			case "http":
 			case "tcp":
 			case "icmp":

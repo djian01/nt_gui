@@ -18,7 +18,7 @@ import (
 var ntGlobal ntGUIGlboal
 
 // func makeUI: make the UI body
-func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry) {
+func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) {
 
 	// set theme variable
 	currentTheme := "light"
@@ -99,12 +99,12 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry) 
 
 	// AppTabContainer
 	AppTabContainer := container.NewAppTabs(
-		container.NewTabItemWithIcon("ICMP Ping", icmpIcon, ICMPPingContainer(a, w, db, entryChan)),
-		container.NewTabItemWithIcon("TCP Ping", tcpIcon, TCPPingContainer(a, w, db, entryChan)),
-		container.NewTabItemWithIcon("HTTP Ping", httpIcon, HTTPPingContainer(a, w, db, entryChan)),
-		container.NewTabItemWithIcon("DNS Ping", dnsIcon, DNSPingContainer(a, w, db, entryChan)),
-		container.NewTabItemWithIcon("Result Analysis", analyIcon, ResultAnalysisContainer(a, w, db, entryChan)),
-		container.NewTabItemWithIcon("History", historyIcon, HistoryContainer(a, w, &historyEntries, db, entryChan)),
+		container.NewTabItemWithIcon("ICMP Ping", icmpIcon, ICMPPingContainer(a, w, db, entryChan, errChan)),
+		container.NewTabItemWithIcon("TCP Ping", tcpIcon, TCPPingContainer(a, w, db, entryChan, errChan)),
+		container.NewTabItemWithIcon("HTTP Ping", httpIcon, HTTPPingContainer(a, w, db, entryChan, errChan)),
+		container.NewTabItemWithIcon("DNS Ping", dnsIcon, DNSPingContainer(a, w, db, entryChan, errChan)),
+		container.NewTabItemWithIcon("Result Analysis", analyIcon, ResultAnalysisContainer(a, w, db, entryChan, errChan)),
+		container.NewTabItemWithIcon("History", historyIcon, HistoryContainer(a, w, &historyEntries, db, entryChan, errChan)),
 	)
 
 	AppTabContainer.SetTabLocation(container.TabLocationLeading) // left
@@ -112,7 +112,7 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry) 
 	AppTabContainer.OnSelected = func(ti *container.TabItem) {
 		if ti.Text == "History" {
 			// refresh History table
-			err := historyRefresh(a, w, &historyEntries, db, entryChan)
+			err := historyRefresh(a, w, &historyEntries, db, entryChan, errChan)
 			if err != nil {
 				logger.Println(err)
 			}

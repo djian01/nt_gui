@@ -1,11 +1,63 @@
+//go:build ignore
+// +build ignore
+
 package ntdb
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
+
+	_ "github.com/xeodou/go-sqlcipher"
 )
+
+func DBOpenS(dbFile string) (*sql.DB, error) {
+
+	key := "123456"
+	passPhase := fmt.Sprintf("%s?_key=%s", dbFile, key)
+
+	// check "dbFile" in the same folder as the executable
+	// if db file not exist, os.Stat(dbFile) return error. And os.IsNotExist(err) returns true if err exist
+	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
+		// fmt.Println("Database file not found, creating new database...")
+		err := createDatabaseS(dbFile, passPhase)
+		if err != nil {
+			return nil, errors.New("failed to create database")
+		}
+		// fmt.Println("Database created successfully!")
+	}
+
+	// Open SQLite database
+	db, err := sql.Open("sqlite3", passPhase)
+	if err != nil {
+		return nil, errors.New("failed to open database")
+	}
+
+	return db, nil
+}
+
+// createDatabase creates a new SQLite database file and initializes it with a default table
+func createDatabaseS(dbFile, passPhase string) error {
+	// Create an empty database file
+	file, err := os.Create(dbFile)
+	if err != nil {
+		return err
+	}
+	file.Close() // Close immediately since SQLite will manage it
+
+	// Open SQLite connection
+	db, err := sql.Open("sqlite3", passPhase)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	// Create a default table (example: users)
+	return createHistoryTable(db)
+}
 
 // createTestResultsTable creates a unique test results table for each summary entry
 func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
@@ -24,7 +76,7 @@ func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
 			record TEXT,
 			response_time TEXT,
 			send_datetime TEXT,
-			success_response TEXT,
+			success_response INTEGER,
 			failure_rate TEXT,
 			min_rtt TEXT,
 			max_rtt TEXT,
@@ -40,7 +92,7 @@ func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
 			response_phase TEXT,
 			response_time TEXT,
 			send_datetime TEXT,
-			successresponse TEXT,
+			successresponse INTEGER,
 			failure_rate TEXT,
 			min_rtt TEXT,
 			max_rtt TEXT,
@@ -54,8 +106,8 @@ func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
 			status TEXT,
 			rtt TEXT,
 			send_datetime TEXT,
-			packetrecv TEXT,
-			packetloss TEXT,
+			packetrecv INTEGER,
+			packetloss INTEGER,
 			min_rtt TEXT,
 			max_rtt TEXT,
 			avg_rtt TEXT,
@@ -68,8 +120,8 @@ func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
 			status TEXT,
 			RTT TEXT,
 			send_datetime TEXT,
-			packetrecv TEXT,
-			packetloss TEXT,
+			packetrecv INTEGER,
+			packetloss INTEGER,
 			min_rtt TEXT,
 			max_rtt TEXT,
 			avg_rtt TEXT,
@@ -99,35 +151,3 @@ func SortHistoryEntries(HistoryEntries *[]HistoryEntry) {
 		return indexI < indexJ // Sort by integer value of Index
 	})
 }
-
-// AddTestResults inserts test results into a dynamically created test results table
-// func AddTestResults(db *sql.DB, testUUID string, p *ntPinger.Packet) error {
-
-// 	// obtain test Type
-// 	testType := (*pkt).GetType()
-
-// 	switch testType {
-// 	case "dns":
-// 		pkt := (*p).(*ntPinger.PacketDNS)
-
-// 		query := fmt.Sprintf(`INSERT INTO %s (seq, status, target_host, rtt) VALUES (?, ?, ?, ?)`, tableName)
-// 		_, err := db.Exec(query, res.Seq, res.Status, res.TargetHost, res.RTT)
-// 		if err != nil {
-// 			return fmt.Errorf("failed to insert test result into %s: %v", tableName, err)
-// 		}
-
-// 	case "http":
-// 	case "tcp":
-// 	case "icmp":
-// 	}
-
-// 	for _, res := range results {
-// 		query := fmt.Sprintf(`INSERT INTO %s (seq, status, target_host, rtt) VALUES (?, ?, ?, ?)`, tableName)
-// 		_, err := db.Exec(query, res.Seq, res.Status, res.TargetHost, res.RTT)
-// 		if err != nil {
-// 			return fmt.Errorf("failed to insert test result into %s: %v", tableName, err)
-// 		}
-// 	}
-// 	log.Println("Successfully added test results to table:", tableName)
-// 	return nil
-// }

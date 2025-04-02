@@ -20,7 +20,7 @@ import (
 	"github.com/djian01/nt_gui/pkg/ntdb"
 )
 
-func ResultAnalysisContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry) *fyne.Container {
+func ResultAnalysisContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) *fyne.Container {
 
 	// Initial slides
 	inputResultPackets := []ntPinger.Packet{}
@@ -57,7 +57,7 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan ch
 	RaMainContainerOuter := container.New(layout.NewBorderLayout(RASpaceHolder, RASpaceHolder, RASpaceHolder, RASpaceHolder), RASpaceHolder, RaMainContainerInner)
 
 	// Open Previous Test Record CSV Config File BTN
-	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(a, w, &inputResultPackets, &chartData, &chart, &SumD, &SumUI, inputResultCSVFilePath, &slider, db, entryChan)
+	inputResultCSVFileButton.OnTapped = OpenResultCSVFile(a, w, &inputResultPackets, &chartData, &chart, &SumD, &SumUI, inputResultCSVFilePath, &slider, db, entryChan, errChan)
 
 	// Slider Update
 	slider.rangeSlider.OnChanged = func() { slider.update() }
@@ -67,7 +67,7 @@ func ResultAnalysisContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan ch
 }
 
 // func: OpenResultCSVFile
-func OpenResultCSVFile(a fyne.App, w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chart *Chart, SumD *SummaryData, SumUI *SummaryUI, inputResultCSVFilePath *widget.Entry, slider *Slider, db *sql.DB, entryChan chan ntdb.DbEntry) func() {
+func OpenResultCSVFile(a fyne.App, w fyne.Window, inputResultPackets *[]ntPinger.Packet, chartData *[]ntchart.ChartPoint, chart *Chart, SumD *SummaryData, SumUI *SummaryUI, inputResultCSVFilePath *widget.Entry, slider *Slider, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) func() {
 	return func() {
 
 		// reset vars
@@ -126,7 +126,7 @@ func OpenResultCSVFile(a fyne.App, w fyne.Window, inputResultPackets *[]ntPinger
 				// launch new test
 				switch RaType {
 				case "dns":
-					go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, true, db, entryChan)
+					go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, true, db, entryChan, errChan)
 				case "http":
 				case "tcp":
 				case "icmp":

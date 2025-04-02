@@ -5,8 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/djian01/nt/pkg/ntPinger"
 	_ "modernc.org/sqlite" // Import SQLite driver
 )
 
@@ -32,7 +36,7 @@ func DBOpen(dbFile string) (*sql.DB, error) {
 	return db, nil
 }
 
-// createDatabase creates a new SQLite database file and initializes it with a default table
+// createDatabase creates a new SQLite database file, enable Auto VACUUM, and create the default History Table
 func createDatabase(dbFile string) error {
 	// Create an empty database file
 	file, err := os.Create(dbFile)
@@ -48,7 +52,19 @@ func createDatabase(dbFile string) error {
 	}
 	defer db.Close()
 
-	// Create a default table (example: users)
+	// Enable auto_vacuum mode
+	_, err = db.Exec("PRAGMA auto_vacuum = FULL;")
+	if err != nil {
+		return fmt.Errorf("failed to set auto_vacuum: %v", err)
+	}
+
+	// Important: run VACUUM to activate auto_vacuum
+	_, err = db.Exec("VACUUM;")
+	if err != nil {
+		return fmt.Errorf("failed to vacuum after setting auto_vacuum: %v", err)
+	}
+
+	// Create a default table (example: History)
 	return createHistoryTable(db)
 }
 
@@ -70,8 +86,43 @@ func createHistoryTable(db *sql.DB) error {
 	return err
 }
 
+// func: convert *pkt to DbEntry
+func ConvertPkt2DbEntry(pkt ntPinger.Packet, tableName string) (dbEntry DbEntry) {
+
+	// get test type of pkt
+	testType := strings.ToLower(pkt.GetType())
+
+	// construct dbEntry based on test type
+	switch testType {
+	case "dns":
+		testPkt := (pkt).(*ntPinger.PacketDNS)
+		dnsEntry := RecordDNSEntry{}
+		dnsEntry.TableName = tableName
+		dnsEntry.TestType = testType
+		dnsEntry.Seq = (*testPkt).Seq
+		dnsEntry.Status = strconv.FormatBool((*testPkt).Status)
+		dnsEntry.DnsResponse = (*testPkt).Dns_response
+		dnsEntry.DnsRecord = (*testPkt).Dns_queryType
+		dnsEntry.ResponseTime = fmt.Sprintf("%v", float64((*testPkt).RTT.Nanoseconds()))
+		dnsEntry.SendDateTime = (*testPkt).SendTime.Format("2006-01-02 15:04:05 MST")
+		dnsEntry.SuccessResponse = (*testPkt).PacketsRecv
+		dnsEntry.FailRate = fmt.Sprintf("%.2f%%", float64((*testPkt).PacketLoss*100))
+		dnsEntry.MinRTT = (*testPkt).MinRtt.String()
+		dnsEntry.MaxRTT = (*testPkt).MaxRtt.String()
+		dnsEntry.AvgRTT = (*testPkt).AvgRtt.String()
+		dnsEntry.AddInfo = (*testPkt).AdditionalInfo
+		dbEntry = &dnsEntry
+	case "http":
+	case "tcp":
+	case "icmp":
+
+	}
+
+	return
+}
+
 // InsertEntry inserts a log entry into the "history" table
-func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry) error {
+func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 
 	// initial err
 	var err error = nil
@@ -95,7 +146,21 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry) error {
 			}
 
 			// Execute the query safely with placeholders for values
-			_, err = ntdb.Exec(query, he.TableName, he.TestType, he.StartTime, he.Command, he.UUID, recordedInt)
+			for {
+				_, err = ntdb.Exec(query, he.TableName, he.TestType, he.StartTime, he.Command, he.UUID, recordedInt)
+				if err != nil {
+					// handle the "database is locked" error
+					if strings.Contains(err.Error(), "database is locked") {
+						time.Sleep(time.Millisecond * 100)
+					} else {
+						errChan <- err
+						break
+					}
+				} else {
+					break
+				}
+			}
+
 		default:
 			// recording table name example "dns_U4S2CP"
 			tableNameSlice := strings.Split(tableName, "_")
@@ -105,36 +170,87 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry) error {
 				case "dns":
 					en := entry.(*RecordDNSEntry)
 					// Construct SQL query with the dynamic table name
-					query := fmt.Sprintf("INSERT INTO %s (seq, status, dns_response, record, response_time, send_datetime, failure_rate, min_rtt, max_rtt, avg_rtt, additinal_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
-					// Execute the query safely with placeholders for values
-					_, err = ntdb.Exec(query, en.Seq, en.Status, en.DnsResponse, en.DnsRecord, en.ResponseTime, en.SendDateTime, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRtt, en.AddInfo)
+					query := fmt.Sprintf("INSERT INTO %s (seq, status, dns_response, record, response_time, send_datetime, failure_rate, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
 
+					// Execute the query safely with placeholders for values
+					for {
+						_, err = ntdb.Exec(query, en.Seq, en.Status, en.DnsResponse, en.DnsRecord, en.ResponseTime, en.SendDateTime, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
+						if err != nil {
+							// handle the "database is locked" error
+							if strings.Contains(err.Error(), "database is locked") {
+								time.Sleep(time.Millisecond * 100)
+							} else {
+								errChan <- err
+								break
+							}
+						} else {
+							break
+						}
+					}
 				case "http":
 					en := entry.(*RecordHTTPEntry)
 					// Construct SQL query with the dynamic table name
-					query := fmt.Sprintf("INSERT INTO %s (seq, status, response_code, response_phase, response_time, send_datetime, successresponse, failure_rate, min_rtt, max_rtt, avg_rtt, additinal_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
-					// Execute the query safely with placeholders for values
-					_, err = ntdb.Exec(query, en.Seq, en.Status, en.ResponseCode, en.ResponsePhase, en.ResponseTime, en.SendDateTime, en.SuccessResponse, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRtt, en.AddInfo)
+					query := fmt.Sprintf("INSERT INTO %s (seq, status, response_code, response_phase, response_time, send_datetime, successresponse, failure_rate, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
 
+					// Execute the query safely with placeholders for values
+					for {
+						_, err = ntdb.Exec(query, en.Seq, en.Status, en.ResponseCode, en.ResponsePhase, en.ResponseTime, en.SendDateTime, en.SuccessResponse, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
+						if err != nil {
+							// handle the "database is locked" error
+							if strings.Contains(err.Error(), "database is locked") {
+								time.Sleep(time.Millisecond * 100)
+							} else {
+								errChan <- err
+								break
+							}
+						} else {
+							break
+						}
+					}
 				case "tcp":
 					en := entry.(*RecordTCPEntry)
 					// Construct SQL query with the dynamic table name
-					query := fmt.Sprintf("INSERT INTO %s (seq, status, rtt, send_datetime, packetrecv, packetloss, min_rtt, max_rtt, avg_rtt, additinal_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
-					// Execute the query safely with placeholders for values
-					_, err = ntdb.Exec(query, en.Seq, en.Status, en.RTT, en.SendDateTime, en.PacketRecv, en.PacketLoss, en.MinRTT, en.MaxRTT, en.AvgRtt, en.AddInfo)
+					query := fmt.Sprintf("INSERT INTO %s (seq, status, rtt, send_datetime, packetrecv, packetloss, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
 
+					// Execute the query safely with placeholders for values
+					for {
+						_, err = ntdb.Exec(query, en.Seq, en.Status, en.RTT, en.SendDateTime, en.PacketRecv, en.PacketLoss, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
+						if err != nil {
+							// handle the "database is locked" error
+							if strings.Contains(err.Error(), "database is locked") {
+								time.Sleep(time.Millisecond * 100)
+							} else {
+								errChan <- err
+								break
+							}
+						} else {
+							break
+						}
+					}
 				case "icmp":
 					en := entry.(*RecordICMPEntry)
 					// Construct SQL query with the dynamic table name
-					query := fmt.Sprintf("INSERT INTO %s (seq, status, rtt, send_datetime, packetrecv, packetloss, min_rtt, max_rtt, avg_rtt, additinal_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
-					// Execute the query safely with placeholders for values
-					_, err = ntdb.Exec(query, en.Seq, en.Status, en.RTT, en.SendDateTime, en.PacketRecv, en.PacketLoss, en.MinRTT, en.MaxRTT, en.AvgRtt, en.AddInfo)
+					query := fmt.Sprintf("INSERT INTO %s (seq, status, rtt, send_datetime, packetrecv, packetloss, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
 
+					// Execute the query safely with placeholders for values
+					for {
+						_, err = ntdb.Exec(query, en.Seq, en.Status, en.RTT, en.SendDateTime, en.PacketRecv, en.PacketLoss, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
+						if err != nil {
+							// handle the "database is locked" error
+							if strings.Contains(err.Error(), "database is locked") {
+								time.Sleep(time.Millisecond * 100)
+							} else {
+								errChan <- err
+								break
+							}
+						} else {
+							break
+						}
+					}
 				}
 			}
 		}
 	}
-	return err
 }
 
 // ReadHistoryTable retrieves all log entries and appends them to the provided *[]HistoryEntry
@@ -186,22 +302,42 @@ func DeleteEntry(db *sql.DB, table, key, value string) error {
 	query := fmt.Sprintf("DELETE FROM %s WHERE %s = ?;", table, key)
 
 	// Execute the delete statement
-	result, err := db.Exec(query, value)
-	if err != nil {
-		return fmt.Errorf("error deleting entry from %s: %v", table, err)
-	}
-
-	// Check how many rows were affected
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("error retrieving affected rows: %v", err)
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("no entry found with %s: %s in table %s", key, value, table)
+	for {
+		_, err := db.Exec(query, value)
+		if err != nil {
+			// handle the "database is locked" error
+			if strings.Contains(err.Error(), "database is locked") {
+				time.Sleep(time.Millisecond * 100)
+			} else {
+				return fmt.Errorf("error deleting entry from %s: %v", table, err)
+			}
+		} else {
+			break
+		}
 	}
 
 	//fmt.Printf("Successfully deleted entry with ID %d from table %s.\n", id, tableName)
+	return nil
+}
+
+// Func: Delete table based on table name
+func DeleteTable(db *sql.DB, tableName string) error {
+
+	query := fmt.Sprintf("DROP TABLE IF EXISTS %q", tableName)
+	for {
+		_, err := db.Exec(query)
+		if err != nil {
+			// handle the "database is locked" error
+			if strings.Contains(err.Error(), "database is locked") {
+				time.Sleep(time.Millisecond * 100)
+			} else {
+				return err
+			}
+		} else {
+			break
+		}
+	}
+
 	return nil
 }
 
@@ -213,4 +349,106 @@ func ShowHistoryTableConsole(historyEntries *[]HistoryEntry) {
 	for _, entry := range *historyEntries {
 		fmt.Printf("ID: %s, TableName: %s, TestType: %s, StartTime: %s, Command: %s, UUID: %s, Recorded: %v\n", entry.Id, entry.TableName, entry.TestType, entry.StartTime, entry.Command, entry.UUID, entry.Recorded)
 	}
+}
+
+// createTestResultsTable creates a unique test results table for each summary entry
+func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
+
+	// initial query
+	query := ""
+
+	// careate table based on test type
+	switch testType {
+	case "dns":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			seq INTEGER,
+			status TEXT,
+			dns_response TEXT,
+			record TEXT,
+			response_time TEXT,
+			send_datetime TEXT,
+			success_response TEXT,
+			failure_rate TEXT,
+			min_rtt TEXT,
+			max_rtt TEXT,
+			avg_rtt TEXT,
+			additional_info TEXT
+		);`, testTableName)
+	case "http":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			seq INTEGER,
+			status TEXT,
+			response_code TEXT,
+			response_phase TEXT,
+			response_time TEXT,
+			send_datetime TEXT,
+			successresponse TEXT,
+			failure_rate TEXT,
+			min_rtt TEXT,
+			max_rtt TEXT,
+			avg_rtt TEXT,
+			additional_info TEXT
+		);`, testTableName)
+	case "tcp":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			seq INTEGER,
+			status TEXT,
+			rtt TEXT,
+			send_datetime TEXT,
+			packetrecv TEXT,
+			packetloss TEXT,
+			min_rtt TEXT,
+			max_rtt TEXT,
+			avg_rtt TEXT,
+			additional_info TEXT
+		);`, testTableName)
+	case "icmp":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			seq INTEGER,
+			status TEXT,
+			RTT TEXT,
+			send_datetime TEXT,
+			packetrecv TEXT,
+			packetloss TEXT,
+			min_rtt TEXT,
+			max_rtt TEXT,
+			avg_rtt TEXT,
+			additional_info TEXT
+		);`, testTableName)
+	}
+
+	for {
+		_, err := db.Exec(query)
+		if err != nil {
+			// handle the "database is locked" error
+			if strings.Contains(err.Error(), "database is locked") {
+				time.Sleep(time.Millisecond * 100)
+			} else {
+				return fmt.Errorf("failed to create table %s: %v", testTableName, err)
+			}
+		} else {
+			break
+		}
+	}
+
+	return nil
+}
+
+// SortItems sorts the slice of Items by Index in ascending order.
+func SortHistoryEntries(HistoryEntries *[]HistoryEntry) {
+	sort.Slice(*HistoryEntries, func(i, j int) bool {
+		indexI, errI := strconv.Atoi((*HistoryEntries)[i].Id)
+		indexJ, errJ := strconv.Atoi((*HistoryEntries)[j].Id)
+
+		// Handle conversion errors (place invalid indices at the end)
+		if errI != nil || errJ != nil {
+			return errI == nil // If errI is valid and errJ is invalid, keep it first
+		}
+
+		return indexI < indexJ // Sort by integer value of Index
+	})
 }

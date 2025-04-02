@@ -36,17 +36,17 @@ type RecordDNSEntry struct {
 	Id              string
 	TableName       string
 	TestType        string
-	Seq             string
+	Seq             int
 	Status          string
 	DnsResponse     string
 	DnsRecord       string
 	ResponseTime    string
 	SendDateTime    string
-	SuccessResponse string
+	SuccessResponse int
 	FailRate        string
 	MinRTT          string
 	MaxRTT          string
-	AvgRtt          string
+	AvgRTT          string
 	AddInfo         string
 }
 
@@ -63,17 +63,17 @@ type RecordHTTPEntry struct {
 	Id              string
 	TableName       string
 	TestType        string
-	Seq             string
+	Seq             int
 	Status          string
 	ResponseCode    string
 	ResponsePhase   string
 	ResponseTime    string
 	SendDateTime    string
-	SuccessResponse string
+	SuccessResponse int
 	FailRate        string
 	MinRTT          string
 	MaxRTT          string
-	AvgRtt          string
+	AvgRTT          string
 	AddInfo         string
 }
 
@@ -90,15 +90,15 @@ type RecordTCPEntry struct {
 	Id           string
 	TableName    string
 	TestType     string
-	Seq          string
+	Seq          int
 	Status       string
 	RTT          string
 	SendDateTime string
-	PacketRecv   string
-	PacketLoss   string
+	PacketRecv   int
+	PacketLoss   int
 	MinRTT       string
 	MaxRTT       string
-	AvgRtt       string
+	AvgRTT       string
 	AddInfo      string
 }
 
@@ -115,15 +115,15 @@ type RecordICMPEntry struct {
 	Id           string
 	TableName    string
 	TestType     string
-	Seq          string
+	Seq          int
 	Status       string
 	RTT          string
 	SendDateTime string
-	PacketRecv   string
-	PacketLoss   string
+	PacketRecv   int
+	PacketLoss   int
 	MinRTT       string
 	MaxRTT       string
-	AvgRtt       string
+	AvgRTT       string
 	AddInfo      string
 }
 

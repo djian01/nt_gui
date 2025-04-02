@@ -8,7 +8,7 @@ import (
 	"github.com/djian01/nt_gui/pkg/ntdb"
 )
 
-func HTTPPingContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry) *fyne.Container {
+func HTTPPingContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) *fyne.Container {
 	// Return your HTTP ping interface components here
 	return container.NewVBox() // Temporary empty container, replace with your actual UI
 }

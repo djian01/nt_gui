@@ -58,6 +58,35 @@ func main() {
 	// create a new logger
 	logger = log.New(logFile, "", log.LstdFlags)
 
+	// create a error chan and error handling
+	errChan := make(chan error)
+	defer close(errChan)
+
+	// launch the error catch go routine
+	go func() {
+		loopClose := false
+		for {
+			// check loopClose Flag
+			if loopClose {
+				break
+			}
+
+			// select option
+			select {
+
+			// ends this test when app is closing
+			case <-appCtx.Done():
+				loopClose = true
+
+			// harvest the Probe results
+			case err := <-errChan:
+				logger.Println(err)
+			default:
+				time.Sleep(time.Millisecond * 500)
+			}
+		}
+	}()
+
 	//// defer func() to capture the panic & debug stack messages
 	defer func() {
 		if r := recover(); r != nil {
@@ -108,10 +137,10 @@ func main() {
 	defer close(entryChan)
 
 	// run Insert Entry Go routine
-	go ntdb.InsertEntry(ntDB, entryChan)
+	go ntdb.InsertEntry(ntDB, entryChan, errChan)
 
 	// make UI
-	makeUI(w, a, ntDB, entryChan)
+	makeUI(w, a, ntDB, entryChan, errChan)
 
 	w.ShowAndRun()
 

@@ -291,7 +291,7 @@ func (d *dnsObject) Stop(p *ntPinger.Pinger) {
 }
 
 // func: Add Ping Row
-func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dnsTableBody *fyne.Container, recording bool, db *sql.DB, entryChan chan ntdb.DbEntry) {
+func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dnsTableBody *fyne.Container, recording bool, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) {
 
 	// test uuid
 	testUUID := GenerateShortUUID()
@@ -363,10 +363,6 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 	// ** start ntPinger Probe **
 
-	// Channel - error (for Go Routines)
-	errChan := make(chan error, 1)
-	defer close(errChan)
-
 	// Start Ping Main Command, manually input display Len
 	p, err := ntPinger.NewPinger(*inputVars)
 
@@ -378,7 +374,7 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 	// OnTapped Func - Chart btn
 	myDnsPing.DnsGUI.ChartBtn.OnTapped = func() {
-		NewChartWindow(a, &myDnsPing, recording, p, db, entryChan)
+		NewChartWindow(a, &myDnsPing, recording, p, db, entryChan, errChan)
 	}
 
 	// OnTapped Func - Stop btn
@@ -390,7 +386,7 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	// OnTapped Func - Replay btn
 	myDnsPing.DnsGUI.ReplayBtn.OnTapped = func() {
 		// re-launch a new go routine for DnsAddPingRow with the same InputVar
-		go DnsAddPingRow(a, indexPing, inputVars, dnsTableBody, recording, db, entryChan)
+		go DnsAddPingRow(a, indexPing, inputVars, dnsTableBody, recording, db, entryChan, errChan)
 	}
 
 	// OnTapped Func - close btn
@@ -438,10 +434,9 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 			// if recording is true, add the &pkt to DB table
 			if recording {
-
+				dnsEntry := ntdb.ConvertPkt2DbEntry(pkt, recordingTableName)
+				entryChan <- dnsEntry
 			}
-
-			// Add test result entry to DB is "recording" is "ON"
 
 		// harvest the errChan input
 		case err := <-errChan:

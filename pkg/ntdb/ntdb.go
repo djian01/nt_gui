@@ -170,11 +170,11 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 				case "dns":
 					en := entry.(*RecordDNSEntry)
 					// Construct SQL query with the dynamic table name
-					query := fmt.Sprintf("INSERT INTO %s (seq, status, dns_response, record, response_time, send_datetime, failure_rate, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
+					query := fmt.Sprintf("INSERT INTO %s (seq, status, dns_response, record, response_time, send_datetime, success_response, failure_rate, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
 
 					// Execute the query safely with placeholders for values
 					for {
-						_, err = ntdb.Exec(query, en.Seq, en.Status, en.DnsResponse, en.DnsRecord, en.ResponseTime, en.SendDateTime, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
+						_, err = ntdb.Exec(query, en.Seq, en.Status, en.DnsResponse, en.DnsRecord, en.ResponseTime, en.SendDateTime, en.SuccessResponse, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
 						if err != nil {
 							// handle the "database is locked" error
 							if strings.Contains(err.Error(), "database is locked") {
@@ -190,7 +190,7 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 				case "http":
 					en := entry.(*RecordHTTPEntry)
 					// Construct SQL query with the dynamic table name
-					query := fmt.Sprintf("INSERT INTO %s (seq, status, response_code, response_phase, response_time, send_datetime, successresponse, failure_rate, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
+					query := fmt.Sprintf("INSERT INTO %s (seq, status, response_code, response_phase, response_time, send_datetime, success_response, failure_rate, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
 
 					// Execute the query safely with placeholders for values
 					for {
@@ -384,7 +384,7 @@ func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
 			response_phase TEXT,
 			response_time TEXT,
 			send_datetime TEXT,
-			successresponse TEXT,
+			ssuccess_response TEXT,
 			failure_rate TEXT,
 			min_rtt TEXT,
 			max_rtt TEXT,
@@ -451,4 +451,51 @@ func SortHistoryEntries(HistoryEntries *[]HistoryEntry) {
 
 		return indexI < indexJ // Sort by integer value of Index
 	})
+}
+
+// func update the recording field of History Table
+func UpdateFieldValue(db *sql.DB, table, searchKey, searchType, searchValue, updateKey, updateType, updateValue string) (err error) {
+
+	// examine the update value
+	var updateVal interface{}
+
+	if updateType == "int" {
+		updateVal, err = strconv.Atoi(updateValue)
+		if err != nil {
+			return
+		}
+	} else {
+		updateVal = updateValue
+	}
+
+	// examine the search value
+	var searchVal interface{}
+
+	if searchType == "int" {
+		searchVal, err = strconv.Atoi(searchValue)
+		if err != nil {
+			return
+		}
+	} else {
+		searchVal = searchValue
+	}
+
+	// Construct the update query dynamically (tableName must be validated)
+
+	query := fmt.Sprintf(`UPDATE %s SET %s = $1 WHERE %s = $2`, table, updateKey, searchKey)
+
+	for {
+		_, err := db.Exec(query, updateVal, searchVal)
+		if err != nil {
+			// handle the "database is locked" error
+			if strings.Contains(err.Error(), "database is locked") {
+				time.Sleep(time.Millisecond * 100)
+			} else {
+				return fmt.Errorf("failed to update field: %w", err)
+			}
+		} else {
+			break
+		}
+	}
+	return nil
 }

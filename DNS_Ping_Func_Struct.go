@@ -250,6 +250,16 @@ func (d *dnsObject) GetUUID() string {
 	return d.testSummary.GetUUID()
 }
 
+func (d *dnsObject) UpdateRecording(recording bool) {
+	if recording {
+		d.DnsGUI.Recording.Object.(*widget.Label).Text = "ON"
+	} else {
+		d.DnsGUI.Recording.Object.(*widget.Label).Text = "OFF"
+	}
+
+	d.DnsGUI.Recording.Object.(*widget.Label).Refresh()
+}
+
 func (d *dnsObject) Initial(testSummary *SummaryData) {
 
 	// test Summary
@@ -374,7 +384,10 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 	// OnTapped Func - Chart btn
 	myDnsPing.DnsGUI.ChartBtn.OnTapped = func() {
-		NewChartWindow(a, &myDnsPing, recording, p, db, entryChan, errChan)
+		// only open the new chart window when there are more than 2 test records
+		if len(myDnsPing.ChartData) > 2 {
+			NewChartWindow(a, &myDnsPing, &recording, p, db, entryChan, errChan)
+		}
 	}
 
 	// OnTapped Func - Stop btn

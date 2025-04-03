@@ -24,7 +24,7 @@ type historyGUIRow struct {
 	StartTime       pingCell
 	Command         pingCell // fixed
 	Action          pingCell
-	RecordBtn       *widget.Button
+	ShowRecordBtn   *widget.Button
 	DeleteBtn       *widget.Button
 	ReplayBtn       *widget.Button
 	historyTableRow *fyne.Container
@@ -51,16 +51,16 @@ func (d *historyGUIRow) Initial() {
 	d.ReplayBtn = widget.NewButtonWithIcon("Re-Run", theme.MediaReplayIcon(), func() {})
 	d.ReplayBtn.Importance = widget.HighImportance
 
-	d.RecordBtn = widget.NewButtonWithIcon("Show Details", theme.FileIcon(), func() {})
-	d.RecordBtn.Importance = widget.WarningImportance
-	d.RecordBtn.Disable()
+	d.ShowRecordBtn = widget.NewButtonWithIcon("Show Details", theme.FileIcon(), func() {})
+	d.ShowRecordBtn.Importance = widget.WarningImportance
+	d.ShowRecordBtn.Disable()
 
 	d.DeleteBtn = widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {})
 	d.DeleteBtn.Importance = widget.DangerImportance
 
 	d.Action.Label = "Action"
 	d.Action.Length = 300
-	d.Action.Object = container.New(layout.NewBorderLayout(nil, nil, nil, d.DeleteBtn), container.New(layout.NewGridLayoutWithColumns(2), d.ReplayBtn, d.RecordBtn), d.DeleteBtn)
+	d.Action.Object = container.New(layout.NewBorderLayout(nil, nil, nil, d.DeleteBtn), container.New(layout.NewGridLayoutWithColumns(2), d.ReplayBtn, d.ShowRecordBtn), d.DeleteBtn)
 
 	// table row
 	row := container.New(layout.NewHBoxLayout(),
@@ -134,7 +134,7 @@ func (d *historyGUIRow) UpdateRow(h *ntdb.HistoryEntry) {
 
 	// Action
 	if h.Recorded {
-		d.RecordBtn.Enable()
+		d.ShowRecordBtn.Enable()
 	}
 
 }
@@ -180,16 +180,16 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 
 	// update show record details btn
 	if he.Recorded {
-		ho.historyGUI.RecordBtn.Enable()
+		ho.historyGUI.ShowRecordBtn.Enable()
 	} else {
-		ho.historyGUI.RecordBtn.Disable()
+		ho.historyGUI.ShowRecordBtn.Disable()
 	}
 
-	ho.historyGUI.RecordBtn.OnTapped = func() {
+	ho.historyGUI.ShowRecordBtn.OnTapped = func() {
 
 	}
 
-	// update delete btn
+	// update delete btn func
 	ho.historyGUI.DeleteBtn.OnTapped = func() {
 
 		confirm := dialog.NewConfirm("Please Confirm", fmt.Sprintf("Do you want to delete the history record of \n \"%s\" ?", he.Command), func(b bool) {

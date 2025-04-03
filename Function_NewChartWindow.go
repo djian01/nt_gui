@@ -16,7 +16,7 @@ import (
 	"github.com/djian01/nt_gui/pkg/ntdb"
 )
 
-func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.Pinger, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) {
+func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger.Pinger, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) {
 
 	// Create a global cancelable context
 	var testCtx, testCancelFunc = context.WithCancel(context.Background())
@@ -45,6 +45,8 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 	testSummaryUI.UpdateUI_Initial(testSummary)
 
 	// Chart card
+
+	//// Chart Btn Pause
 	chartBtnPause := widget.NewButtonWithIcon("Pause Chart Update", theme.MediaPauseIcon(), func() {})
 	chartBtnPause.Importance = widget.WarningImportance
 
@@ -53,9 +55,9 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 	} else {
 		chartBtnPause.Disable()
 	}
-
 	chartBtnPauseContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnPause)
 
+	//// Chart Btn Play
 	chartBtnPlay := widget.NewButtonWithIcon("Continue Chart Update", theme.MediaPlayIcon(), func() {})
 	chartBtnPlay.Importance = widget.WarningImportance
 
@@ -66,18 +68,31 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 	}
 	chartBtnPlayContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnPlay)
 
+	//// Chart Btn Record
 	chartBtnRecord := widget.NewButtonWithIcon("Record Test", theme.MediaRecordIcon(), func() {})
 	chartBtnRecord.Importance = widget.WarningImportance
-	if recording { // if recording is enabled, disable the recording button
+	if *recording { // if recording is enabled, disable the recording button
+
+		// disable the Recording btn
 		chartBtnRecord.Disable()
+
 	}
 	chartBtnRecordContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnRecord)
 
+	//// Chart Btn Stop
 	chartBtnStop := widget.NewButtonWithIcon("Stop Test", theme.MediaStopIcon(), func() {})
 	chartBtnStop.Importance = widget.DangerImportance
 	chartBtnStopContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnStop)
 
-	chartBtnContainerIn := container.New(layout.NewHBoxLayout(), chartBtnPauseContainer, chartBtnPlayContainer, chartBtnRecordContainer, chartBtnStopContainer)
+	//// Chart Btn Export CSV
+	//// Chart Btn Stop
+	chartBtnExport := widget.NewButtonWithIcon("Export CSV", theme.MediaStopIcon(), func() {})
+	chartBtnExport.Importance = widget.HighImportance
+	chartBtnExport.Disable()
+	chartBtnExportContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnExport)
+
+	//// Chart Btn Container & Card
+	chartBtnContainerIn := container.New(layout.NewHBoxLayout(), chartBtnPauseContainer, chartBtnPlayContainer, chartBtnRecordContainer, chartBtnStopContainer, chartBtnExportContainer)
 	chartBtnContainerOut := container.New(layout.NewCenterLayout(), chartBtnContainerIn)
 	chartBtnCard := widget.NewCard("", "", chartBtnContainerOut)
 
@@ -107,6 +122,9 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 		chartBtnPlay.Disable()
 		chartBtnStop.Disable()
 		chartBtnRecord.Disable()
+		if *recording {
+			chartBtnExport.Enable()
+		}
 
 		// chart
 		(chartBody).ChartUpdate(testType, testChartData)
@@ -140,7 +158,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 			// launch new test
 			switch testType {
 			case "dns":
-				go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording, db, entryChan, errChan)
+				go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, *recording, db, entryChan, errChan)
 			case "http":
 			case "tcp":
 			case "icmp":
@@ -149,7 +167,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 		}
 	} else {
 		// kickoff the go routine for chart/summary update
-		go NewChartUpdate(testCtx, &chartPauseFlag, &testObj, &testSummaryUI, &chartBody)
+		go NewChartUpdate(testCtx, &chartPauseFlag, testObj, &testSummaryUI, &chartBody)
 	}
 
 	// update btn functions
@@ -197,7 +215,27 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 	}
 	//// Record Btn Function
 	chartBtnRecord.OnTapped = func() {
+		// disable the Recording btn
+		chartBtnRecord.Disable()
 
+		// build recording table if "recording" is enabled
+		recordingTableName := fmt.Sprintf("%s_%s", testType, testObj.GetUUID())
+		err := ntdb.CreateTestResultsTable(db, "dns", recordingTableName)
+		if err != nil {
+			errChan <- err
+		}
+
+		// update the history record with recording on
+		err = ntdb.UpdateFieldValue(db, "history", "uuid", "string", testObj.GetUUID(), "recorded", "int", "1")
+		if err != nil {
+			errChan <- err
+		}
+
+		// update the DNS ping Row recording field
+		testObj.UpdateRecording(true)
+
+		// set the recording to true
+		*recording = true
 	}
 
 	//// Stop Btn Function
@@ -211,6 +249,10 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 		chartBtnPlay.Disable()
 		chartBtnStop.Disable()
 		chartBtnRecord.Disable()
+
+		if *recording {
+			chartBtnExport.Enable()
+		}
 
 		// chart
 		(chartBody).ChartUpdate(testType, testChartData)
@@ -248,7 +290,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 			// launch new test
 			switch testType {
 			case "dns":
-				go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording, db, entryChan, errChan)
+				go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, *recording, db, entryChan, errChan)
 			case "http":
 			case "tcp":
 			case "icmp":
@@ -268,11 +310,11 @@ func NewChartWindow(a fyne.App, testObj testObject, recording bool, p *ntPinger.
 }
 
 // Func: Chart Update Go Routine
-func NewChartUpdate(testCtx context.Context, pauseFlag *bool, testObj *testObject, testSummaryUI *SummaryUI, testChart *Chart) {
+func NewChartUpdate(testCtx context.Context, pauseFlag *bool, testObj testObject, testSummaryUI *SummaryUI, testChart *Chart) {
 
-	testType := (*testObj).GetType()
-	testSummary := (*testObj).GetSummary()
-	testChartData := (*testObj).GetChartData()
+	testType := testObj.GetType()
+	testSummary := testObj.GetSummary()
+	testChartData := testObj.GetChartData()
 
 	for {
 		// if pauseFlag is true, sleep for 1 sec and skip the current loop
@@ -282,7 +324,7 @@ func NewChartUpdate(testCtx context.Context, pauseFlag *bool, testObj *testObjec
 		}
 
 		// if the test is ended, exit
-		if !existingTestCheck(&testRegister, (*testObj).GetUUID()) {
+		if !existingTestCheck(&testRegister, testObj.GetUUID()) {
 			return
 		}
 

@@ -123,6 +123,11 @@ func main() {
 
 	w := a.NewWindow("NT GUI") // w is a pointer
 
+	// Intercept close to ensure app exits, the app will stop once the main window is closed
+	w.SetCloseIntercept(func() {
+		a.Quit()
+	})
+
 	w.Resize(fyne.NewSize(1650, 950))
 	w.CenterOnScreen()
 

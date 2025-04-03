@@ -72,10 +72,8 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 	chartBtnRecord := widget.NewButtonWithIcon("Record Test", theme.MediaRecordIcon(), func() {})
 	chartBtnRecord.Importance = widget.WarningImportance
 	if *recording { // if recording is enabled, disable the recording button
-
 		// disable the Recording btn
 		chartBtnRecord.Disable()
-
 	}
 	chartBtnRecordContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnRecord)
 
@@ -122,6 +120,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 		chartBtnPlay.Disable()
 		chartBtnStop.Disable()
 		chartBtnRecord.Disable()
+		// if the test is already stopped & recording is enabed, enable the export button
 		if *recording {
 			chartBtnExport.Enable()
 		}
@@ -170,7 +169,8 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 		go NewChartUpdate(testCtx, &chartPauseFlag, testObj, &testSummaryUI, &chartBody)
 	}
 
-	// update btn functions
+	// ** update btn functions **
+
 	//// Pause btn Function
 	chartBtnPause.OnTapped = func() {
 

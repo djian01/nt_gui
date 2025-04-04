@@ -210,11 +210,11 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 				case "tcp":
 					en := entry.(*RecordTCPEntry)
 					// Construct SQL query with the dynamic table name
-					query := fmt.Sprintf("INSERT INTO %s (seq, status, rtt, send_datetime, packetrecv, packetloss, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
+					query := fmt.Sprintf("INSERT INTO %s (seq, status, rtt, send_datetime, packetrecv, packetloss_rate, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
 
 					// Execute the query safely with placeholders for values
 					for {
-						_, err = ntdb.Exec(query, en.Seq, en.Status, en.RTT, en.SendDateTime, en.PacketRecv, en.PacketLoss, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
+						_, err = ntdb.Exec(query, en.Seq, en.Status, en.RTT, en.SendDateTime, en.PacketRecv, en.PacketLossRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
 						if err != nil {
 							// handle the "database is locked" error
 							if strings.Contains(err.Error(), "database is locked") {
@@ -230,11 +230,11 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 				case "icmp":
 					en := entry.(*RecordICMPEntry)
 					// Construct SQL query with the dynamic table name
-					query := fmt.Sprintf("INSERT INTO %s (seq, status, rtt, send_datetime, packetrecv, packetloss, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
+					query := fmt.Sprintf("INSERT INTO %s (seq, status, rtt, send_datetime, packetrecv, packetloss_rate, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
 
 					// Execute the query safely with placeholders for values
 					for {
-						_, err = ntdb.Exec(query, en.Seq, en.Status, en.RTT, en.SendDateTime, en.PacketRecv, en.PacketLoss, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
+						_, err = ntdb.Exec(query, en.Seq, en.Status, en.RTT, en.SendDateTime, en.PacketRecv, en.PacketLossRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
 						if err != nil {
 							// handle the "database is locked" error
 							if strings.Contains(err.Error(), "database is locked") {
@@ -413,7 +413,7 @@ func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointer *[]DbEntry
 
 		case "tcp":
 			// Construct query dynamically
-			query := fmt.Sprintf("SELECT seq, status, rtt, send_datetime, packetrecv, packetloss, min_rtt, max_rtt, avg_rtt, additional_info FROM %s;", tableName)
+			query := fmt.Sprintf("SELECT seq, status, rtt, send_datetime, packetrecv, packetloss_rate, min_rtt, max_rtt, avg_rtt, additional_info FROM %s;", tableName)
 
 			// Execute the query
 			rows, errIn := db.Query(query)
@@ -428,7 +428,7 @@ func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointer *[]DbEntry
 				var entry RecordTCPEntry
 
 				// The rows.Scan() function in Go is used to map database query results into Go variables
-				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.RTT, &entry.SendDateTime, &entry.PacketRecv, &entry.PacketLoss, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.RTT, &entry.SendDateTime, &entry.PacketRecv, &entry.PacketLossRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
 					err = errIn
 					return
 				}
@@ -445,7 +445,7 @@ func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointer *[]DbEntry
 
 		case "icmp":
 			// Construct query dynamically
-			query := fmt.Sprintf("SELECT seq, status, rtt, send_datetime, packetrecv, packetloss, min_rtt, max_rtt, avg_rtt, additional_info FROM %s;", tableName)
+			query := fmt.Sprintf("SELECT seq, status, rtt, send_datetime, packetrecv, packetloss_rate, min_rtt, max_rtt, avg_rtt, additional_info FROM %s;", tableName)
 
 			// Execute the query
 			rows, errIn := db.Query(query)
@@ -460,7 +460,7 @@ func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointer *[]DbEntry
 				var entry RecordICMPEntry
 
 				// The rows.Scan() function in Go is used to map database query results into Go variables
-				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.RTT, &entry.SendDateTime, &entry.PacketRecv, &entry.PacketLoss, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.RTT, &entry.SendDateTime, &entry.PacketRecv, &entry.PacketLossRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
 					err = errIn
 					return
 				}
@@ -584,7 +584,7 @@ func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
 			rtt TEXT,
 			send_datetime TEXT,
 			packetrecv TEXT,
-			packetloss TEXT,
+			packetloss_rate TEXT,
 			min_rtt TEXT,
 			max_rtt TEXT,
 			avg_rtt TEXT,
@@ -598,7 +598,7 @@ func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
 			RTT TEXT,
 			send_datetime TEXT,
 			packetrecv TEXT,
-			packetloss TEXT,
+			packetloss_rate TEXT,
 			min_rtt TEXT,
 			max_rtt TEXT,
 			avg_rtt TEXT,

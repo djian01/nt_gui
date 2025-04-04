@@ -221,19 +221,19 @@ func (r *RecordHTTPEntry) GetAvgRtt() string {
 
 // ** Record Table Entry: TCP Record Entry **
 type RecordTCPEntry struct {
-	Id           string
-	TableName    string
-	TestType     string
-	Seq          int
-	Status       string
-	RTT          string
-	SendDateTime string
-	PacketRecv   int
-	PacketLoss   int
-	MinRTT       string
-	MaxRTT       string
-	AvgRTT       string
-	AddInfo      string
+	Id             string
+	TableName      string
+	TestType       string
+	Seq            int
+	Status         string
+	RTT            string
+	SendDateTime   string
+	PacketRecv     int
+	PacketLossRate string
+	MinRTT         string
+	MaxRTT         string
+	AvgRTT         string
+	AddInfo        string
 }
 
 func (r *RecordTCPEntry) GetTableName() string {
@@ -270,8 +270,7 @@ func (r *RecordTCPEntry) GetSuccessResponse() int {
 }
 
 func (r *RecordTCPEntry) GetFailRate() string {
-	failRate := fmt.Sprintf("%.2f%%", (float64(r.PacketLoss) / float64(r.GetPacketSent()) * 100))
-	return failRate
+	return r.PacketLossRate
 }
 
 func (r *RecordTCPEntry) GetMinRtt() string {
@@ -287,19 +286,19 @@ func (r *RecordTCPEntry) GetAvgRtt() string {
 
 // ** Record Table Entry: ICMP Record Entry **
 type RecordICMPEntry struct {
-	Id           string
-	TableName    string
-	TestType     string
-	Seq          int
-	Status       string
-	RTT          string
-	SendDateTime string
-	PacketRecv   int
-	PacketLoss   int
-	MinRTT       string
-	MaxRTT       string
-	AvgRTT       string
-	AddInfo      string
+	Id             string
+	TableName      string
+	TestType       string
+	Seq            int
+	Status         string
+	RTT            string
+	SendDateTime   string
+	PacketRecv     int
+	PacketLossRate string
+	MinRTT         string
+	MaxRTT         string
+	AvgRTT         string
+	AddInfo        string
 }
 
 func (r *RecordICMPEntry) GetTableName() string {
@@ -336,8 +335,7 @@ func (r *RecordICMPEntry) GetSuccessResponse() int {
 }
 
 func (r *RecordICMPEntry) GetFailRate() string {
-	failRate := fmt.Sprintf("%.2f%%", (float64(r.PacketLoss) / float64(r.GetPacketSent()) * 100))
-	return failRate
+	return r.PacketLossRate
 }
 
 func (r *RecordICMPEntry) GetMinRtt() string {

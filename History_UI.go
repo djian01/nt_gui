@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -14,36 +13,13 @@ import (
 
 func HistoryContainer(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryEntry, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) *fyne.Container {
 
-	// Initial History Entries Slice
-	//historyEntries := []ntdb.HistoryEntry{}
-
-	//// test code start
-	insertBtn := widget.NewButton("Insert Entry", func() {})
-	// insert Btn functions
-	insertBtn.OnTapped = func() {
-		he := ntdb.HistoryEntry{}
-
-		Now := time.Now()
-		he.TableName = "history"
-		he.StartTime = Now.Format("2006-01-02 15:04:05 MST")
-		he.TestType = "dns"
-		he.Command = "nt -r dns 8.8.8.8 google.com"
-		he.UUID = GenerateShortUUID()
-		he.Recorded = false
-
-		// insert to entryChan
-		entryChan <- &he
-	}
-
-	//// test code ends
-
 	// history table column: id, type, start time, command, btn: record, delete, replay
 
 	// ** Refresh-Button Card **
 	historyRefreshBtn := widget.NewButtonWithIcon("Rresh", theme.ViewRefreshIcon(), func() {})
 	historyRefreshBtn.Importance = widget.HighImportance
 	historyRefreshBtnContainerInner := container.NewGridWrap(fyne.NewSize(120, 30), historyRefreshBtn)
-	historyRefreshBtnContainer := container.New(layout.NewBorderLayout(nil, nil, historyRefreshBtnContainerInner, nil), historyRefreshBtnContainerInner, insertBtn)
+	historyRefreshBtnContainer := container.New(layout.NewBorderLayout(nil, nil, historyRefreshBtnContainerInner, nil), historyRefreshBtnContainerInner)
 	historyRefreshBtnBtncard := widget.NewCard("", "", historyRefreshBtnContainer)
 
 	// ** Table Container **

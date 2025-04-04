@@ -14,7 +14,7 @@ import (
 func SaveToCSV(filePath string, iv ntPinger.InputVars, dbEntries *[]ntdb.DbEntry) error {
 
 	// set DateTime Layout
-	dateTimeLayout := "2006-01-02 15:04:05 -0700 MST"
+	dateTimeLayout := "2006-01-02 15:04:05 MST"
 
 	// Open or create the file with append mode and write-only access
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)

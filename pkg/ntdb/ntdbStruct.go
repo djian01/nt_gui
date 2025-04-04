@@ -9,7 +9,18 @@ import (
 type DbEntry interface {
 	GetTableName() string
 	GetTestType() string
-	GetRtt() string
+}
+
+// check interafce implementation for DB Entry
+var _ DbEntry = (*HistoryEntry)(nil)
+var _ DbEntry = (*RecordDNSEntry)(nil)
+var _ DbEntry = (*RecordHTTPEntry)(nil)
+var _ DbEntry = (*RecordTCPEntry)(nil)
+var _ DbEntry = (*RecordICMPEntry)(nil)
+
+// History Record Interface
+type HistoryRecord interface {
+	GetRtt() time.Duration
 	GetSendTime() time.Time
 	GetStatus() bool
 	GetPacketSent() int
@@ -20,19 +31,19 @@ type DbEntry interface {
 	GetSuccessResponse() int
 }
 
-// check interafce implementation
-var _ DbEntry = (*HistoryEntry)(nil)
-var _ DbEntry = (*RecordDNSEntry)(nil)
-var _ DbEntry = (*RecordHTTPEntry)(nil)
-var _ DbEntry = (*RecordTCPEntry)(nil)
-var _ DbEntry = (*RecordICMPEntry)(nil)
+// check interafce implementation for DB Entry
+var _ HistoryRecord = (*HistoryEntry)(nil)
+var _ HistoryRecord = (*RecordDNSEntry)(nil)
+var _ HistoryRecord = (*RecordHTTPEntry)(nil)
+var _ HistoryRecord = (*RecordTCPEntry)(nil)
+var _ HistoryRecord = (*RecordICMPEntry)(nil)
 
 // ** DB Entry: History Entry **
 type HistoryEntry struct {
 	Id        string
 	TableName string
 	TestType  string
-	StartTime string
+	StartTime time.Time
 	Command   string
 	UUID      string
 	Recorded  bool
@@ -50,42 +61,6 @@ func (h *HistoryEntry) GetTestType() string {
 	return h.TestType
 }
 
-func (r *HistoryEntry) GetRtt() string {
-	return ""
-}
-
-func (r *HistoryEntry) GetSendTime() time.Time {
-	layout := "2006-01-02 15:04:05 MST"
-	t, _ := time.Parse(layout, r.StartTime)
-	return t
-}
-func (r *HistoryEntry) GetStatus() bool {
-	return false
-}
-
-func (r *HistoryEntry) GetPacketSent() int {
-	return 0
-}
-
-func (r *HistoryEntry) GetSuccessResponse() int {
-	return 0
-}
-
-func (r *HistoryEntry) GetFailRate() string {
-	return ""
-}
-
-func (r *HistoryEntry) GetMinRtt() string {
-	return ""
-}
-
-func (r *HistoryEntry) GetMaxRtt() string {
-	return ""
-}
-func (r *HistoryEntry) GetAvgRtt() string {
-	return ""
-}
-
 // ** Record Table Entry: DNS Record Entry **
 type RecordDNSEntry struct {
 	Id              string
@@ -95,8 +70,8 @@ type RecordDNSEntry struct {
 	Status          string
 	DnsResponse     string
 	DnsRecord       string
-	ResponseTime    string
-	SendDateTime    string
+	ResponseTime    time.Duration
+	SendDateTime    time.Time
 	SuccessResponse int
 	FailRate        string
 	MinRTT          string
@@ -161,8 +136,8 @@ type RecordHTTPEntry struct {
 	Status          string
 	ResponseCode    string
 	ResponsePhase   string
-	ResponseTime    string
-	SendDateTime    string
+	ResponseTime    time.Duration
+	SendDateTime    time.Time
 	SuccessResponse int
 	FailRate        string
 	MinRTT          string
@@ -226,8 +201,8 @@ type RecordTCPEntry struct {
 	TestType       string
 	Seq            int
 	Status         string
-	RTT            string
-	SendDateTime   string
+	RTT            time.Duration
+	SendDateTime   time.Time
 	PacketRecv     int
 	PacketLossRate string
 	MinRTT         string
@@ -244,7 +219,7 @@ func (r *RecordTCPEntry) GetTestType() string {
 	return r.TestType
 }
 
-func (r *RecordTCPEntry) GetRtt() string {
+func (r *RecordTCPEntry) GetRtt() time.Duration {
 	return r.RTT
 }
 
@@ -291,8 +266,8 @@ type RecordICMPEntry struct {
 	TestType       string
 	Seq            int
 	Status         string
-	RTT            string
-	SendDateTime   string
+	RTT            time.Duration
+	SendDateTime   time.Time
 	PacketRecv     int
 	PacketLossRate string
 	MinRTT         string

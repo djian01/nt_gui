@@ -187,6 +187,33 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 
 	ho.historyGUI.ShowRecordBtn.OnTapped = func() {
 
+		// Get Imput Vars
+		_, iv, err := NtCmd2Iv(he.Command)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		fmt.Println(iv)
+
+		// dbEntries
+		dbEntries, err := ntdb.ReadTableEntries(db, fmt.Sprintf("%s_%s", he.TestType, he.UUID))
+		if err != nil {
+			errChan <- err
+			return
+		}
+		switch he.TestType {
+		case "dns":
+			entries, err := ntdb.ConvertDbEntriesToRecordDNSEntries(dbEntries)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			fmt.Println((*entries)[0])
+		case "http":
+		case "tcp":
+		case "icmp":
+		}
+
 	}
 
 	// update delete btn func
@@ -229,7 +256,13 @@ func historyRefresh(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryEnt
 	ntGlobal.historyTable.Objects = nil // Remove all child objects
 
 	// read the DB and obtain the historyEntries
-	err := ntdb.ReadHistoryTable(db, historyEntries)
+	DbEntries, err := ntdb.ReadTableEntries(db, "history")
+	if err != nil {
+		return err
+	}
+
+	// convert *[]DbEntry -> *[]ntdb.HistoryEntry
+	historyEntries, err = ntdb.ConvertDbEntriesToHistoryEntries(DbEntries)
 	if err != nil {
 		return err
 	}

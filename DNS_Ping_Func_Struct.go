@@ -229,9 +229,10 @@ func (d *dnsGUIRow) UpdateRow(p *ntPinger.Packet) {
 
 // ******* struct dnsObject ********
 type dnsObject struct {
-	testSummary *SummaryData
-	ChartData   []ntchart.ChartPoint
-	DnsGUI      dnsGUIRow
+	testSummary          *SummaryData
+	ChartData            []ntchart.ChartPoint
+	DnsGUI               dnsGUIRow
+	PopUpChartWindowFlag bool
 }
 
 func (d *dnsObject) GetType() string {
@@ -261,6 +262,9 @@ func (d *dnsObject) UpdateRecording(recording bool) {
 }
 
 func (d *dnsObject) Initial(testSummary *SummaryData) {
+
+	// initial the PopUpChartWindowFlag
+	d.PopUpChartWindowFlag = false
 
 	// test Summary
 	d.testSummary = testSummary
@@ -298,6 +302,16 @@ func (d *dnsObject) Stop(p *ntPinger.Pinger) {
 
 	// Unregister test from test register
 	UnregisterTest(&testRegister, d.GetUUID())
+}
+
+// Get PopUpChartWindowFlag
+func (d *dnsObject) GetPopUpChartWindowFlag() bool {
+	return d.PopUpChartWindowFlag
+}
+
+// Set PopUpChartWindowFlag
+func (d *dnsObject) SetPopUpChartWindowFlag(flag bool) {
+	d.PopUpChartWindowFlag = flag
 }
 
 // func: Add Ping Row
@@ -384,8 +398,9 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 
 	// OnTapped Func - Chart btn
 	myDnsPing.DnsGUI.ChartBtn.OnTapped = func() {
-		// only open the new chart window when there are more than 2 test records
-		if len(myDnsPing.ChartData) > 2 {
+		// only open the new chart window when there are more than 2 test records && No pop up window (PopUpChartWindowFlag = false)
+		if len(myDnsPing.ChartData) > 2 && !myDnsPing.PopUpChartWindowFlag {
+			myDnsPing.PopUpChartWindowFlag = true
 			NewChartWindow(a, &myDnsPing, &recording, p, db, entryChan, errChan)
 		}
 	}

@@ -18,6 +18,8 @@ import (
 
 func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger.Pinger, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) {
 
+	// ** "p *ntPinger.Pinger" is only for testObj.Stop(p) purpose
+
 	// Create a global cancelable context
 	var testCtx, testCancelFunc = context.WithCancel(context.Background())
 
@@ -34,6 +36,8 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 	newChartWindow.Resize(fyne.NewSize(1400, 900))
 	newChartWindow.CenterOnScreen()
 	newChartWindow.SetOnClosed(func() {
+		// set the SetPopUpChartWindowFlag to false
+		testObj.SetPopUpChartWindowFlag(false)
 		// call the cancel func to close the go routine
 		testCancelFunc()
 	})
@@ -83,7 +87,6 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 	chartBtnStopContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnStop)
 
 	//// Chart Btn Export CSV
-	//// Chart Btn Stop
 	chartBtnExport := widget.NewButtonWithIcon("Export CSV", theme.MediaStopIcon(), func() {})
 	chartBtnExport.Importance = widget.HighImportance
 	chartBtnExport.Disable()

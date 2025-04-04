@@ -254,46 +254,231 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 }
 
 // ReadHistoryTable retrieves all log entries and appends them to the provided *[]HistoryEntry
-func ReadHistoryTable(db *sql.DB, historyEntries *[]HistoryEntry) error {
+// func ReadHistoryTable(db *sql.DB, historyEntries *[]HistoryEntry) error {
 
-	// initial []HistoryEntry
-	*historyEntries = []HistoryEntry{}
+// 	// initial []HistoryEntry
+// 	*historyEntries = []HistoryEntry{}
 
-	// Construct query dynamically
-	query := "SELECT id, tablename, testtype, starttime, command, uuid, recorded FROM history;"
+// 	// Construct query dynamically
+// 	query := "SELECT id, tablename, testtype, starttime, command, uuid, recorded FROM history;"
 
-	// Execute the query
-	rows, err := db.Query(query)
-	if err != nil {
-		return fmt.Errorf("error reading table %s: %v", "history", err)
-	}
-	defer rows.Close()
+// 	// Execute the query
+// 	rows, err := db.Query(query)
+// 	if err != nil {
+// 		return fmt.Errorf("error reading table %s: %v", "history", err)
+// 	}
+// 	defer rows.Close()
 
-	// Iterate over rows and scan data into struct
-	for rows.Next() {
-		var entry HistoryEntry
-		var recordedInt int // temporary variable to store the INT value of recorded
+// 	// Iterate over rows and scan data into struct
+// 	for rows.Next() {
+// 		var entry HistoryEntry
+// 		var recordedInt int // temporary variable to store the INT value of recorded
 
-		// The rows.Scan() function in Go is used to map database query results into Go variables
-		if err := rows.Scan(&entry.Id, &entry.TableName, &entry.TestType, &entry.StartTime, &entry.Command, &entry.UUID, &recordedInt); err != nil {
-			return err
+// 		// The rows.Scan() function in Go is used to map database query results into Go variables
+// 		if err := rows.Scan(&entry.Id, &entry.TableName, &entry.TestType, &entry.StartTime, &entry.Command, &entry.UUID, &recordedInt); err != nil {
+// 			return err
+// 		}
+// 		// update recorded
+// 		if recordedInt == 1 {
+// 			entry.Recorded = true
+// 		} else {
+// 			entry.Recorded = false
+// 		}
+
+// 		*historyEntries = append(*historyEntries, entry) // Modify the original slice
+// 	}
+
+// 	// Check for iteration errors
+// 	if err := rows.Err(); err != nil {
+// 		return err
+// 	}
+
+// 	return nil
+// }
+
+// ReadHistoryTable retrieves all log entries and appends them to the provided *[]HistoryEntry
+func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointer *[]DbEntry, err error) {
+
+	// initial DbEntries
+	DbEntries := []DbEntry{}
+	DbEntriesPointer = &DbEntries
+
+	// read table based on table name or type
+	if tableName == "history" {
+		// Construct query dynamically
+		query := "SELECT id, tablename, testtype, starttime, command, uuid, recorded FROM history;"
+
+		// Execute the query
+		rows, errIn := db.Query(query)
+		if errIn != nil {
+			err = fmt.Errorf("error reading table %s: %v", "history", errIn)
+			return
 		}
-		// update recorded
-		if recordedInt == 1 {
-			entry.Recorded = true
-		} else {
-			entry.Recorded = false
+		defer rows.Close()
+
+		// Iterate over rows and scan data into struct
+		for rows.Next() {
+			var entry HistoryEntry
+			var recordedInt int // temporary variable to store the INT value of recorded
+
+			// The rows.Scan() function in Go is used to map database query results into Go variables
+			if errIn := rows.Scan(&entry.Id, &entry.TableName, &entry.TestType, &entry.StartTime, &entry.Command, &entry.UUID, &recordedInt); errIn != nil {
+				err = errIn
+				return
+			}
+			// update recorded
+			if recordedInt == 1 {
+				entry.Recorded = true
+			} else {
+				entry.Recorded = false
+			}
+
+			// append DbEntries
+			DbEntries = append(DbEntries, &entry)
 		}
 
-		*historyEntries = append(*historyEntries, entry) // Modify the original slice
+		// Check for iteration errors
+		if errIn := rows.Err(); errIn != nil {
+			err = errIn
+			return
+		}
+
+	} else {
+		tableType := (strings.Split(tableName, "_"))[0]
+
+		switch tableType {
+		case "dns":
+			// Construct query dynamically
+			query := fmt.Sprintf("SELECT seq, status, dns_response, record, response_time, send_datetime, success_response, failure_rate, min_rtt, max_rtt, avg_rtt, additional_info FROM %s;", tableName)
+
+			// Execute the query
+			rows, errIn := db.Query(query)
+			if errIn != nil {
+				err = fmt.Errorf("error reading table %s: %v", tableName, errIn)
+				return
+			}
+			defer rows.Close()
+
+			// Iterate over rows and scan data into struct
+			for rows.Next() {
+				var entry RecordDNSEntry
+
+				// The rows.Scan() function in Go is used to map database query results into Go variables
+				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.DnsResponse, &entry.DnsRecord, &entry.ResponseTime, &entry.SendDateTime, &entry.SuccessResponse, &entry.FailRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+					err = errIn
+					return
+				}
+
+				// append DbEntries
+				DbEntries = append(DbEntries, &entry)
+			}
+
+			// Check for iteration errors
+			if errIn := rows.Err(); errIn != nil {
+				err = errIn
+				return
+			}
+
+		case "http":
+			// Construct query dynamically
+			query := fmt.Sprintf("SELECT seq, status, response_code, response_phase, response_time, send_datetime, success_response, failure_rate, min_rtt, max_rtt, avg_rtt, additional_info FROM %s;", tableName)
+
+			// Execute the query
+			rows, errIn := db.Query(query)
+			if errIn != nil {
+				err = fmt.Errorf("error reading table %s: %v", tableName, errIn)
+				return
+			}
+			defer rows.Close()
+
+			// Iterate over rows and scan data into struct
+			for rows.Next() {
+				var entry RecordHTTPEntry
+
+				// The rows.Scan() function in Go is used to map database query results into Go variables
+				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.ResponseCode, &entry.ResponsePhase, &entry.ResponseTime, &entry.SendDateTime, &entry.SuccessResponse, &entry.FailRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+					err = errIn
+					return
+				}
+
+				// append DbEntries
+				DbEntries = append(DbEntries, &entry)
+			}
+
+			// Check for iteration errors
+			if errIn := rows.Err(); errIn != nil {
+				err = errIn
+				return
+			}
+
+		case "tcp":
+			// Construct query dynamically
+			query := fmt.Sprintf("SELECT seq, status, rtt, send_datetime, packetrecv, packetloss, min_rtt, max_rtt, avg_rtt, additional_info FROM %s;", tableName)
+
+			// Execute the query
+			rows, errIn := db.Query(query)
+			if errIn != nil {
+				err = fmt.Errorf("error reading table %s: %v", tableName, errIn)
+				return
+			}
+			defer rows.Close()
+
+			// Iterate over rows and scan data into struct
+			for rows.Next() {
+				var entry RecordTCPEntry
+
+				// The rows.Scan() function in Go is used to map database query results into Go variables
+				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.RTT, &entry.SendDateTime, &entry.PacketRecv, &entry.PacketLoss, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+					err = errIn
+					return
+				}
+
+				// append DbEntries
+				DbEntries = append(DbEntries, &entry)
+			}
+
+			// Check for iteration errors
+			if errIn := rows.Err(); errIn != nil {
+				err = errIn
+				return
+			}
+
+		case "icmp":
+			// Construct query dynamically
+			query := fmt.Sprintf("SELECT seq, status, rtt, send_datetime, packetrecv, packetloss, min_rtt, max_rtt, avg_rtt, additional_info FROM %s;", tableName)
+
+			// Execute the query
+			rows, errIn := db.Query(query)
+			if errIn != nil {
+				err = fmt.Errorf("error reading table %s: %v", tableName, errIn)
+				return
+			}
+			defer rows.Close()
+
+			// Iterate over rows and scan data into struct
+			for rows.Next() {
+				var entry RecordICMPEntry
+
+				// The rows.Scan() function in Go is used to map database query results into Go variables
+				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.RTT, &entry.SendDateTime, &entry.PacketRecv, &entry.PacketLoss, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+					err = errIn
+					return
+				}
+
+				// append DbEntries
+				DbEntries = append(DbEntries, &entry)
+			}
+
+			// Check for iteration errors
+			if errIn := rows.Err(); errIn != nil {
+				err = errIn
+				return
+			}
+
+		}
 	}
 
-	// Check for iteration errors
-	if err := rows.Err(); err != nil {
-		return err
-	}
-
-	return nil
+	return
 }
 
 // Func: Delete entry from "table" by "key" & "value"
@@ -498,4 +683,56 @@ func UpdateFieldValue(db *sql.DB, table, searchKey, searchType, searchValue, upd
 		}
 	}
 	return nil
+}
+
+// func: *[]DbEntry -> *[]HistoryEntry
+func ConvertDbEntriesToHistoryEntries(entries *[]DbEntry) (*[]HistoryEntry, error) {
+	var historyEntries []HistoryEntry
+	for _, entry := range *entries {
+		if h, ok := entry.(*HistoryEntry); ok {
+			historyEntries = append(historyEntries, *h)
+		} else {
+			return nil, fmt.Errorf("entry is not of type *HistoryEntry: %+v", entry)
+		}
+	}
+	return &historyEntries, nil
+}
+
+// func: *[]DbEntry -> *[]RecordDNSEntry
+func ConvertDbEntriesToRecordDNSEntries(entries *[]DbEntry) (*[]RecordDNSEntry, error) {
+	var RecordDNSEntries []RecordDNSEntry
+	for _, entry := range *entries {
+		if r, ok := entry.(*RecordDNSEntry); ok {
+			RecordDNSEntries = append(RecordDNSEntries, *r)
+		} else {
+			return nil, fmt.Errorf("entry is not of type *RecordDNSEntry: %+v", entry)
+		}
+	}
+	return &RecordDNSEntries, nil
+}
+
+// func: *[]DbEntry -> *[]RecordHTTPEntry
+func ConvertDbEntriesToRecordHTTPEntries(entries *[]DbEntry) (*[]RecordHTTPEntry, error) {
+	var RecordHTTPEntries []RecordHTTPEntry
+	for _, entry := range *entries {
+		if r, ok := entry.(*RecordHTTPEntry); ok {
+			RecordHTTPEntries = append(RecordHTTPEntries, *r)
+		} else {
+			return nil, fmt.Errorf("entry is not of type *RecordHTTPEntry: %+v", entry)
+		}
+	}
+	return &RecordHTTPEntries, nil
+}
+
+// func: *[]DbEntry -> *[]RecordTCPEntry
+func ConvertDbEntriesToRecordTCPEntries(entries *[]DbEntry) (*[]RecordTCPEntry, error) {
+	var RecordTCPEntries []RecordTCPEntry
+	for _, entry := range *entries {
+		if r, ok := entry.(*RecordTCPEntry); ok {
+			RecordTCPEntries = append(RecordTCPEntries, *r)
+		} else {
+			return nil, fmt.Errorf("entry is not of type *RecordTCPEntry: %+v", entry)
+		}
+	}
+	return &RecordTCPEntries, nil
 }

@@ -214,6 +214,7 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 		// test
 		fmt.Println(len(*chartData))
 
+		// For Exporting CSV
 		switch he.TestType {
 		case "dns":
 			entries, err := ntdb.ConvertDbEntriesToRecordDNSEntries(dbEntries)

@@ -5,9 +5,11 @@ import (
 	"image"
 	"image/png"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/djian01/nt/pkg/ntPinger"
+	"github.com/djian01/nt_gui/pkg/ntdb"
 	"github.com/wcharczuk/go-chart/v2"
 	"github.com/wcharczuk/go-chart/v2/drawing"
 )
@@ -29,6 +31,38 @@ func ConvertFromPacketToChartPoint(pkt ntPinger.Packet) ChartPoint {
 	cp.Status = pkt.GetStatus()
 
 	return cp
+}
+
+// func: convert DbEntry to ChartPoint
+func ConvertFromDbEntryToChartPoint(dbEntry ntdb.DbEntry) (ChartPoint, error) {
+
+	cp := ChartPoint{}
+
+	cp.XValues = dbEntry.GetSendTime()
+	yValue, err := strconv.ParseFloat(dbEntry.GetRtt(), 64)
+	if err != nil {
+		return cp, err
+	}
+	cp.YValues = yValue / 1e6
+	cp.Status = dbEntry.GetStatus()
+
+	return cp, err
+}
+
+// func: convert *[]DbEntry to *[]ChartPoint
+func ConvertFromDbToCheckpoint(dbEntries *[]ntdb.DbEntry) (*[]ChartPoint, error) {
+
+	cps := []ChartPoint{}
+
+	for _, en := range *dbEntries {
+		cp, err := ConvertFromDbEntryToChartPoint(en)
+		if err != nil {
+			return &cps, err
+		}
+		cps = append(cps, cp)
+	}
+
+	return &cps, nil
 }
 
 // Generate the dynamic chart or a placeholder if needed

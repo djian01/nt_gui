@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/djian01/nt/pkg/ntPinger"
 	ntchart "github.com/djian01/nt_gui/pkg/chart"
+	"github.com/djian01/nt_gui/pkg/ntdb"
 	"github.com/djian01/nt_gui/pkg/ntwidget"
 )
 
@@ -74,7 +75,7 @@ type SummaryData struct {
 	FailRate        string
 	MinRTT          time.Duration
 	MaxRTT          time.Duration
-	AvgRtt          time.Duration
+	AvgRTT          time.Duration
 	ntCmd           string
 	uuid            string
 	//testEnded       bool
@@ -100,7 +101,7 @@ func (sd *SummaryData) UpdateRunning(p *ntPinger.Packet) {
 		sd.FailRate = fmt.Sprintf("%.2f%%", float64(myPacket.PacketLoss*100))
 		sd.MinRTT = myPacket.MinRtt
 		sd.MaxRTT = myPacket.MaxRtt
-		sd.AvgRtt = myPacket.AvgRtt
+		sd.AvgRTT = myPacket.AvgRtt
 	case "http":
 		myPacket := (*p).(*ntPinger.PacketHTTP)
 		sd.PacketSent = myPacket.PacketsSent
@@ -108,7 +109,7 @@ func (sd *SummaryData) UpdateRunning(p *ntPinger.Packet) {
 		sd.FailRate = fmt.Sprintf("%.2f%%", float64(myPacket.PacketLoss*100))
 		sd.MinRTT = myPacket.MinRtt
 		sd.MaxRTT = myPacket.MaxRtt
-		sd.AvgRtt = myPacket.AvgRtt
+		sd.AvgRTT = myPacket.AvgRtt
 	case "tcp":
 		myPacket := (*p).(*ntPinger.PacketTCP)
 		sd.PacketSent = myPacket.PacketsSent
@@ -116,7 +117,7 @@ func (sd *SummaryData) UpdateRunning(p *ntPinger.Packet) {
 		sd.FailRate = fmt.Sprintf("%.2f%%", float64(myPacket.PacketLoss*100))
 		sd.MinRTT = myPacket.MinRtt
 		sd.MaxRTT = myPacket.MaxRtt
-		sd.AvgRtt = myPacket.AvgRtt
+		sd.AvgRTT = myPacket.AvgRtt
 	case "icmp":
 		myPacket := (*p).(*ntPinger.PacketICMP)
 		sd.PacketSent = myPacket.PacketsSent
@@ -124,7 +125,7 @@ func (sd *SummaryData) UpdateRunning(p *ntPinger.Packet) {
 		sd.FailRate = fmt.Sprintf("%.2f%%", float64(myPacket.PacketLoss*100))
 		sd.MinRTT = myPacket.MinRtt
 		sd.MaxRTT = myPacket.MaxRtt
-		sd.AvgRtt = myPacket.AvgRtt
+		sd.AvgRTT = myPacket.AvgRtt
 
 	}
 }
@@ -132,6 +133,35 @@ func (sd *SummaryData) UpdateRunning(p *ntPinger.Packet) {
 // func: get UUID
 func (sd *SummaryData) GetUUID() string {
 	return sd.uuid
+}
+
+// func: history db entry -> SummaryData
+func DbEntry2SummaryData(historyEntry ntdb.HistoryEntry, firstDbEntry, lastDbEntry ntdb.DbEntry) (SummaryData, error) {
+
+	// inital SummaryData
+	sumData := SummaryData{}
+
+	// create Input Var
+	_, iv, err := NtCmd2Iv(historyEntry.Command)
+	if err != nil {
+		return sumData, err
+	}
+
+	// construct summary data
+	sumData.Type = iv.Type
+	sumData.DestHost = iv.DestHost
+	sumData.StartTime = firstDbEntry.GetSendTime()
+	sumData.EndTime = lastDbEntry.GetSendTime()
+	sumData.PacketSent = lastDbEntry.GetPacketSent()
+	sumData.SuccessResponse = lastDbEntry.GetSuccessResponse()
+	sumData.FailRate = lastDbEntry.GetFailRate()
+	sumData.MinRTT, _ = time.ParseDuration(lastDbEntry.GetMinRtt())
+	sumData.MaxRTT, _ = time.ParseDuration(lastDbEntry.GetMaxRtt())
+	sumData.AvgRTT, _ = time.ParseDuration(lastDbEntry.GetAvgRtt())
+	sumData.ntCmd = historyEntry.Command
+	sumData.uuid = historyEntry.UUID
+
+	return sumData, err
 }
 
 // *********** Summary UI **********
@@ -251,7 +281,7 @@ func (sui *SummaryUI) UpdateStaticUI(sd *SummaryData) {
 	sui.failRateEntry.SetText((*sd).FailRate)
 	sui.minRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MinRTT.Milliseconds()))
 	sui.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MaxRTT.Milliseconds()))
-	sui.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).AvgRtt.Milliseconds()))
+	sui.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).AvgRTT.Milliseconds()))
 	sui.ntCmdEntry.SetText((*sd).ntCmd)
 
 	// ntCmdBtn
@@ -285,7 +315,7 @@ func (sui *SummaryUI) UpdateUI_Running(sd *SummaryData) {
 	sui.failRateEntry.SetText((*sd).FailRate)
 	sui.minRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MinRTT.Milliseconds()))
 	sui.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MaxRTT.Milliseconds()))
-	sui.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).AvgRtt.Milliseconds()))
+	sui.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).AvgRTT.Milliseconds()))
 }
 
 // Update Summary UI Initial - when the test is ended.

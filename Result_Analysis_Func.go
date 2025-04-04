@@ -69,7 +69,7 @@ func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records 
 				(*Summary).FailRate = packet[13]
 				(*Summary).MinRTT = p.MinRtt
 				(*Summary).MaxRTT = p.MaxRtt
-				(*Summary).AvgRtt = p.AvgRtt
+				(*Summary).AvgRTT = p.AvgRtt
 			}
 
 			// append
@@ -131,7 +131,7 @@ func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records 
 				(*Summary).FailRate = packet[12]
 				(*Summary).MinRTT = p.MinRtt
 				(*Summary).MaxRTT = p.MaxRtt
-				(*Summary).AvgRtt = p.AvgRtt
+				(*Summary).AvgRTT = p.AvgRtt
 			}
 
 			// append
@@ -188,7 +188,7 @@ func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records 
 				(*Summary).FailRate = packet[12]
 				(*Summary).MinRTT = p.MinRtt
 				(*Summary).MaxRTT = p.MaxRtt
-				(*Summary).AvgRtt = p.AvgRtt
+				(*Summary).AvgRTT = p.AvgRtt
 			}
 
 			// append
@@ -244,7 +244,7 @@ func appendPacket(inputResultPackets *[]ntPinger.Packet, RaType string, records 
 				(*Summary).FailRate = packet[11]
 				(*Summary).MinRTT = p.MinRtt
 				(*Summary).MaxRTT = p.MaxRtt
-				(*Summary).AvgRtt = p.AvgRtt
+				(*Summary).AvgRTT = p.AvgRtt
 			}
 
 			// append

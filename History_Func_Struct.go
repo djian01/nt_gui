@@ -13,6 +13,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	ntchart "github.com/djian01/nt_gui/pkg/chart"
 	ntdb "github.com/djian01/nt_gui/pkg/ntdb"
 )
 
@@ -187,20 +188,32 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 
 	ho.historyGUI.ShowRecordBtn.OnTapped = func() {
 
-		// Get Imput Vars
-		_, iv, err := NtCmd2Iv(he.Command)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		fmt.Println(iv)
-
 		// dbEntries
 		dbEntries, err := ntdb.ReadTableEntries(db, fmt.Sprintf("%s_%s", he.TestType, he.UUID))
 		if err != nil {
 			errChan <- err
 			return
 		}
+
+		// generate Summary
+		sumData, err := DbEntry2SummaryData(*he, (*dbEntries)[0], (*dbEntries)[len(*dbEntries)-1])
+		if err != nil {
+			errChan <- err
+			return
+		}
+		// test
+		fmt.Println(sumData)
+
+		// []ntchart.chartPoint
+		chartData, err := ntchart.ConvertFromDbToCheckpoint(dbEntries)
+		if err != nil {
+			errChan <- err
+			return
+		}
+
+		// test
+		fmt.Println(len(*chartData))
+
 		switch he.TestType {
 		case "dns":
 			entries, err := ntdb.ConvertDbEntriesToRecordDNSEntries(dbEntries)
@@ -208,7 +221,10 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 				errChan <- err
 				return
 			}
+
+			// test
 			fmt.Println((*entries)[0])
+
 		case "http":
 		case "tcp":
 		case "icmp":

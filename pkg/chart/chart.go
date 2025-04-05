@@ -5,7 +5,6 @@ import (
 	"image"
 	"image/png"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/djian01/nt/pkg/ntPinger"
@@ -27,42 +26,36 @@ func ConvertFromPacketToChartPoint(pkt ntPinger.Packet) ChartPoint {
 	cp := ChartPoint{}
 
 	cp.XValues = pkt.GetSendTime()
-	cp.YValues = (float64((pkt.GetRtt()).Nanoseconds())) / 1e6
+	cp.YValues = (float64((pkt.GetRtt()).Nanoseconds())) / 1e6 // the YValues is in milliseconds
 	cp.Status = pkt.GetStatus()
 
 	return cp
 }
 
 // func: convert DbEntry to ChartPoint
-func ConvertFromDbEntryToChartPoint(dbEntry ntdb.DbEntry) (ChartPoint, error) {
+func ConvertFromDbTestEntryToChartPoint(dbTestEntry ntdb.DbTestEntry) ChartPoint {
 
 	cp := ChartPoint{}
 
-	cp.XValues = dbEntry.GetSendTime()
-	yValue, err := strconv.ParseFloat(dbEntry.GetRtt(), 64)
-	if err != nil {
-		return cp, err
-	}
-	cp.YValues = yValue / 1e6
-	cp.Status = dbEntry.GetStatus()
+	cp.XValues = dbTestEntry.GetSendTime()
+	cp.YValues = float64(dbTestEntry.GetRtt().Microseconds())
 
-	return cp, err
+	cp.Status = dbTestEntry.GetStatus()
+
+	return cp
 }
 
 // func: convert *[]DbEntry to *[]ChartPoint
-func ConvertFromDbToCheckpoint(dbEntries *[]ntdb.DbEntry) (*[]ChartPoint, error) {
+func ConvertFromDbToCheckpoint(dbEntries *[]ntdb.DbTestEntry) *[]ChartPoint {
 
 	cps := []ChartPoint{}
 
 	for _, en := range *dbEntries {
-		cp, err := ConvertFromDbEntryToChartPoint(en)
-		if err != nil {
-			return &cps, err
-		}
+		cp := ConvertFromDbTestEntryToChartPoint(en)
 		cps = append(cps, cp)
 	}
 
-	return &cps, nil
+	return &cps
 }
 
 // Generate the dynamic chart or a placeholder if needed

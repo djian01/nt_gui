@@ -103,21 +103,67 @@ func ConvertPkt2DbEntry(pkt ntPinger.Packet, tableName string) (dbEntry DbEntry)
 		dnsEntry.Status = strconv.FormatBool((*testPkt).Status)
 		dnsEntry.DnsResponse = (*testPkt).Dns_response
 		dnsEntry.DnsRecord = (*testPkt).Dns_queryType
-		dnsEntry.ResponseTime = fmt.Sprintf("%v", float64((*testPkt).RTT.Nanoseconds()))
-		dnsEntry.SendDateTime = (*testPkt).SendTime.Format("2006-01-02 15:04:05 MST")
+		dnsEntry.ResponseTime = (*testPkt).RTT
+		dnsEntry.SendDateTime = (*testPkt).SendTime
 		dnsEntry.SuccessResponse = (*testPkt).PacketsRecv
-		dnsEntry.FailRate = fmt.Sprintf("%.2f%%", float64((*testPkt).PacketLoss*100))
+		dnsEntry.FailRate = fmt.Sprintf("%.2f%%", (*testPkt).PacketLoss*100)
 		dnsEntry.MinRTT = (*testPkt).MinRtt.String()
 		dnsEntry.MaxRTT = (*testPkt).MaxRtt.String()
 		dnsEntry.AvgRTT = (*testPkt).AvgRtt.String()
 		dnsEntry.AddInfo = (*testPkt).AdditionalInfo
 		dbEntry = &dnsEntry
 	case "http":
+		testPkt := (pkt).(*ntPinger.PacketHTTP)
+		httpEntry := RecordHTTPEntry{}
+		httpEntry.TableName = tableName
+		httpEntry.TestType = testType
+		httpEntry.Seq = (*testPkt).Seq
+		httpEntry.Status = strconv.FormatBool((*testPkt).Status)
+		httpEntry.ResponseCode = strconv.Itoa((*testPkt).Http_response_code)
+		httpEntry.ResponsePhase = (*testPkt).Http_response
+		httpEntry.ResponseTime = (*testPkt).RTT
+		httpEntry.SendDateTime = (*testPkt).SendTime
+		httpEntry.SuccessResponse = (*testPkt).PacketsRecv
+		httpEntry.FailRate = fmt.Sprintf("%.2f%%", (*testPkt).PacketLoss*100)
+		httpEntry.MinRTT = (*testPkt).MinRtt.String()
+		httpEntry.MaxRTT = (*testPkt).MaxRtt.String()
+		httpEntry.AvgRTT = (*testPkt).AvgRtt.String()
+		httpEntry.AddInfo = (*testPkt).AdditionalInfo
+		dbEntry = &httpEntry
 	case "tcp":
+		testPkt := (pkt).(*ntPinger.PacketTCP)
+		tcpEntry := RecordTCPEntry{}
+		tcpEntry.TableName = tableName
+		tcpEntry.TestType = testType
+		tcpEntry.Seq = (*testPkt).Seq
+		tcpEntry.Status = strconv.FormatBool((*testPkt).Status)
+		tcpEntry.RTT = (*testPkt).RTT
+		tcpEntry.SendDateTime = (*testPkt).SendTime
+		tcpEntry.PacketRecv = (*testPkt).PacketsRecv
+		tcpEntry.PacketLossRate = fmt.Sprintf("%.2f%%", (*testPkt).PacketLoss*100)
+		tcpEntry.MinRTT = (*testPkt).MinRtt.String()
+		tcpEntry.MaxRTT = (*testPkt).MaxRtt.String()
+		tcpEntry.AvgRTT = (*testPkt).AvgRtt.String()
+		tcpEntry.AddInfo = (*testPkt).AdditionalInfo
+		dbEntry = &tcpEntry
 	case "icmp":
+		testPkt := (pkt).(*ntPinger.PacketICMP)
+		icmpEntry := RecordICMPEntry{}
+		icmpEntry.TableName = tableName
+		icmpEntry.TestType = testType
+		icmpEntry.Seq = (*testPkt).Seq
+		icmpEntry.Status = strconv.FormatBool((*testPkt).Status)
+		icmpEntry.RTT = (*testPkt).RTT
+		icmpEntry.SendDateTime = (*testPkt).SendTime
+		icmpEntry.PacketRecv = (*testPkt).PacketsRecv
+		icmpEntry.PacketLossRate = fmt.Sprintf("%.2f%%", (*testPkt).PacketLoss*100)
+		icmpEntry.MinRTT = (*testPkt).MinRtt.String()
+		icmpEntry.MaxRTT = (*testPkt).MaxRtt.String()
+		icmpEntry.AvgRTT = (*testPkt).AvgRtt.String()
+		icmpEntry.AddInfo = (*testPkt).AdditionalInfo
+		dbEntry = &icmpEntry
 
 	}
-
 	return
 }
 
@@ -137,6 +183,9 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 			// Construct SQL query with the dynamic table name
 			query := fmt.Sprintf("INSERT INTO %s (tablename, testtype, starttime, command, uuid, recorded) VALUES (?, ?, ?, ?, ?, ?);", tableName)
 
+			// format start time to string
+			startTime := he.StartTime.Format("2006-01-02 15:04:05 MST")
+
 			// setup temporary variable for recorded
 			var recordedInt int // temporary variable to store the INT value of recorded
 			if he.Recorded {
@@ -147,7 +196,8 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 
 			// Execute the query safely with placeholders for values
 			for {
-				_, err = ntdb.Exec(query, he.TableName, he.TestType, he.StartTime, he.Command, he.UUID, recordedInt)
+				_, err = ntdb.Exec(query, he.TableName, he.TestType, startTime, he.Command, he.UUID, recordedInt)
+
 				if err != nil {
 					// handle the "database is locked" error
 					if strings.Contains(err.Error(), "database is locked") {
@@ -172,9 +222,15 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 					// Construct SQL query with the dynamic table name
 					query := fmt.Sprintf("INSERT INTO %s (seq, status, dns_response, record, response_time, send_datetime, success_response, failure_rate, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
 
+					// format sendDateTime -> string
+					sendDateTime := en.SendDateTime.Format("2006-01-02 15:04:05 MST")
+
+					// set responseTime: time.Duration -> string
+					responseTime := en.ResponseTime.String()
+
 					// Execute the query safely with placeholders for values
 					for {
-						_, err = ntdb.Exec(query, en.Seq, en.Status, en.DnsResponse, en.DnsRecord, en.ResponseTime, en.SendDateTime, en.SuccessResponse, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
+						_, err = ntdb.Exec(query, en.Seq, en.Status, en.DnsResponse, en.DnsRecord, responseTime, sendDateTime, en.SuccessResponse, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
 						if err != nil {
 							// handle the "database is locked" error
 							if strings.Contains(err.Error(), "database is locked") {
@@ -192,9 +248,15 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 					// Construct SQL query with the dynamic table name
 					query := fmt.Sprintf("INSERT INTO %s (seq, status, response_code, response_phase, response_time, send_datetime, success_response, failure_rate, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
 
+					// format sendDateTime to string
+					sendDateTime := en.SendDateTime.Format("2006-01-02 15:04:05 MST")
+
+					// set responseTime: time.Duration -> string
+					responseTime := en.ResponseTime.String()
+
 					// Execute the query safely with placeholders for values
 					for {
-						_, err = ntdb.Exec(query, en.Seq, en.Status, en.ResponseCode, en.ResponsePhase, en.ResponseTime, en.SendDateTime, en.SuccessResponse, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
+						_, err = ntdb.Exec(query, en.Seq, en.Status, en.ResponseCode, en.ResponsePhase, responseTime, sendDateTime, en.SuccessResponse, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
 						if err != nil {
 							// handle the "database is locked" error
 							if strings.Contains(err.Error(), "database is locked") {
@@ -212,9 +274,15 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 					// Construct SQL query with the dynamic table name
 					query := fmt.Sprintf("INSERT INTO %s (seq, status, rtt, send_datetime, packetrecv, packetloss_rate, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
 
+					// format sendDateTime to string
+					sendDateTime := en.SendDateTime.Format("2006-01-02 15:04:05 MST")
+
+					// et responseTime: time.Duration -> string
+					RTT := en.RTT.String()
+
 					// Execute the query safely with placeholders for values
 					for {
-						_, err = ntdb.Exec(query, en.Seq, en.Status, en.RTT, en.SendDateTime, en.PacketRecv, en.PacketLossRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
+						_, err = ntdb.Exec(query, en.Seq, en.Status, RTT, sendDateTime, en.PacketRecv, en.PacketLossRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
 						if err != nil {
 							// handle the "database is locked" error
 							if strings.Contains(err.Error(), "database is locked") {
@@ -232,9 +300,15 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 					// Construct SQL query with the dynamic table name
 					query := fmt.Sprintf("INSERT INTO %s (seq, status, rtt, send_datetime, packetrecv, packetloss_rate, min_rtt, max_rtt, avg_rtt, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", tableName)
 
+					// format sendDateTime to string
+					sendDateTime := en.SendDateTime.Format("2006-01-02 15:04:05 MST")
+
+					// et responseTime: time.Duration -> string
+					RTT := en.RTT.String()
+
 					// Execute the query safely with placeholders for values
 					for {
-						_, err = ntdb.Exec(query, en.Seq, en.Status, en.RTT, en.SendDateTime, en.PacketRecv, en.PacketLossRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
+						_, err = ntdb.Exec(query, en.Seq, en.Status, RTT, sendDateTime, en.PacketRecv, en.PacketLossRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
 						if err != nil {
 							// handle the "database is locked" error
 							if strings.Contains(err.Error(), "database is locked") {
@@ -254,54 +328,14 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 }
 
 // ReadHistoryTable retrieves all log entries and appends them to the provided *[]HistoryEntry
-// func ReadHistoryTable(db *sql.DB, historyEntries *[]HistoryEntry) error {
-
-// 	// initial []HistoryEntry
-// 	*historyEntries = []HistoryEntry{}
-
-// 	// Construct query dynamically
-// 	query := "SELECT id, tablename, testtype, starttime, command, uuid, recorded FROM history;"
-
-// 	// Execute the query
-// 	rows, err := db.Query(query)
-// 	if err != nil {
-// 		return fmt.Errorf("error reading table %s: %v", "history", err)
-// 	}
-// 	defer rows.Close()
-
-// 	// Iterate over rows and scan data into struct
-// 	for rows.Next() {
-// 		var entry HistoryEntry
-// 		var recordedInt int // temporary variable to store the INT value of recorded
-
-// 		// The rows.Scan() function in Go is used to map database query results into Go variables
-// 		if err := rows.Scan(&entry.Id, &entry.TableName, &entry.TestType, &entry.StartTime, &entry.Command, &entry.UUID, &recordedInt); err != nil {
-// 			return err
-// 		}
-// 		// update recorded
-// 		if recordedInt == 1 {
-// 			entry.Recorded = true
-// 		} else {
-// 			entry.Recorded = false
-// 		}
-
-// 		*historyEntries = append(*historyEntries, entry) // Modify the original slice
-// 	}
-
-// 	// Check for iteration errors
-// 	if err := rows.Err(); err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
-
-// ReadHistoryTable retrieves all log entries and appends them to the provided *[]HistoryEntry
-func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointer *[]DbEntry, err error) {
+func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointers *[]DbEntry, err error) {
 
 	// initial DbEntries
 	DbEntries := []DbEntry{}
-	DbEntriesPointer = &DbEntries
+	DbEntriesPointers = &DbEntries
+
+	// time layout
+	timeLayout := "2006-01-02 15:04:05 MST"
 
 	// read table based on table name or type
 	if tableName == "history" {
@@ -320,9 +354,10 @@ func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointer *[]DbEntry
 		for rows.Next() {
 			var entry HistoryEntry
 			var recordedInt int // temporary variable to store the INT value of recorded
+			var startTime string
 
 			// The rows.Scan() function in Go is used to map database query results into Go variables
-			if errIn := rows.Scan(&entry.Id, &entry.TableName, &entry.TestType, &entry.StartTime, &entry.Command, &entry.UUID, &recordedInt); errIn != nil {
+			if errIn := rows.Scan(&entry.Id, &entry.TableName, &entry.TestType, &startTime, &entry.Command, &entry.UUID, &recordedInt); errIn != nil {
 				err = errIn
 				return
 			}
@@ -332,6 +367,17 @@ func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointer *[]DbEntry
 			} else {
 				entry.Recorded = false
 			}
+
+			// update start time
+			t, errIn := time.Parse(startTime, timeLayout)
+			fmt.Println(startTime)
+			fmt.Println(timeLayout)
+			fmt.Println(errIn)
+			if errIn != nil {
+				err = errIn
+				return
+			}
+			entry.StartTime = t
 
 			// append DbEntries
 			DbEntries = append(DbEntries, &entry)
@@ -362,12 +408,20 @@ func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointer *[]DbEntry
 			// Iterate over rows and scan data into struct
 			for rows.Next() {
 				var entry RecordDNSEntry
+				var responseTime string
+				var sendDateTime string
 
 				// The rows.Scan() function in Go is used to map database query results into Go variables
-				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.DnsResponse, &entry.DnsRecord, &entry.ResponseTime, &entry.SendDateTime, &entry.SuccessResponse, &entry.FailRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.DnsResponse, &entry.DnsRecord, &responseTime, &sendDateTime, &entry.SuccessResponse, &entry.FailRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
 					err = errIn
 					return
 				}
+
+				// update responseTime
+				entry.ResponseTime, _ = time.ParseDuration(responseTime)
+
+				// update sendDateTime
+				entry.SendDateTime, _ = time.Parse(timeLayout, sendDateTime)
 
 				// append DbEntries
 				DbEntries = append(DbEntries, &entry)
@@ -394,12 +448,20 @@ func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointer *[]DbEntry
 			// Iterate over rows and scan data into struct
 			for rows.Next() {
 				var entry RecordHTTPEntry
+				var responseTime string
+				var sendDateTime string
 
 				// The rows.Scan() function in Go is used to map database query results into Go variables
-				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.ResponseCode, &entry.ResponsePhase, &entry.ResponseTime, &entry.SendDateTime, &entry.SuccessResponse, &entry.FailRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.ResponseCode, &entry.ResponsePhase, &responseTime, &sendDateTime, &entry.SuccessResponse, &entry.FailRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
 					err = errIn
 					return
 				}
+
+				// update responseTime
+				entry.ResponseTime, _ = time.ParseDuration(responseTime)
+
+				// update sendDateTime
+				entry.SendDateTime, _ = time.Parse(timeLayout, sendDateTime)
 
 				// append DbEntries
 				DbEntries = append(DbEntries, &entry)
@@ -426,12 +488,20 @@ func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointer *[]DbEntry
 			// Iterate over rows and scan data into struct
 			for rows.Next() {
 				var entry RecordTCPEntry
+				var RTT string
+				var sendDateTime string
 
 				// The rows.Scan() function in Go is used to map database query results into Go variables
-				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.RTT, &entry.SendDateTime, &entry.PacketRecv, &entry.PacketLossRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+				if errIn := rows.Scan(&entry.Seq, &entry.Status, &RTT, &sendDateTime, &entry.PacketRecv, &entry.PacketLossRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
 					err = errIn
 					return
 				}
+
+				// update RTT
+				entry.RTT, _ = time.ParseDuration(RTT)
+
+				// update sendDateTime
+				entry.SendDateTime, _ = time.Parse(timeLayout, sendDateTime)
 
 				// append DbEntries
 				DbEntries = append(DbEntries, &entry)
@@ -458,12 +528,20 @@ func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointer *[]DbEntry
 			// Iterate over rows and scan data into struct
 			for rows.Next() {
 				var entry RecordICMPEntry
+				var RTT string
+				var sendDateTime string
 
 				// The rows.Scan() function in Go is used to map database query results into Go variables
-				if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.RTT, &entry.SendDateTime, &entry.PacketRecv, &entry.PacketLossRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+				if errIn := rows.Scan(&entry.Seq, &entry.Status, &RTT, &sendDateTime, &entry.PacketRecv, &entry.PacketLossRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
 					err = errIn
 					return
 				}
+
+				// update RTT
+				entry.RTT, _ = time.ParseDuration(RTT)
+
+				// update sendDateTime
+				entry.SendDateTime, _ = time.Parse(timeLayout, sendDateTime)
 
 				// append DbEntries
 				DbEntries = append(DbEntries, &entry)
@@ -476,6 +554,187 @@ func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointer *[]DbEntry
 			}
 
 		}
+	}
+
+	return
+}
+
+// ReadTestTable retrieves all log entries and appends them to the provided *[]HistoryEntry
+func ReadTestTableEntries(db *sql.DB, tableName string) (DbTestEntriesPointers *[]DbTestEntry, err error) {
+
+	// initial DbEntries
+	DbTestEntries := []DbTestEntry{}
+	DbTestEntriesPointers = &DbTestEntries
+
+	// time layout
+	timeLayout := "2006-01-02 15:04:05 MST"
+
+	// read table based on table name or type
+	tableType := (strings.Split(tableName, "_"))[0]
+
+	switch tableType {
+	case "dns":
+		// Construct query dynamically
+		query := fmt.Sprintf("SELECT seq, status, dns_response, record, response_time, send_datetime, success_response, failure_rate, min_rtt, max_rtt, avg_rtt, additional_info FROM %s;", tableName)
+
+		// Execute the query
+		rows, errIn := db.Query(query)
+		if errIn != nil {
+			err = fmt.Errorf("error reading table %s: %v", tableName, errIn)
+			return
+		}
+		defer rows.Close()
+
+		// Iterate over rows and scan data into struct
+		for rows.Next() {
+			var entry RecordDNSEntry
+			var responseTime string
+			var sendDateTime string
+
+			// The rows.Scan() function in Go is used to map database query results into Go variables
+			if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.DnsResponse, &entry.DnsRecord, &responseTime, &sendDateTime, &entry.SuccessResponse, &entry.FailRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+				err = errIn
+				return
+			}
+
+			// update responseTime
+			entry.ResponseTime, _ = time.ParseDuration(responseTime)
+
+			// update sendDateTime
+			entry.SendDateTime, _ = time.Parse(timeLayout, sendDateTime)
+
+			// append DbTestEntries
+			DbTestEntries = append(DbTestEntries, &entry)
+		}
+
+		// Check for iteration errors
+		if errIn := rows.Err(); errIn != nil {
+			err = errIn
+			return
+		}
+
+	case "http":
+		// Construct query dynamically
+		query := fmt.Sprintf("SELECT seq, status, response_code, response_phase, response_time, send_datetime, success_response, failure_rate, min_rtt, max_rtt, avg_rtt, additional_info FROM %s;", tableName)
+
+		// Execute the query
+		rows, errIn := db.Query(query)
+		if errIn != nil {
+			err = fmt.Errorf("error reading table %s: %v", tableName, errIn)
+			return
+		}
+		defer rows.Close()
+
+		// Iterate over rows and scan data into struct
+		for rows.Next() {
+			var entry RecordHTTPEntry
+			var responseTime string
+			var sendDateTime string
+
+			// The rows.Scan() function in Go is used to map database query results into Go variables
+			if errIn := rows.Scan(&entry.Seq, &entry.Status, &entry.ResponseCode, &entry.ResponsePhase, &responseTime, &sendDateTime, &entry.SuccessResponse, &entry.FailRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+				err = errIn
+				return
+			}
+
+			// update responseTime
+			entry.ResponseTime, _ = time.ParseDuration(responseTime)
+
+			// update sendDateTime
+			entry.SendDateTime, _ = time.Parse(timeLayout, sendDateTime)
+
+			// append DbTestEntries
+			DbTestEntries = append(DbTestEntries, &entry)
+		}
+
+		// Check for iteration errors
+		if errIn := rows.Err(); errIn != nil {
+			err = errIn
+			return
+		}
+
+	case "tcp":
+		// Construct query dynamically
+		query := fmt.Sprintf("SELECT seq, status, rtt, send_datetime, packetrecv, packetloss_rate, min_rtt, max_rtt, avg_rtt, additional_info FROM %s;", tableName)
+
+		// Execute the query
+		rows, errIn := db.Query(query)
+		if errIn != nil {
+			err = fmt.Errorf("error reading table %s: %v", tableName, errIn)
+			return
+		}
+		defer rows.Close()
+
+		// Iterate over rows and scan data into struct
+		for rows.Next() {
+			var entry RecordTCPEntry
+			var RTT string
+			var sendDateTime string
+
+			// The rows.Scan() function in Go is used to map database query results into Go variables
+			if errIn := rows.Scan(&entry.Seq, &entry.Status, &RTT, &sendDateTime, &entry.PacketRecv, &entry.PacketLossRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+				err = errIn
+				return
+			}
+
+			// update RTT
+			entry.RTT, _ = time.ParseDuration(RTT)
+
+			// update sendDateTime
+			entry.SendDateTime, _ = time.Parse(timeLayout, sendDateTime)
+
+			// append DbTestEntries
+			DbTestEntries = append(DbTestEntries, &entry)
+		}
+
+		// Check for iteration errors
+		if errIn := rows.Err(); errIn != nil {
+			err = errIn
+			return
+		}
+
+	case "icmp":
+		// Construct query dynamically
+		query := fmt.Sprintf("SELECT seq, status, rtt, send_datetime, packetrecv, packetloss_rate, min_rtt, max_rtt, avg_rtt, additional_info FROM %s;", tableName)
+
+		// Execute the query
+		rows, errIn := db.Query(query)
+		if errIn != nil {
+			err = fmt.Errorf("error reading table %s: %v", tableName, errIn)
+			return
+		}
+		defer rows.Close()
+
+		// Iterate over rows and scan data into struct
+		for rows.Next() {
+			var entry RecordICMPEntry
+			var RTT string
+			var sendDateTime string
+
+			// The rows.Scan() function in Go is used to map database query results into Go variables
+			if errIn := rows.Scan(&entry.Seq, &entry.Status, &RTT, &sendDateTime, &entry.PacketRecv, &entry.PacketLossRate, &entry.MinRTT, &entry.MaxRTT, &entry.AvgRTT, &entry.AddInfo); errIn != nil {
+				err = errIn
+				return
+			}
+
+			// update RTT
+			entry.RTT, _ = time.ParseDuration(RTT)
+
+			// update sendDateTime
+			entry.SendDateTime, _ = time.Parse(timeLayout, sendDateTime)
+
+			// append DbEnDbTestEntriestries
+			DbTestEntries = append(DbTestEntries, &entry)
+		}
+
+		// Check for iteration errors
+		if errIn := rows.Err(); errIn != nil {
+			err = errIn
+			return
+		}
+	default:
+		err = fmt.Errorf("error reading table %s: %v", tableName, "table type not supported")
+		return
 	}
 
 	return
@@ -698,8 +957,8 @@ func ConvertDbEntriesToHistoryEntries(entries *[]DbEntry) (*[]HistoryEntry, erro
 	return &historyEntries, nil
 }
 
-// func: *[]DbEntry -> *[]RecordDNSEntry
-func ConvertDbEntriesToRecordDNSEntries(entries *[]DbEntry) (*[]RecordDNSEntry, error) {
+// func: *[]DbTestEntry -> *[]RecordDNSEntry
+func ConvertDbTestEntriesToRecordDNSEntries(entries *[]DbTestEntry) (*[]RecordDNSEntry, error) {
 	var RecordDNSEntries []RecordDNSEntry
 	for _, entry := range *entries {
 		if r, ok := entry.(*RecordDNSEntry); ok {
@@ -711,8 +970,8 @@ func ConvertDbEntriesToRecordDNSEntries(entries *[]DbEntry) (*[]RecordDNSEntry, 
 	return &RecordDNSEntries, nil
 }
 
-// func: *[]DbEntry -> *[]RecordHTTPEntry
-func ConvertDbEntriesToRecordHTTPEntries(entries *[]DbEntry) (*[]RecordHTTPEntry, error) {
+// func: *[]DbTestEntry -> *[]RecordHTTPEntry
+func ConvertDbTestEntriesToRecordHTTPEntries(entries *[]DbTestEntry) (*[]RecordHTTPEntry, error) {
 	var RecordHTTPEntries []RecordHTTPEntry
 	for _, entry := range *entries {
 		if r, ok := entry.(*RecordHTTPEntry); ok {
@@ -724,8 +983,8 @@ func ConvertDbEntriesToRecordHTTPEntries(entries *[]DbEntry) (*[]RecordHTTPEntry
 	return &RecordHTTPEntries, nil
 }
 
-// func: *[]DbEntry -> *[]RecordTCPEntry
-func ConvertDbEntriesToRecordTCPEntries(entries *[]DbEntry) (*[]RecordTCPEntry, error) {
+// func: *[]DbTestEntry -> *[]RecordTCPEntry
+func ConvertDbTestEntriesToRecordTCPEntries(entries *[]DbTestEntry) (*[]RecordTCPEntry, error) {
 	var RecordTCPEntries []RecordTCPEntry
 	for _, entry := range *entries {
 		if r, ok := entry.(*RecordTCPEntry); ok {
@@ -735,4 +994,17 @@ func ConvertDbEntriesToRecordTCPEntries(entries *[]DbEntry) (*[]RecordTCPEntry, 
 		}
 	}
 	return &RecordTCPEntries, nil
+}
+
+// func: *[]DbTestEntry -> *[]RecordICMPEntry
+func ConvertDbTestEntriesToRecordICMPEntries(entries *[]DbTestEntry) (*[]RecordICMPEntry, error) {
+	var RecordICMPEntries []RecordICMPEntry
+	for _, entry := range *entries {
+		if r, ok := entry.(*RecordICMPEntry); ok {
+			RecordICMPEntries = append(RecordICMPEntries, *r)
+		} else {
+			return nil, fmt.Errorf("entry is not of type *RecordICMPEntry: %+v", entry)
+		}
+	}
+	return &RecordICMPEntries, nil
 }

@@ -19,7 +19,7 @@ var _ DbEntry = (*RecordTCPEntry)(nil)
 var _ DbEntry = (*RecordICMPEntry)(nil)
 
 // History Record Interface
-type HistoryRecord interface {
+type DbTestEntry interface {
 	GetRtt() time.Duration
 	GetSendTime() time.Time
 	GetStatus() bool
@@ -31,12 +31,11 @@ type HistoryRecord interface {
 	GetSuccessResponse() int
 }
 
-// check interafce implementation for DB Entry
-var _ HistoryRecord = (*HistoryEntry)(nil)
-var _ HistoryRecord = (*RecordDNSEntry)(nil)
-var _ HistoryRecord = (*RecordHTTPEntry)(nil)
-var _ HistoryRecord = (*RecordTCPEntry)(nil)
-var _ HistoryRecord = (*RecordICMPEntry)(nil)
+// check interafce implementation for DB Test Entry
+var _ DbTestEntry = (*RecordDNSEntry)(nil)
+var _ DbTestEntry = (*RecordHTTPEntry)(nil)
+var _ DbTestEntry = (*RecordTCPEntry)(nil)
+var _ DbTestEntry = (*RecordICMPEntry)(nil)
 
 // ** DB Entry: History Entry **
 type HistoryEntry struct {
@@ -88,13 +87,11 @@ func (r *RecordDNSEntry) GetTestType() string {
 	return r.TestType
 }
 
-func (r *RecordDNSEntry) GetRtt() string {
+func (r *RecordDNSEntry) GetRtt() time.Duration {
 	return r.ResponseTime
 }
 func (r *RecordDNSEntry) GetSendTime() time.Time {
-	layout := "2006-01-02 15:04:05 MST"
-	t, _ := time.Parse(layout, r.SendDateTime)
-	return t
+	return r.SendDateTime
 }
 func (r *RecordDNSEntry) GetStatus() bool {
 	if r.Status == "true" {
@@ -154,14 +151,12 @@ func (r *RecordHTTPEntry) GetTestType() string {
 	return r.TestType
 }
 
-func (r *RecordHTTPEntry) GetRtt() string {
+func (r *RecordHTTPEntry) GetRtt() time.Duration {
 	return r.ResponseTime
 }
 
 func (r *RecordHTTPEntry) GetSendTime() time.Time {
-	layout := "2006-01-02 15:04:05 MST"
-	t, _ := time.Parse(layout, r.SendDateTime)
-	return t
+	return r.SendDateTime
 }
 func (r *RecordHTTPEntry) GetStatus() bool {
 	if r.Status == "true" {
@@ -224,9 +219,7 @@ func (r *RecordTCPEntry) GetRtt() time.Duration {
 }
 
 func (r *RecordTCPEntry) GetSendTime() time.Time {
-	layout := "2006-01-02 15:04:05 MST"
-	t, _ := time.Parse(layout, r.SendDateTime)
-	return t
+	return r.SendDateTime
 }
 func (r *RecordTCPEntry) GetStatus() bool {
 	if r.Status == "true" {
@@ -284,14 +277,12 @@ func (r *RecordICMPEntry) GetTestType() string {
 	return r.TestType
 }
 
-func (r *RecordICMPEntry) GetRtt() string {
+func (r *RecordICMPEntry) GetRtt() time.Duration {
 	return r.RTT
 }
 
 func (r *RecordICMPEntry) GetSendTime() time.Time {
-	layout := "2006-01-02 15:04:05 MST"
-	t, _ := time.Parse(layout, r.SendDateTime)
-	return t
+	return r.SendDateTime
 }
 func (r *RecordICMPEntry) GetStatus() bool {
 	if r.Status == "true" {

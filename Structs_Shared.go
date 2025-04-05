@@ -135,8 +135,8 @@ func (sd *SummaryData) GetUUID() string {
 	return sd.uuid
 }
 
-// func: history db entry -> SummaryData
-func DbEntry2SummaryData(historyEntry ntdb.HistoryEntry, firstDbEntry, lastDbEntry ntdb.DbEntry) (SummaryData, error) {
+// func: DB Test Entry -> SummaryData
+func DbTestEntry2SummaryData(historyEntry ntdb.HistoryEntry, firstEntry, lastEntry ntdb.DbTestEntry) (SummaryData, error) {
 
 	// inital SummaryData
 	sumData := SummaryData{}
@@ -150,14 +150,14 @@ func DbEntry2SummaryData(historyEntry ntdb.HistoryEntry, firstDbEntry, lastDbEnt
 	// construct summary data
 	sumData.Type = iv.Type
 	sumData.DestHost = iv.DestHost
-	sumData.StartTime = firstDbEntry.GetSendTime()
-	sumData.EndTime = lastDbEntry.GetSendTime()
-	sumData.PacketSent = lastDbEntry.GetPacketSent()
-	sumData.SuccessResponse = lastDbEntry.GetSuccessResponse()
-	sumData.FailRate = lastDbEntry.GetFailRate()
-	sumData.MinRTT, _ = time.ParseDuration(lastDbEntry.GetMinRtt())
-	sumData.MaxRTT, _ = time.ParseDuration(lastDbEntry.GetMaxRtt())
-	sumData.AvgRTT, _ = time.ParseDuration(lastDbEntry.GetAvgRtt())
+	sumData.StartTime = firstEntry.GetSendTime()
+	sumData.EndTime = lastEntry.GetSendTime()
+	sumData.PacketSent = lastEntry.GetPacketSent()
+	sumData.SuccessResponse = lastEntry.GetSuccessResponse()
+	sumData.FailRate = lastEntry.GetFailRate()
+	sumData.MinRTT, _ = time.ParseDuration(lastEntry.GetMinRtt())
+	sumData.MaxRTT, _ = time.ParseDuration(lastEntry.GetMaxRtt())
+	sumData.AvgRTT, _ = time.ParseDuration(lastEntry.GetAvgRtt())
 	sumData.ntCmd = historyEntry.Command
 	sumData.uuid = historyEntry.UUID
 

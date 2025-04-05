@@ -126,7 +126,7 @@ func (d *historyGUIRow) UpdateRow(h *ntdb.HistoryEntry) {
 	d.TestType.Object.(*widget.Label).Refresh()
 
 	// Start Time
-	d.StartTime.Object.(*widget.Label).Text = h.StartTime
+	d.StartTime.Object.(*widget.Label).Text = h.StartTime.Format("2006-01-02 15:04:05 MST")
 	d.StartTime.Object.(*widget.Label).Refresh()
 
 	// Command
@@ -188,15 +188,15 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 
 	ho.historyGUI.ShowRecordBtn.OnTapped = func() {
 
-		// dbEntries
-		dbEntries, err := ntdb.ReadTableEntries(db, fmt.Sprintf("%s_%s", he.TestType, he.UUID))
+		// dbTestEntries
+		dbTestEntries, err := ntdb.ReadTestTableEntries(db, fmt.Sprintf("%s_%s", he.TestType, he.UUID))
 		if err != nil {
 			errChan <- err
 			return
 		}
 
 		// generate Summary
-		sumData, err := DbEntry2SummaryData(*he, (*dbEntries)[0], (*dbEntries)[len(*dbEntries)-1])
+		sumData, err := DbTestEntry2SummaryData(*he, (*dbTestEntries)[0], (*dbTestEntries)[len(*dbTestEntries)-1])
 		if err != nil {
 			errChan <- err
 			return
@@ -205,11 +205,7 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 		fmt.Println(sumData)
 
 		// []ntchart.chartPoint
-		chartData, err := ntchart.ConvertFromDbToCheckpoint(dbEntries)
-		if err != nil {
-			errChan <- err
-			return
-		}
+		chartData := ntchart.ConvertFromDbToCheckpoint(dbTestEntries)
 
 		// test
 		fmt.Println(len(*chartData))
@@ -217,7 +213,7 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 		// For Exporting CSV
 		switch he.TestType {
 		case "dns":
-			entries, err := ntdb.ConvertDbEntriesToRecordDNSEntries(dbEntries)
+			entries, err := ntdb.ConvertDbTestEntriesToRecordDNSEntries(dbTestEntries)
 			if err != nil {
 				errChan <- err
 				return

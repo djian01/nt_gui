@@ -330,7 +330,7 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	// Add History DB record
 	historyRecord := ntdb.HistoryEntry{}
 	historyRecord.TableName = "history"
-	historyRecord.StartTime = time.Now().Format("2006-01-02 15:04:05 MST")
+	historyRecord.StartTime = time.Now()
 	historyRecord.TestType = mySumData.Type
 	historyRecord.Command = mySumData.ntCmd
 	historyRecord.UUID = testUUID

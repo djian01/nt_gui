@@ -34,8 +34,6 @@ type testObject interface {
 	GetChartData() *[]ntchart.ChartPoint
 	GetUUID() string
 	UpdateRecording(recording bool)
-	SetPopUpChartWindowFlag(flag bool)
-	GetPopUpChartWindowFlag() bool
 }
 
 // ********* Chart ***************

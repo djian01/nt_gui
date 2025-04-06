@@ -13,6 +13,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/djian01/nt/pkg/ntPinger"
 	ntchart "github.com/djian01/nt_gui/pkg/chart"
 	ntdb "github.com/djian01/nt_gui/pkg/ntdb"
 )
@@ -155,6 +156,8 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 	ho.historyGUI.Initial()
 	ho.historyGUI.UpdateRow(he)
 
+	//
+
 	// check if the UUID is NOT in the registered running test, add the record in the history table
 	if !existingTestCheck(&testRegister, he.UUID) {
 		// update table body
@@ -186,45 +189,63 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 		ho.historyGUI.ShowRecordBtn.Disable()
 	}
 
+	// initial PopUpChartWindowFlag
+	PopUpChartWindowFlag := false
+
+	// update show record btn
 	ho.historyGUI.ShowRecordBtn.OnTapped = func() {
 
-		// dbTestEntries
-		dbTestEntries, err := ntdb.ReadTestTableEntries(db, fmt.Sprintf("%s_%s", he.TestType, he.UUID))
-		if err != nil {
-			errChan <- err
-			return
-		}
+		if !PopUpChartWindowFlag {
+			// set pop up chart window flag to true
+			PopUpChartWindowFlag = true
 
-		// generate Summary
-		sumData, err := DbTestEntry2SummaryData(*he, (*dbTestEntries)[0], (*dbTestEntries)[len(*dbTestEntries)-1])
-		if err != nil {
-			errChan <- err
-			return
-		}
-		// test
-		fmt.Println(sumData)
-
-		// []ntchart.chartPoint
-		chartData := ntchart.ConvertFromDbToCheckpoint(dbTestEntries)
-
-		// test
-		fmt.Println(len(*chartData))
-
-		// For Exporting CSV
-		switch he.TestType {
-		case "dns":
-			entries, err := ntdb.ConvertDbTestEntriesToRecordDNSEntries(dbTestEntries)
+			// dbTestEntries
+			dbTestEntries, err := ntdb.ReadTestTableEntries(db, fmt.Sprintf("%s_%s", he.TestType, he.UUID))
 			if err != nil {
 				errChan <- err
 				return
 			}
 
-			// test
-			fmt.Println((*entries)[0])
+			// generate Summary
+			sumData, err := DbTestEntry2SummaryData(*he, (*dbTestEntries)[0], (*dbTestEntries)[len(*dbTestEntries)-1])
+			if err != nil {
+				errChan <- err
+				return
+			}
 
-		case "http":
-		case "tcp":
-		case "icmp":
+			// []ntchart.chartPoint
+			chartData := ntchart.ConvertFromDbToCheckpoint(dbTestEntries)
+
+			// create testObject
+			testObj, err := createTestObj(&sumData, chartData)
+			if err != nil {
+				errChan <- err
+				return
+			}
+
+			// create holders for NewChartWindow (these holders are just required to call the "NewChartWindow" funciton. They won't be contrubiting in the function.)
+			recordingFlag := true
+			var p *ntPinger.Pinger
+
+			// new chart window
+			NewChartWindow(a, testObj, &recordingFlag, p, db, entryChan, errChan, &PopUpChartWindowFlag)
+
+			// For Exporting CSV
+			// switch he.TestType {
+			// case "dns":
+			// 	entries, err := ntdb.ConvertDbTestEntriesToRecordDNSEntries(dbTestEntries)
+			// 	if err != nil {
+			// 		errChan <- err
+			// 		return
+			// 	}
+
+			// 	// test
+			// 	fmt.Println((*entries)[0])
+
+			// case "http":
+			// case "tcp":
+			// case "icmp":
+			// }
 		}
 
 	}
@@ -292,4 +313,25 @@ func historyRefresh(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryEnt
 	}
 
 	return nil
+}
+
+// func: create testObject
+func createTestObj(sumData *SummaryData, chartData *[]ntchart.ChartPoint) (testObject, error) {
+
+	testType := sumData.Type
+
+	switch testType {
+	case "dns":
+		obj := dnsObject{}
+		obj.testSummary = sumData
+		obj.ChartData = *chartData
+		return &obj, nil
+	case "http":
+	case "tcp":
+	case "icmp":
+	default:
+		return nil, fmt.Errorf("testObject could not be created")
+	}
+
+	return nil, fmt.Errorf("testObject could not be created")
 }

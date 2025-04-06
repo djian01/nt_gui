@@ -369,10 +369,7 @@ func ReadTableEntries(db *sql.DB, tableName string) (DbEntriesPointers *[]DbEntr
 			}
 
 			// update start time
-			t, errIn := time.Parse(startTime, timeLayout)
-			fmt.Println(startTime)
-			fmt.Println(timeLayout)
-			fmt.Println(errIn)
+			t, errIn := time.Parse(timeLayout, startTime)
 			if errIn != nil {
 				err = errIn
 				return

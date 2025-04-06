@@ -16,7 +16,7 @@ import (
 	"github.com/djian01/nt_gui/pkg/ntdb"
 )
 
-func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger.Pinger, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) {
+func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger.Pinger, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error, PopUpChartWindowFlag *bool) {
 
 	// ** "p *ntPinger.Pinger" is only for testObj.Stop(p) purpose
 
@@ -37,7 +37,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 	newChartWindow.CenterOnScreen()
 	newChartWindow.SetOnClosed(func() {
 		// set the SetPopUpChartWindowFlag to false
-		testObj.SetPopUpChartWindowFlag(false)
+		*PopUpChartWindowFlag = false
 		// call the cancel func to close the go routine
 		testCancelFunc()
 	})

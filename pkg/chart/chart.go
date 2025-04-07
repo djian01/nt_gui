@@ -38,7 +38,7 @@ func ConvertFromDbTestEntryToChartPoint(dbTestEntry ntdb.DbTestEntry) ChartPoint
 	cp := ChartPoint{}
 
 	cp.XValues = dbTestEntry.GetSendTime()
-	cp.YValues = float64(dbTestEntry.GetRtt().Microseconds())
+	cp.YValues = float64(dbTestEntry.GetRtt().Nanoseconds()) / 1e6 // the YValues is in milliseconds
 
 	cp.Status = dbTestEntry.GetStatus()
 

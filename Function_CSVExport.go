@@ -4,13 +4,15 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 
 	"github.com/djian01/nt/pkg/ntPinger"
 	"github.com/djian01/nt_gui/pkg/ntdb"
 )
 
-func SaveToCSV(filePath string, iv ntPinger.InputVars, dbEntries *[]ntdb.DbTestEntry) error {
+func SaveToCSV(filePath string, iv ntPinger.InputVars, dbTestEntries *[]ntdb.DbTestEntry) error {
 
 	// Open or create the file with append mode and write-only access
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
@@ -23,7 +25,7 @@ func SaveToCSV(filePath string, iv ntPinger.InputVars, dbEntries *[]ntdb.DbTestE
 	defer writer.Flush()
 
 	// if accumulatedRecords is empty
-	if len(*dbEntries) == 0 {
+	if len(*dbTestEntries) == 0 {
 		return nil
 		// else Save to CSV based on Type
 	} else {
@@ -54,7 +56,7 @@ func SaveToCSV(filePath string, iv ntPinger.InputVars, dbEntries *[]ntdb.DbTestE
 			}
 
 			// Write each struct to the file
-			for _, recordItem := range *dbEntries {
+			for _, recordItem := range *dbTestEntries {
 				// interface assertion
 				pkt := recordItem.(*ntdb.RecordICMPEntry)
 
@@ -62,7 +64,7 @@ func SaveToCSV(filePath string, iv ntPinger.InputVars, dbEntries *[]ntdb.DbTestE
 				row := []string{
 					iv.Type,                       // Ping Type
 					strconv.Itoa(pkt.Seq),         // Seq
-					fmt.Sprintf("%t", pkt.Status), // Status
+					fmt.Sprintf("%v", pkt.Status), // Status
 					iv.DestHost,                   // DestHost
 					iv.DestHost,                   // DestAddr
 					strconv.Itoa(iv.PayLoadSize),  // PayLoadSize
@@ -113,7 +115,7 @@ func SaveToCSV(filePath string, iv ntPinger.InputVars, dbEntries *[]ntdb.DbTestE
 			}
 
 			// Write each struct to the file
-			for _, recordItem := range *dbEntries {
+			for _, recordItem := range *dbTestEntries {
 
 				// interface assertion
 				pkt := recordItem.(*ntdb.RecordTCPEntry)
@@ -122,7 +124,7 @@ func SaveToCSV(filePath string, iv ntPinger.InputVars, dbEntries *[]ntdb.DbTestE
 				row := []string{
 					iv.Type,                       // Ping Type
 					strconv.Itoa(pkt.Seq),         // Seq
-					fmt.Sprintf("%t", pkt.Status), // Status
+					fmt.Sprintf("%v", pkt.Status), // Status
 					iv.DestHost,                   // DestHost
 					iv.DestHost,                   // DestAddr
 					strconv.Itoa(iv.DestPort),     // DestPort
@@ -174,7 +176,7 @@ func SaveToCSV(filePath string, iv ntPinger.InputVars, dbEntries *[]ntdb.DbTestE
 			}
 
 			// Write each struct to the file
-			for _, recordItem := range *dbEntries {
+			for _, recordItem := range *dbTestEntries {
 
 				// interface assertion
 				pkt := recordItem.(*ntdb.RecordHTTPEntry)
@@ -186,7 +188,7 @@ func SaveToCSV(filePath string, iv ntPinger.InputVars, dbEntries *[]ntdb.DbTestE
 				row := []string{
 					iv.Type,                       // Ping Type
 					strconv.Itoa(pkt.Seq),         // Seq
-					fmt.Sprintf("%t", pkt.Status), // Status
+					fmt.Sprintf("%v", pkt.Status), // Status
 					iv.Http_method,                // HTTP Method
 					url,                           // DestHost
 					pkt.ResponseCode,              // Response_Code
@@ -239,7 +241,7 @@ func SaveToCSV(filePath string, iv ntPinger.InputVars, dbEntries *[]ntdb.DbTestE
 			}
 
 			// Write each struct to the file
-			for _, recordItem := range *dbEntries {
+			for _, recordItem := range *dbTestEntries {
 				// interface assertion
 				pkt := recordItem.(*ntdb.RecordDNSEntry)
 
@@ -247,7 +249,7 @@ func SaveToCSV(filePath string, iv ntPinger.InputVars, dbEntries *[]ntdb.DbTestE
 				row := []string{
 					iv.Type,                       // Ping Type
 					strconv.Itoa(pkt.Seq),         // Seq
-					fmt.Sprintf("%t", pkt.Status), // Status
+					fmt.Sprintf("%v", pkt.Status), // Status
 					iv.DestHost,                   // DNS_Resolver
 					iv.Dns_query,                  // DNS_Query
 					pkt.DnsResponse,               // DNS_Response
@@ -274,4 +276,35 @@ func SaveToCSV(filePath string, iv ntPinger.InputVars, dbEntries *[]ntdb.DbTestE
 		}
 	}
 	return nil
+}
+
+// GetDefaultExportFolder returns a folder path like ~/Documents/<appName>
+// It creates the folder if it doesn't exist.
+func GetDefaultExportFolder(appName string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("unable to find user home directory: %w", err)
+	}
+
+	var baseDir string
+	switch runtime.GOOS {
+	case "windows":
+		baseDir = filepath.Join(home, "Documents")
+	case "darwin": // macOS
+		baseDir = filepath.Join(home, "Documents")
+	case "linux":
+		baseDir = filepath.Join(home, "Documents")
+	default:
+		// fallback if OS is unrecognized
+		baseDir = filepath.Join(home, appName)
+	}
+
+	exportFolder := filepath.Join(baseDir, appName)
+
+	// Ensure the directory exists
+	if err := os.MkdirAll(exportFolder, 0755); err != nil {
+		return "", fmt.Errorf("failed to create export folder: %w", err)
+	}
+
+	return exportFolder, nil
 }

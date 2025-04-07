@@ -9,7 +9,9 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/djian01/nt/pkg/ntPinger"
@@ -92,8 +94,16 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 	chartBtnExport.Disable()
 	chartBtnExportContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnExport)
 
+	//// Read DB Progress
+	chartBtnReadDBProgressBar := widget.NewProgressBarInfinite()
+	chartBtnReadDBProgressLabel := widget.NewLabel(" Reading DB: ")
+	chartBtnReadDBProgressLabel.TextStyle.Bold = true
+	chartBtnReadDBProgress := container.New(layout.NewBorderLayout(nil, nil, chartBtnReadDBProgressLabel, nil), chartBtnReadDBProgressLabel, chartBtnReadDBProgressBar)
+	chartBtnReadDBProgress.Hidden = true
+
 	//// Chart Btn Container & Card
-	chartBtnContainerIn := container.New(layout.NewHBoxLayout(), chartBtnPauseContainer, chartBtnPlayContainer, chartBtnRecordContainer, chartBtnStopContainer, chartBtnExportContainer)
+	chartBtnContainerInBtn := container.New(layout.NewHBoxLayout(), chartBtnPauseContainer, chartBtnPlayContainer, chartBtnRecordContainer, chartBtnStopContainer, chartBtnExportContainer)
+	chartBtnContainerIn := container.New(layout.NewVBoxLayout(), chartBtnContainerInBtn, chartBtnReadDBProgress)
 	chartBtnContainerOut := container.New(layout.NewCenterLayout(), chartBtnContainerIn)
 	chartBtnCard := widget.NewCard("", "", chartBtnContainerOut)
 
@@ -242,7 +252,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 	}
 
 	//// Stop Btn Function
-	chartBtnStop.OnTapped = func() { // Stop on tap function
+	chartBtnStop.OnTapped = func() {
 		// if the test has not yet stopped, stop it
 		if existingTestCheck(&testRegister, testObj.GetUUID()) {
 			testObj.Stop(p)
@@ -300,6 +310,112 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 			}
 			testSummaryUI.ntCmdBtn.Disable()
 		}
+	}
+
+	// chartBtnExport func - in Fyne, the btn.OnTapped function won't be run till the previous tappped function is finished. So no need to monitor the function progressing
+	chartBtnExport.OnTapped = func() {
+
+		// show progress bar
+		chartBtnReadDBProgress.Hidden = false
+
+		// initial dbTestEntries
+		var dbTestEntries *[]ntdb.DbTestEntry
+		var err error
+
+		// Read DB Test Entries
+		dbTestEntries, err = ntdb.ReadTestTableEntries(db, fmt.Sprintf("%s_%s", testObj.GetType(), testObj.GetUUID()))
+		if err != nil {
+			errChan <- err
+			return
+		}
+
+		// dialog for file save
+		exportFileSaveDialog := dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
+			if err != nil {
+				logger.Println(err)
+				return
+			}
+
+			if writer == nil {
+				logger.Println("No file saved")
+				return
+			}
+			defer writer.Close()
+
+			fmt.Println(writer.URI().Path())
+			fmt.Println(len(*dbTestEntries))
+
+		}, newChartWindow)
+
+		now := time.Now()
+		record_csv_name := fmt.Sprintf("Record_%s_%s_%s.csv", testObj.GetType(), testObj.GetSummary().DestHost, now.Format("20060102150405"))
+		exportFileSaveDialog.SetFileName(record_csv_name)
+		exportFileSaveDialog.Resize(fyne.NewSize(750, 550))
+
+		// get current executable path
+		exportPath, err := GetDefaultExportFolder("nt_gui")
+		if err != nil {
+			errChan <- err
+		}
+		exportPathURI, _ := storage.ListerForURI(storage.NewFileURI(exportPath))
+		exportFileSaveDialog.SetLocation(exportPathURI)
+
+		// export dialog show()
+		exportFileSaveDialog.Show()
+
+		// // switch based on test type for DbTestEntries -> Specificed Record Test Entries
+		// switch testObj.GetSummary().Type {
+		// case "dns":
+		// 	// DB Test Entries -> Record DNS Entries
+		// 	entries, err := ntdb.ConvertDbTestEntriesToRecordDNSEntries(dbTestEntries)
+		// 	if err != nil {
+		// 		errChan <- err
+		// 		return
+		// 	}
+
+		// 	// test
+		// 	fmt.Println(len(*entries))
+		// 	fmt.Println((*entries)[0])
+
+		// case "http":
+		// 	// DB Test Entries -> Record HTTP Entries
+		// 	entries, err := ntdb.ConvertDbTestEntriesToRecordHTTPEntries(dbTestEntries)
+		// 	if err != nil {
+		// 		errChan <- err
+		// 		return
+		// 	}
+
+		// 	// test
+		// 	fmt.Println((*entries)[0])
+
+		// case "tcp":
+		// 	// DB Test Entries -> Record TCP Entries
+		// 	entries, err := ntdb.ConvertDbTestEntriesToRecordTCPEntries(dbTestEntries)
+		// 	if err != nil {
+		// 		errChan <- err
+		// 		return
+		// 	}
+
+		// 	// test
+		// 	fmt.Println((*entries)[0])
+
+		// case "icmp":
+		// 	// DB Test Entries -> Record ICMP Entries
+		// 	entries, err := ntdb.ConvertDbTestEntriesToRecordICMPEntries(dbTestEntries)
+		// 	if err != nil {
+		// 		errChan <- err
+		// 		return
+		// 	}
+
+		// 	// test
+		// 	fmt.Println((*entries)[0])
+		// }
+
+		// time.Sleep(3 * time.Second)
+
+		// hide the progress bar
+		chartBtnReadDBProgress.Hidden = true
+
 	}
 
 	// New Chart Window Container

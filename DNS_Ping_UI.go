@@ -43,7 +43,7 @@ func DNSPingContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 
 	// dnsPingAddBtn action
 	dnsPingAddBtn.OnTapped = func() {
-		// NewTest will call "go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable)"
+		// Initial a New Test
 		NewTest(a, "dns", db, entryChan, errChan)
 	}
 

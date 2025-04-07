@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 
 	"github.com/djian01/nt/pkg/ntPinger"
@@ -286,18 +285,7 @@ func GetDefaultExportFolder(appName string) (string, error) {
 		return "", fmt.Errorf("unable to find user home directory: %w", err)
 	}
 
-	var baseDir string
-	switch runtime.GOOS {
-	case "windows":
-		baseDir = filepath.Join(home, "Documents")
-	case "darwin": // macOS
-		baseDir = filepath.Join(home, "Documents")
-	case "linux":
-		baseDir = filepath.Join(home, "Documents")
-	default:
-		// fallback if OS is unrecognized
-		baseDir = filepath.Join(home, appName)
-	}
+	baseDir := filepath.Join(home, "Documents")
 
 	exportFolder := filepath.Join(baseDir, appName)
 

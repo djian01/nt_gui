@@ -61,7 +61,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 	} else {
 		chartBtnPause.Disable()
 	}
-	chartBtnPauseContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnPause)
+	chartBtnPauseContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(220, 30)), chartBtnPause)
 
 	//// Chart Btn Play
 	chartBtnPlay := widget.NewButtonWithIcon("Continue Chart Update", theme.MediaPlayIcon(), func() {})
@@ -72,7 +72,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 	} else {
 		chartBtnPlay.Disable()
 	}
-	chartBtnPlayContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnPlay)
+	chartBtnPlayContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(220, 30)), chartBtnPlay)
 
 	//// Chart Btn Record
 	chartBtnRecord := widget.NewButtonWithIcon("Record Test", theme.MediaRecordIcon(), func() {})
@@ -81,22 +81,22 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 		// disable the Recording btn
 		chartBtnRecord.Disable()
 	}
-	chartBtnRecordContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnRecord)
+	chartBtnRecordContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(220, 30)), chartBtnRecord)
 
 	//// Chart Btn Stop
 	chartBtnStop := widget.NewButtonWithIcon("Stop Test", theme.MediaStopIcon(), func() {})
 	chartBtnStop.Importance = widget.DangerImportance
-	chartBtnStopContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnStop)
+	chartBtnStopContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(220, 30)), chartBtnStop)
 
 	//// Chart Btn Export CSV
-	chartBtnExport := widget.NewButtonWithIcon("Export CSV", theme.MediaStopIcon(), func() {})
+	chartBtnExport := widget.NewButtonWithIcon("Export CSV", theme.DocumentSaveIcon(), func() {})
 	chartBtnExport.Importance = widget.HighImportance
 	chartBtnExport.Disable()
-	chartBtnExportContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(200, 30)), chartBtnExport)
+	chartBtnExportContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(220, 30)), chartBtnExport)
 
 	//// Read DB Progress
 	chartBtnReadDBProgressBar := widget.NewProgressBarInfinite()
-	chartBtnReadDBProgressLabel := widget.NewLabel(" Reading DB: ")
+	chartBtnReadDBProgressLabel := widget.NewLabel(" Exporting CSV: ")
 	chartBtnReadDBProgressLabel.TextStyle.Bold = true
 	chartBtnReadDBProgress := container.New(layout.NewBorderLayout(nil, nil, chartBtnReadDBProgressLabel, nil), chartBtnReadDBProgressLabel, chartBtnReadDBProgressBar)
 	chartBtnReadDBProgress.Hidden = true
@@ -322,6 +322,13 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 		var dbTestEntries *[]ntdb.DbTestEntry
 		var err error
 
+		// create Input Var
+		_, iv, err := NtCmd2Iv(testObj.GetSummary().ntCmd)
+		if err != nil {
+			errChan <- err
+			return
+		}
+
 		// Read DB Test Entries
 		dbTestEntries, err = ntdb.ReadTestTableEntries(db, fmt.Sprintf("%s_%s", testObj.GetType(), testObj.GetUUID()))
 		if err != nil {
@@ -332,18 +339,27 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 		// dialog for file save
 		exportFileSaveDialog := dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
 			if err != nil {
-				logger.Println(err)
+				errChan <- err
+				chartBtnReadDBProgress.Hidden = true
 				return
 			}
 
 			if writer == nil {
-				logger.Println("No file saved")
+				errChan <- fmt.Errorf("no file saved")
+				chartBtnReadDBProgress.Hidden = true
 				return
 			}
 			defer writer.Close()
 
-			fmt.Println(writer.URI().Path())
-			fmt.Println(len(*dbTestEntries))
+			err = SaveToCSV(writer.URI().Path(), iv, dbTestEntries)
+			if err != nil {
+				errChan <- err
+				chartBtnReadDBProgress.Hidden = true
+				return
+			}
+
+			// end dialog, hide progress bar
+			chartBtnReadDBProgress.Hidden = true
 
 		}, newChartWindow)
 
@@ -352,69 +368,18 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 		exportFileSaveDialog.SetFileName(record_csv_name)
 		exportFileSaveDialog.Resize(fyne.NewSize(750, 550))
 
-		// get current executable path
+		// get current <current_user>/Document/<app_name> path
 		exportPath, err := GetDefaultExportFolder("nt_gui")
 		if err != nil {
 			errChan <- err
 		}
+
+		// set exportPath as the default path for Dialog
 		exportPathURI, _ := storage.ListerForURI(storage.NewFileURI(exportPath))
 		exportFileSaveDialog.SetLocation(exportPathURI)
 
 		// export dialog show()
 		exportFileSaveDialog.Show()
-
-		// // switch based on test type for DbTestEntries -> Specificed Record Test Entries
-		// switch testObj.GetSummary().Type {
-		// case "dns":
-		// 	// DB Test Entries -> Record DNS Entries
-		// 	entries, err := ntdb.ConvertDbTestEntriesToRecordDNSEntries(dbTestEntries)
-		// 	if err != nil {
-		// 		errChan <- err
-		// 		return
-		// 	}
-
-		// 	// test
-		// 	fmt.Println(len(*entries))
-		// 	fmt.Println((*entries)[0])
-
-		// case "http":
-		// 	// DB Test Entries -> Record HTTP Entries
-		// 	entries, err := ntdb.ConvertDbTestEntriesToRecordHTTPEntries(dbTestEntries)
-		// 	if err != nil {
-		// 		errChan <- err
-		// 		return
-		// 	}
-
-		// 	// test
-		// 	fmt.Println((*entries)[0])
-
-		// case "tcp":
-		// 	// DB Test Entries -> Record TCP Entries
-		// 	entries, err := ntdb.ConvertDbTestEntriesToRecordTCPEntries(dbTestEntries)
-		// 	if err != nil {
-		// 		errChan <- err
-		// 		return
-		// 	}
-
-		// 	// test
-		// 	fmt.Println((*entries)[0])
-
-		// case "icmp":
-		// 	// DB Test Entries -> Record ICMP Entries
-		// 	entries, err := ntdb.ConvertDbTestEntriesToRecordICMPEntries(dbTestEntries)
-		// 	if err != nil {
-		// 		errChan <- err
-		// 		return
-		// 	}
-
-		// 	// test
-		// 	fmt.Println((*entries)[0])
-		// }
-
-		// time.Sleep(3 * time.Second)
-
-		// hide the progress bar
-		chartBtnReadDBProgress.Hidden = true
 
 	}
 

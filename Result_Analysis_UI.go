@@ -3,8 +3,6 @@ package main
 import (
 	"database/sql"
 	"encoding/csv"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -156,11 +154,15 @@ func OpenResultCSVFile(a fyne.App, w fyne.Window, inputResultPackets *[]ntPinger
 		// resize the dialog size
 		RA_Dialog.Resize(fyne.Size{Width: 800, Height: 600})
 
-		// get current executable path
-		exePath, _ := os.Executable()
-		exeDir := filepath.Dir(exePath)
-		exePathURI, _ := storage.ListerForURI(storage.NewFileURI(exeDir))
-		RA_Dialog.SetLocation(exePathURI)
+		// get current <current_user>/Document/<app_name> path
+		exportPath, err := GetDefaultExportFolder("nt_gui")
+		if err != nil {
+			errChan <- err
+		}
+
+		// set exportPath as the default path for Dialog
+		exportPathURI, _ := storage.ListerForURI(storage.NewFileURI(exportPath))
+		RA_Dialog.SetLocation(exportPathURI)
 
 		// create a file extension filter
 		filter1 := storage.NewExtensionFileFilter([]string{".csv"})

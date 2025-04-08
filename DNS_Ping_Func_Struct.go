@@ -361,10 +361,6 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	myDnsPing.DnsGUI.StartTime.Object.(*widget.Label).Text = mySumData.StartTime.Format("2006-01-02 15:04:05 MST")
 	myDnsPing.DnsGUI.StartTime.Object.(*widget.Label).Refresh()
 
-	// update table body
-	dnsTableBody.Add(myDnsPing.DnsGUI.DnsTableRow)
-	dnsTableBody.Refresh()
-
 	// update recording
 	if recording {
 		myDnsPing.DnsGUI.Recording.Object.(*widget.Label).Text = "ON"
@@ -373,11 +369,13 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	}
 	myDnsPing.DnsGUI.Recording.Object.(*widget.Label).Refresh()
 
-	// Add New Entry to DB History
+	// update table body
+	dnsTableBody.Add(myDnsPing.DnsGUI.DnsTableRow)
+	dnsTableBody.Refresh()
 
 	// ** start ntPinger Probe **
 
-	// Start Ping Main Command, manually input display Len
+	// Start Ping Main Command
 	p, err := ntPinger.NewPinger(*inputVars)
 
 	if err != nil {
@@ -465,9 +463,5 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 			return
 		}
 	}
-
-	// update test table when test is closed
-
-	// deal with the recordingChan when test is closed
 
 }

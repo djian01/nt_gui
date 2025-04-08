@@ -172,6 +172,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 			case "dns":
 				go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, *recording, db, entryChan, errChan)
 			case "http":
+				go HttpAddPingRow(a, &ntGlobal.httpIndex, &iv, ntGlobal.httpTable, *recording, db, entryChan, errChan)
 			case "tcp":
 			case "icmp":
 			}

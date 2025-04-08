@@ -424,3 +424,68 @@ func GenerateShortUUID() string {
 
 	return string(result)
 }
+
+// ParseURL extracts scheme, hostname, port, and path from a URL
+func ParseURL(inputURL string) (HttpVars, error) {
+
+	HttpVarNew := HttpVars{}
+
+	parsedURL, err := url.Parse(inputURL)
+
+	if err != nil {
+		return HttpVarNew, err
+	}
+
+	HttpVarNew.Scheme = parsedURL.Scheme
+	HttpVarNew.Hostname = parsedURL.Hostname()
+
+	// Handle default ports for http and https
+	if parsedURL.Port() != "" {
+		HttpVarNew.Port, err = strconv.Atoi(parsedURL.Port())
+		if err != nil {
+			return HttpVarNew, err
+		}
+	} else if HttpVarNew.Scheme == "http" {
+		HttpVarNew.Port = 80
+	} else if HttpVarNew.Scheme == "https" {
+		HttpVarNew.Port = 443
+	}
+
+	if parsedURL.Path != "" {
+		HttpVarNew.Path = parsedURL.Path
+	}
+
+	return HttpVarNew, nil
+}
+
+// func: ParseTargetURL (Parse Target Test URL and return errors if required)
+func ParseTargetURL(inputURL string) (HttpVars, error) {
+	testHttpVar, err := ParseURL(inputURL)
+	if err != nil {
+		return testHttpVar, err
+	}
+
+	// http scheme check
+	schemeCheck := false
+	if testHttpVar.Scheme == "http" || testHttpVar.Scheme == "https" {
+		schemeCheck = true
+	} else {
+		return testHttpVar, fmt.Errorf("Invalid http scheme. It has to be http or https!")
+	}
+
+	// http host check
+	hostCheck := false
+	_, err = net.LookupHost(testHttpVar.Hostname)
+	if err != nil {
+		return testHttpVar, err
+	} else {
+		hostCheck = true
+	}
+
+	// return
+	if schemeCheck && hostCheck {
+		return testHttpVar, nil
+	} else {
+		return testHttpVar, fmt.Errorf("Invalid input url.")
+	}
+}

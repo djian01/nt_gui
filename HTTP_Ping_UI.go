@@ -30,7 +30,7 @@ func HTTPPingContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntd
 	httpTableBody := container.New(layout.NewVBoxLayout())
 	ntGlobal.httpTable = httpTableBody
 
-	httpTableScroll := container.NewScroll(ntGlobal.httpTable)
+	httpTableScroll := container.NewScroll(httpTableBody)
 	httpTableContainer := container.New(layout.NewBorderLayout(httpHeaderRow, nil, nil, nil), httpHeaderRow, httpTableScroll)
 
 	// ** Table Card **

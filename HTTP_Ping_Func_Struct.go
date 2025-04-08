@@ -102,7 +102,7 @@ func (d *httpGUIRow) Initial() {
 	d.Fail.Object = widget.NewLabel("--")
 
 	d.AvgRTT.Label = "AvgRTT"
-	d.AvgRTT.Length = 90
+	d.AvgRTT.Length = 110
 	d.AvgRTT.Object = widget.NewLabel("--")
 
 	d.Recording.Label = "Recording"
@@ -305,7 +305,7 @@ func (d *httpObject) Stop(p *ntPinger.Pinger) {
 }
 
 // func: Add Ping Row
-func httpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, httpTableBody *fyne.Container, recording bool, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) {
+func HttpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, httpTableBody *fyne.Container, recording bool, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) {
 
 	// test uuid
 	testUUID := GenerateShortUUID()
@@ -355,16 +355,12 @@ func httpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, h
 
 	// Update URL
 	testURL := ConstructURL(inputVars.Http_scheme, inputVars.DestHost, inputVars.Http_path, inputVars.DestPort)
-	myhttpPing.httpGUI.URL.Object.(*widget.Label).Text = TruncateString(testURL, 290)
+	myhttpPing.httpGUI.URL.Object.(*widget.Label).Text = TruncateString(testURL, 42)
 	myhttpPing.httpGUI.URL.Object.(*widget.Label).Refresh()
 
 	// Update StartTime
 	myhttpPing.httpGUI.StartTime.Object.(*widget.Label).Text = mySumData.StartTime.Format("2006-01-02 15:04:05 MST")
 	myhttpPing.httpGUI.StartTime.Object.(*widget.Label).Refresh()
-
-	// update table body
-	httpTableBody.Add(myhttpPing.httpGUI.httpTableRow)
-	httpTableBody.Refresh()
 
 	// update recording
 	if recording {
@@ -374,11 +370,13 @@ func httpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, h
 	}
 	myhttpPing.httpGUI.Recording.Object.(*widget.Label).Refresh()
 
-	// Add New Entry to DB History
+	// update table body
+	httpTableBody.Add(myhttpPing.httpGUI.httpTableRow)
+	httpTableBody.Refresh()
 
 	// ** start ntPinger Probe **
 
-	// Start Ping Main Command, manually input display Len
+	// Start Ping Main Command
 	p, err := ntPinger.NewPinger(*inputVars)
 
 	if err != nil {
@@ -408,7 +406,7 @@ func httpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, h
 	// OnTapped Func - Replay btn
 	myhttpPing.httpGUI.ReplayBtn.OnTapped = func() {
 		// re-launch a new go routine for httpAddPingRow with the same InputVar
-		go httpAddPingRow(a, indexPing, inputVars, httpTableBody, recording, db, entryChan, errChan)
+		go HttpAddPingRow(a, indexPing, inputVars, httpTableBody, recording, db, entryChan, errChan)
 	}
 
 	// OnTapped Func - close btn
@@ -466,10 +464,6 @@ func httpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, h
 			return
 		}
 	}
-
-	// update test table when test is closed
-
-	// deal with the recordingChan when test is closed
 
 }
 

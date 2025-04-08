@@ -131,7 +131,7 @@ func (d *historyGUIRow) UpdateRow(h *ntdb.HistoryEntry) {
 	d.StartTime.Object.(*widget.Label).Refresh()
 
 	// Command
-	d.Command.Object.(*widget.Label).Text = h.Command
+	d.Command.Object.(*widget.Label).Text = TruncateString(h.Command, 70)
 	d.Command.Object.(*widget.Label).Refresh()
 
 	// Action
@@ -177,6 +177,7 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 		case "dns":
 			go DnsAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.dnsTable, recording, db, entryChan, errChan)
 		case "http":
+			go HttpAddPingRow(a, &ntGlobal.httpIndex, &iv, ntGlobal.httpTable, recording, db, entryChan, errChan)
 		case "tcp":
 		case "icmp":
 		}
@@ -229,23 +230,6 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 
 			// new chart window
 			NewChartWindow(a, testObj, &recordingFlag, p, db, entryChan, errChan, &PopUpChartWindowFlag)
-
-			// For Exporting CSV
-			// switch he.TestType {
-			// case "dns":
-			// 	entries, err := ntdb.ConvertDbTestEntriesToRecordDNSEntries(dbTestEntries)
-			// 	if err != nil {
-			// 		errChan <- err
-			// 		return
-			// 	}
-
-			// 	// test
-			// 	fmt.Println((*entries)[0])
-
-			// case "http":
-			// case "tcp":
-			// case "icmp":
-			// }
 		}
 
 	}
@@ -327,8 +311,20 @@ func createTestObj(sumData *SummaryData, chartData *[]ntchart.ChartPoint) (testO
 		obj.ChartData = *chartData
 		return &obj, nil
 	case "http":
+		obj := httpObject{}
+		obj.testSummary = sumData
+		obj.ChartData = *chartData
+		return &obj, nil
 	case "tcp":
+		// obj := tcpObject{}
+		// obj.testSummary = sumData
+		// obj.ChartData = *chartData
+		// return &obj, nil
 	case "icmp":
+		// obj := icmpObject{}
+		// obj.testSummary = sumData
+		// obj.ChartData = *chartData
+		// return &obj, nil
 	default:
 		return nil, fmt.Errorf("testObject could not be created")
 	}

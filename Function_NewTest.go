@@ -188,6 +188,65 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 		}
 
 	case "http":
+		// HTTP Method protocol
+		httpMethod := "GET"
+		httpMethodLabel := widget.NewLabel("HTTP Method:")
+		httpMethodSelect := widget.NewSelect([]string{"GET", "PUT", "POST"}, func(s string) { httpMethod = s })
+		httpMethodSelect.Selected = "GET"
+		httpMethodCell := formCell(httpMethodLabel, 100, httpMethodSelect, 150)
+
+		// URL
+		httpURLCheck := false
+		httpURLLabel := widget.NewLabel("Test URL:")
+		httpURLEntry := widget.NewEntry()
+		httpURLEntry.SetPlaceHolder("Exapmle: https://www.mywebsite.com:8443/web/img")
+		httpURLEntryContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(504, 150)), httpURLEntry)
+		httpURLContainer := container.New(layout.NewVBoxLayout(), httpURLLabel, httpURLEntryContainer)
+
+		// specific container
+		specificContainer.Add(httpMethodCell)
+		specificContainer.Add(httpURLContainer)
+
+		// submit on Tap Action
+		submitBtn.OnTapped = func() {
+			// target URL validation
+			httpInputVars, err := ParseTargetURL(httpURLEntry.Text)
+			if err != nil {
+				httpURLCheck = false
+				errMsg.Text = err.Error()
+				errMsg.Refresh()
+				return
+			} else {
+				httpURLCheck = true
+				errMsg.Text = ""
+				errMsg.Refresh()
+			}
+
+			// validation check
+			if intervalCheck && timeoutCheck && httpURLCheck {
+
+				// construct iput var
+				iv := ntPinger.InputVars{}
+				iv.Type = "http"
+				iv.Count = 0
+				iv.Timeout = timeoutValue
+				iv.Interval = intervalValue
+				iv.Http_method = httpMethod
+				iv.DestHost = httpInputVars.Hostname
+				iv.Http_path = httpInputVars.Path
+				iv.Http_scheme = httpInputVars.Scheme
+				iv.DestPort = httpInputVars.Port
+
+				// start test
+				go HttpAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.httpTable, recording, db, entryChan, errChan)
+
+				// close new test window
+				newTestWindow.Close()
+
+			} else {
+				return
+			}
+		}
 	case "tcp":
 	case "icmp":
 

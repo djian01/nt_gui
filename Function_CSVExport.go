@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 
 	"github.com/djian01/nt/pkg/ntPinger"
@@ -280,18 +281,44 @@ func SaveToCSV(filePath string, iv ntPinger.InputVars, dbTestEntries *[]ntdb.DbT
 // GetDefaultExportFolder returns a folder path like ~/Documents/<appName>
 // It creates the folder if it doesn't exist.
 func GetDefaultExportFolder(appName string) (string, error) {
-	home, err := os.UserHomeDir()
+
+	var exportFolder string
+	// Get the user's home directory
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("unable to find user home directory: %w", err)
 	}
 
-	baseDir := filepath.Join(home, "Documents")
+	documentBaseDir := filepath.Join(homeDir, "Documents")
 
-	exportFolder := filepath.Join(baseDir, appName)
+	switch runtime.GOOS {
+	case "darwin":
+		exportFolder = filepath.Join(documentBaseDir, appName)
 
-	// Ensure the directory exists
-	if err := os.MkdirAll(exportFolder, 0755); err != nil {
-		return "", fmt.Errorf("failed to create export folder: %w", err)
+		// Ensure the directory exists
+		if err := os.MkdirAll(exportFolder, 0755); err != nil {
+			return "", fmt.Errorf("failed to create export folder: %w", err)
+		}
+
+	case "windows", "linux":
+		// Check if Documents/ exists
+		if _, err := os.Stat(documentBaseDir); os.IsNotExist(err) {
+			// Fall back to the folder where the executable resides
+			execPath, err := os.Executable()
+			if err != nil {
+				return "", fmt.Errorf("unable to get executable path: %v", err)
+			}
+			exportFolder = filepath.Dir(execPath)
+		} else {
+			exportFolder = filepath.Join(documentBaseDir, appName)
+
+			// Ensure the directory exists
+			if err := os.MkdirAll(exportFolder, 0755); err != nil {
+				return "", fmt.Errorf("failed to create export folder: %w", err)
+			}
+		}
+	default:
+		return "", fmt.Errorf("unsupported OS: %s", runtime.GOOS)
 	}
 
 	return exportFolder, nil

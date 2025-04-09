@@ -17,7 +17,7 @@ func TCPPingContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 	ntGlobal.tcpIndex = 1
 
 	// ** Add-Button Card **
-	tcpPingAddBtn := widget.NewButtonWithIcon("Add tcp Ping", theme.ContentAddIcon(), func() {})
+	tcpPingAddBtn := widget.NewButtonWithIcon("Add TCP Ping", theme.ContentAddIcon(), func() {})
 	tcpPingAddBtn.Importance = widget.HighImportance
 	tcpPingAddBtnContainer := container.New(layout.NewBorderLayout(nil, nil, tcpPingAddBtn, nil), tcpPingAddBtn)
 	tcpPingAddBtncard := widget.NewCard("", "", tcpPingAddBtnContainer)

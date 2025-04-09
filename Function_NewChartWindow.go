@@ -176,7 +176,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 			case "tcp":
 				go TcpAddPingRow(a, &ntGlobal.tcpIndex, &iv, ntGlobal.tcpTable, *recording, db, entryChan, errChan)
 			case "icmp":
-				// go IcmpAddPingRow(a, &ntGlobal.icmpIndex, &iv, ntGlobal.icmpTable, *recording, db, entryChan, errChan)
+				go IcmpAddPingRow(a, &ntGlobal.icmpIndex, &iv, ntGlobal.icmpTable, *recording, db, entryChan, errChan)
 			}
 			testSummaryUI.ntCmdBtn.Disable()
 		}
@@ -313,7 +313,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 			case "tcp":
 				go TcpAddPingRow(a, &ntGlobal.tcpIndex, &iv, ntGlobal.tcpTable, *recording, db, entryChan, errChan)
 			case "icmp":
-				//go IcmpAddPingRow(a, &ntGlobal.icmpIndex, &iv, ntGlobal.icmpTable, *recording, db, entryChan, errChan)
+				go IcmpAddPingRow(a, &ntGlobal.icmpIndex, &iv, ntGlobal.icmpTable, *recording, db, entryChan, errChan)
 			}
 			testSummaryUI.ntCmdBtn.Disable()
 		}

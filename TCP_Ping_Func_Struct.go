@@ -29,10 +29,10 @@ type tcpGUIRow struct {
 	Index     pingCell
 	Seq       pingCell
 	Status    pingCell
-	HostName  pingCell // fix
-	IP        pingCell
-	Port      pingCell
-	Payload   pingCell
+	HostName  pingCell // fixed
+	IP        pingCell // fixed
+	Port      pingCell // fixed
+	Payload   pingCell // fixed
 	RTT       pingCell
 	StartTime pingCell // sendDateTime
 	Fail      pingCell

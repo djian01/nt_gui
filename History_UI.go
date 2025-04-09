@@ -16,7 +16,7 @@ func HistoryContainer(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryE
 	// history table column: id, type, start time, command, btn: record, delete, replay
 
 	// ** Refresh-Button Card **
-	historyRefreshBtn := widget.NewButtonWithIcon("Rfresh", theme.ViewRefreshIcon(), func() {})
+	historyRefreshBtn := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {})
 	historyRefreshBtn.Importance = widget.HighImportance
 	historyRefreshBtnContainerInner := container.NewGridWrap(fyne.NewSize(120, 30), historyRefreshBtn)
 	historyRefreshBtnContainer := container.New(layout.NewBorderLayout(nil, nil, historyRefreshBtnContainerInner, nil), historyRefreshBtnContainerInner)

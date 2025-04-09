@@ -151,7 +151,7 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 				return
 			}
 
-			// valid IP check
+			// valid IP check - no domain name is allowed
 			for _, dnsServer := range dnsServers {
 				errIn := IsValidIP(dnsServer)
 				if errIn != nil {
@@ -366,14 +366,14 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 			tcpPayloadSize, err = strconv.Atoi(tcpPayloadEntry.Text)
 			if err != nil {
 				tcpPayloadCheck = false
-				errMsg.Text = fmt.Sprintf("Invalid Payload Size: %s. Valid number is a integer", tcpPortEntry.Text)
+				errMsg.Text = fmt.Sprintf("Invalid Payload Size: %s. Valid number is a integer", tcpPayloadEntry.Text)
 				errMsg.Refresh()
 				return
 			}
 
 			if tcpPayloadSize > 65535 || tcpPayloadSize < 0 {
 				tcpPayloadCheck = false
-				errMsg.Text = fmt.Sprintf("Invalid Payload Size: %s. Valid range is 0–65535", tcpPortEntry.Text)
+				errMsg.Text = fmt.Sprintf("Invalid Payload Size: %s. Valid range is 0–65535", tcpPayloadEntry.Text)
 				errMsg.Refresh()
 				return
 			} else {
@@ -405,6 +405,105 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 			}
 		}
 	case "icmp":
+		// update the New Test Window Size
+		newTestWindow.Resize(fyne.NewSize(710, 550))
+
+		// target server
+		icmpServerCheck := false
+		icmpServerLabel := widget.NewLabel("ICMP Server IP/Host(s):")
+		icmpServerEntry := widget.NewMultiLineEntry()
+		icmpServerEntryContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(504, 150)), icmpServerEntry)
+		icmpServerContainer := container.New(layout.NewVBoxLayout(), icmpServerLabel, icmpServerEntryContainer)
+
+		// icmp DF
+		icmpDFLabel := widget.NewLabel("DF bit Set:")
+		icmpDFBit := "OFF"
+		icmpDFSelect := widget.NewSelect([]string{"OFF", "ON"}, func(s string) { icmpDFBit = s })
+		icmpDFSelect.Selected = "OFF"
+		icmpDFCell := formCell(icmpDFLabel, 100, icmpDFSelect, 100)
+
+		// icmp Payload
+		icmpPayloadCheck := false
+		icmpPayloadLabel := widget.NewLabel("PayloadSize:")
+		icmpPayloadEntry := widget.NewEntry()
+		icmpPayloadEntry.Text = "32"
+		icmpPayloadEntry.Resize(fyne.NewSize(100, 3))
+		icmpPayloadCell := formCell(icmpPayloadLabel, 100, icmpPayloadEntry, 100)
+
+		// specific container
+		specificContainer.Add(icmpServerContainer)
+		specificContainer.Add(icmpDFCell)
+		specificContainer.Add(icmpPayloadCell)
+
+		// submit on Tap Action
+		submitBtn.OnTapped = func() {
+
+			// icmp Server validation
+			icmpServers, err := targetHostValidator(icmpServerEntry.Text, true)
+			if err != nil {
+				icmpServerCheck = false
+				errMsg.Text = err.Error()
+				errMsg.Refresh()
+				return
+			} else {
+				icmpServerCheck = true
+				errMsg.Text = ""
+				errMsg.Refresh()
+			}
+
+			// tcp payload validation
+			var icmpPayloadSize int
+			icmpPayloadSize, err = strconv.Atoi(icmpPayloadEntry.Text)
+			if err != nil {
+				icmpPayloadCheck = false
+				errMsg.Text = fmt.Sprintf("Invalid Payload Size: %s. Valid number is a integer", icmpPayloadEntry.Text)
+				errMsg.Refresh()
+				return
+			}
+
+			if icmpPayloadSize > 65535 || icmpPayloadSize < 32 {
+				icmpPayloadCheck = false
+				errMsg.Text = fmt.Sprintf("Invalid Payload Size: %s. Valid range is 32–65535", icmpPayloadEntry.Text)
+				errMsg.Refresh()
+				return
+			} else {
+				icmpPayloadCheck = true
+				errMsg.Text = ""
+				errMsg.Refresh()
+			}
+
+			// validation check
+			if icmpServerCheck && icmpPayloadCheck {
+
+				// set DF Bit
+				var DFBit bool
+				if icmpDFBit == "OFF" {
+					DFBit = false
+				} else {
+					DFBit = true
+				}
+
+				// create ping row
+				for _, icmpServer := range icmpServers {
+					iv := ntPinger.InputVars{}
+					iv.Type = "icmp"
+					iv.Count = 0
+					iv.Timeout = timeoutValue
+					iv.Interval = intervalValue
+					iv.DestHost = icmpServer
+					iv.Icmp_DF = DFBit
+					iv.PayLoadSize = icmpPayloadSize
+
+					// start test
+					go IcmpAddPingRow(a, &ntGlobal.icmpIndex, &iv, ntGlobal.icmpTable, recording, db, entryChan, errChan)
+
+					// close new test window
+					newTestWindow.Close()
+				}
+			} else {
+				return
+			}
+		}
 
 	}
 

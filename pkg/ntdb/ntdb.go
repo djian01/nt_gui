@@ -86,6 +86,93 @@ func createHistoryTable(db *sql.DB) error {
 	return err
 }
 
+// createTestResultsTable creates a unique test results table for each summary entry
+func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
+
+	// initial query
+	query := ""
+
+	// careate table based on test type
+	switch testType {
+	case "dns":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			seq INTEGER,
+			status TEXT,
+			dns_response TEXT,
+			record TEXT,
+			response_time TEXT,
+			send_datetime TEXT,
+			success_response TEXT,
+			failure_rate TEXT,
+			min_rtt TEXT,
+			max_rtt TEXT,
+			avg_rtt TEXT,
+			additional_info TEXT
+		);`, testTableName)
+	case "http":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			seq INTEGER,
+			status TEXT,
+			response_code TEXT,
+			response_phase TEXT,
+			response_time TEXT,
+			send_datetime TEXT,
+			success_response TEXT,
+			failure_rate TEXT,
+			min_rtt TEXT,
+			max_rtt TEXT,
+			avg_rtt TEXT,
+			additional_info TEXT
+		);`, testTableName)
+	case "tcp":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			seq INTEGER,
+			status TEXT,
+			rtt TEXT,
+			send_datetime TEXT,
+			packetrecv TEXT,
+			packetloss_rate TEXT,
+			min_rtt TEXT,
+			max_rtt TEXT,
+			avg_rtt TEXT,
+			additional_info TEXT
+		);`, testTableName)
+	case "icmp":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			seq INTEGER,
+			status TEXT,
+			RTT TEXT,
+			send_datetime TEXT,
+			packetrecv TEXT,
+			packetloss_rate TEXT,
+			min_rtt TEXT,
+			max_rtt TEXT,
+			avg_rtt TEXT,
+			additional_info TEXT
+		);`, testTableName)
+	}
+
+	for {
+		_, err := db.Exec(query)
+		if err != nil {
+			// handle the "database is locked" error
+			if strings.Contains(err.Error(), "database is locked") {
+				time.Sleep(time.Millisecond * 100)
+			} else {
+				return fmt.Errorf("failed to create table %s: %v", testTableName, err)
+			}
+		} else {
+			break
+		}
+	}
+
+	return nil
+}
+
 // func: convert *pkt to DbEntry
 func ConvertPkt2DbEntry(pkt ntPinger.Packet, tableName string) (dbEntry DbEntry) {
 
@@ -790,93 +877,6 @@ func ShowHistoryTableConsole(historyEntries *[]HistoryEntry) {
 	for _, entry := range *historyEntries {
 		fmt.Printf("ID: %s, TableName: %s, TestType: %s, StartTime: %s, Command: %s, UUID: %s, Recorded: %v\n", entry.Id, entry.TableName, entry.TestType, entry.StartTime, entry.Command, entry.UUID, entry.Recorded)
 	}
-}
-
-// createTestResultsTable creates a unique test results table for each summary entry
-func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
-
-	// initial query
-	query := ""
-
-	// careate table based on test type
-	switch testType {
-	case "dns":
-		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			seq INTEGER,
-			status TEXT,
-			dns_response TEXT,
-			record TEXT,
-			response_time TEXT,
-			send_datetime TEXT,
-			success_response TEXT,
-			failure_rate TEXT,
-			min_rtt TEXT,
-			max_rtt TEXT,
-			avg_rtt TEXT,
-			additional_info TEXT
-		);`, testTableName)
-	case "http":
-		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			seq INTEGER,
-			status TEXT,
-			response_code TEXT,
-			response_phase TEXT,
-			response_time TEXT,
-			send_datetime TEXT,
-			success_response TEXT,
-			failure_rate TEXT,
-			min_rtt TEXT,
-			max_rtt TEXT,
-			avg_rtt TEXT,
-			additional_info TEXT
-		);`, testTableName)
-	case "tcp":
-		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			seq INTEGER,
-			status TEXT,
-			rtt TEXT,
-			send_datetime TEXT,
-			packetrecv TEXT,
-			packetloss_rate TEXT,
-			min_rtt TEXT,
-			max_rtt TEXT,
-			avg_rtt TEXT,
-			additional_info TEXT
-		);`, testTableName)
-	case "icmp":
-		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			seq INTEGER,
-			status TEXT,
-			RTT TEXT,
-			send_datetime TEXT,
-			packetrecv TEXT,
-			packetloss_rate TEXT,
-			min_rtt TEXT,
-			max_rtt TEXT,
-			avg_rtt TEXT,
-			additional_info TEXT
-		);`, testTableName)
-	}
-
-	for {
-		_, err := db.Exec(query)
-		if err != nil {
-			// handle the "database is locked" error
-			if strings.Contains(err.Error(), "database is locked") {
-				time.Sleep(time.Millisecond * 100)
-			} else {
-				return fmt.Errorf("failed to create table %s: %v", testTableName, err)
-			}
-		} else {
-			break
-		}
-	}
-
-	return nil
 }
 
 // SortItems sorts the slice of Items by Index in ascending order.

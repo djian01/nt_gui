@@ -130,7 +130,7 @@ func OpenResultCSVFile(a fyne.App, w fyne.Window, inputResultPackets *[]ntPinger
 				case "tcp":
 					go TcpAddPingRow(a, &ntGlobal.tcpIndex, &iv, ntGlobal.httpTable, true, db, entryChan, errChan)
 				case "icmp":
-					// go IcmpAddPingRow(a, &ntGlobal.icmpIndex, &iv, ntGlobal.httpTable, true, db, entryChan, errChan)
+					go IcmpAddPingRow(a, &ntGlobal.icmpIndex, &iv, ntGlobal.httpTable, true, db, entryChan, errChan)
 				}
 				(*SumUI).ntCmdBtn.Disable()
 			}

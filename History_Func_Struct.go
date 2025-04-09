@@ -181,6 +181,7 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 		case "tcp":
 			go TcpAddPingRow(a, &ntGlobal.tcpIndex, &iv, ntGlobal.tcpTable, recording, db, entryChan, errChan)
 		case "icmp":
+			go IcmpAddPingRow(a, &ntGlobal.icmpIndex, &iv, ntGlobal.icmpTable, recording, db, entryChan, errChan)
 		}
 	}
 
@@ -322,10 +323,10 @@ func createTestObj(sumData *SummaryData, chartData *[]ntchart.ChartPoint) (testO
 		obj.ChartData = *chartData
 		return &obj, nil
 	case "icmp":
-		// obj := icmpObject{}
-		// obj.testSummary = sumData
-		// obj.ChartData = *chartData
-		// return &obj, nil
+		obj := icmpObject{}
+		obj.testSummary = sumData
+		obj.ChartData = *chartData
+		return &obj, nil
 	default:
 		return nil, fmt.Errorf("testObject could not be created")
 	}

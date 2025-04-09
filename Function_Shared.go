@@ -328,11 +328,11 @@ func targetHostValidator(inputTargets string, requiredResolve bool) (targetHosts
 		input = strings.TrimSpace(input)
 
 		// Validate and Resolve
-		server, err := ValidateAndResolve(input, requiredResolve)
+		_, err := ValidateAndResolve(input, requiredResolve)
 		if err != nil {
 			return targetHosts, err
 		} else {
-			targetHosts = append(targetHosts, server)
+			targetHosts = append(targetHosts, input)
 		}
 	}
 	return targetHosts, nil
@@ -488,4 +488,13 @@ func ParseTargetURL(inputURL string) (HttpVars, error) {
 	} else {
 		return testHttpVar, fmt.Errorf("Invalid input url.")
 	}
+}
+
+// func: valid IP address check
+func IsValidIP(ipStr string) error {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return fmt.Errorf("invalid IP address: %s", ipStr)
+	}
+	return nil
 }

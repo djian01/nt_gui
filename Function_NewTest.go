@@ -141,6 +141,7 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 
 		// submit on Tap Action
 		submitBtn.OnTapped = func() {
+
 			// dns target validation
 			dnsServers, err := targetHostValidator(dnsServerEntry.Text, true)
 			if err != nil {
@@ -148,11 +149,22 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 				errMsg.Text = err.Error()
 				errMsg.Refresh()
 				return
-			} else {
-				dnsServerCheck = true
-				errMsg.Text = ""
-				errMsg.Refresh()
 			}
+
+			// valid IP check
+			for _, dnsServer := range dnsServers {
+				errIn := IsValidIP(dnsServer)
+				if errIn != nil {
+					dnsServerCheck = false
+					errMsg.Text = fmt.Sprintf("DNS server must be a valid IP address. Invalid input: %s", dnsServer)
+					errMsg.Refresh()
+					return
+				}
+			}
+
+			dnsServerCheck = true
+			errMsg.Text = ""
+			errMsg.Refresh()
 
 			// dns query validation
 			if dnsQueryEntry.Text == "" {
@@ -204,14 +216,31 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 		// URL
 		httpURLCheck := false
 		httpURLLabel := widget.NewLabel("Test URL:")
+
+		httpURLNote01 := widget.NewLabel("Note: By default, HTTP uses TCP port 80, and HTTPS uses TCP port 443. If a different port is used, it must be specified after the domain name and before the path (if present).")
+		httpURLNote01.Wrapping = fyne.TextWrapWord
+		httpURLNote01.Resize(fyne.NewSize(300, 15))
+		//httpURLNote01.TextStyle.Bold = true
+
+		httpURLNote02 := widget.NewLabel("Example 1: www.google.com")
+		httpURLNote02.Wrapping = fyne.TextWrapWord
+		httpURLNote02.Resize(fyne.NewSize(300, 3))
+
+		httpURLNote03 := widget.NewLabel("Example 2: www.mywebsite.com:8443/web/img")
+		httpURLNote03.Wrapping = fyne.TextWrapWord
+		httpURLNote03.Resize(fyne.NewSize(300, 3))
+
+		httpURLNoteContainer := container.New(layout.NewVBoxLayout(), httpURLNote01, httpURLNote02, httpURLNote03)
+		httpUrlNoteCard := widget.NewCard("", "", httpURLNoteContainer)
+
 		httpScheme := "https://"
 		httpSchemeSelect := widget.NewSelect([]string{"https://", "http://"}, func(s string) { httpScheme = s })
 		httpSchemeSelect.Selected = "https://"
 		httpURLEntry := widget.NewEntry()
-		httpURLEntry.SetPlaceHolder("Exapmle: www.mywebsite.com:8443/web/img")
+		httpURLEntry.SetPlaceHolder("Please input the test URL")
 		httpURLEntryContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(504, 40)), httpURLEntry)
 		httpURLSchemeURLEntryContainer := container.New(layout.NewBorderLayout(nil, nil, httpSchemeSelect, nil), httpSchemeSelect, httpURLEntryContainer)
-		httpURLContainer := container.New(layout.NewVBoxLayout(), httpURLLabel, httpURLSchemeURLEntryContainer)
+		httpURLContainer := container.New(layout.NewVBoxLayout(), httpURLLabel, httpURLSchemeURLEntryContainer, httpUrlNoteCard)
 
 		// specific container
 		specificContainer.Add(httpMethodCell)
@@ -248,7 +277,7 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 				iv.DestPort = httpInputVars.Port
 
 				// start test
-				go HttpAddPingRow(a, &ntGlobal.dnsIndex, &iv, ntGlobal.httpTable, recording, db, entryChan, errChan)
+				go HttpAddPingRow(a, &ntGlobal.httpIndex, &iv, ntGlobal.httpTable, recording, db, entryChan, errChan)
 
 				// close new test window
 				newTestWindow.Close()
@@ -258,6 +287,123 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 			}
 		}
 	case "tcp":
+		// update the New Test Window Size
+		newTestWindow.Resize(fyne.NewSize(710, 550))
+
+		// target server
+		tcpServerCheck := false
+		tcpServerLabel := widget.NewLabel("TCP Server IP/Host(s):")
+		tcpServerEntry := widget.NewMultiLineEntry()
+		tcpServerEntryContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(504, 150)), tcpServerEntry)
+		tcpServerContainer := container.New(layout.NewVBoxLayout(), tcpServerLabel, tcpServerEntryContainer)
+
+		// tcp Port
+		tcpPortCheck := false
+		tcpPortLabel := widget.NewLabel("TCP Port:")
+		tcpPortEntry := widget.NewEntry()
+		tcpPortEntry.Resize(fyne.NewSize(100, 3))
+		tcpPortCell := formCell(tcpPortLabel, 100, tcpPortEntry, 100)
+
+		// tcp Payload
+		tcpPayloadCheck := false
+		tcpPayloadLabel := widget.NewLabel("PayloadSize:")
+		tcpPayloadEntry := widget.NewEntry()
+		tcpPayloadEntry.Text = "0"
+		tcpPayloadEntry.Resize(fyne.NewSize(100, 3))
+		tcpPayloadCell := formCell(tcpPayloadLabel, 100, tcpPayloadEntry, 100)
+
+		// specific container
+		specificContainer.Add(tcpServerContainer)
+		specificContainer.Add(tcpPortCell)
+		specificContainer.Add(tcpPayloadCell)
+
+		// submit on Tap Action
+		submitBtn.OnTapped = func() {
+
+			// tcp Server validation
+			tcpServers, err := targetHostValidator(tcpServerEntry.Text, true)
+			if err != nil {
+				tcpServerCheck = false
+				errMsg.Text = err.Error()
+				errMsg.Refresh()
+				return
+			} else {
+				tcpServerCheck = true
+				errMsg.Text = ""
+				errMsg.Refresh()
+			}
+
+			// target Port Validation
+			var tcpPort int
+			if tcpPortEntry.Text == "" {
+				tcpPortCheck = false
+				errMsg.Text = "TCP Port cannot be empty!"
+				errMsg.Refresh()
+				return
+			} else {
+				tcpPort, err = strconv.Atoi(tcpPortEntry.Text)
+				if err != nil {
+					tcpPortCheck = false
+					errMsg.Text = fmt.Sprintf("Invalid Port number: %s. Valid number is a integer", tcpPortEntry.Text)
+					errMsg.Refresh()
+					return
+				}
+
+				if tcpPort > 65535 || tcpPort < 1 {
+					tcpPortCheck = false
+					errMsg.Text = fmt.Sprintf("Invalid port number: %s. Valid range is 1–65535", tcpPortEntry.Text)
+					errMsg.Refresh()
+					return
+				}
+
+				tcpPortCheck = true
+				errMsg.Text = ""
+				errMsg.Refresh()
+			}
+
+			// tcp payload validation
+			var tcpPayloadSize int
+			tcpPayloadSize, err = strconv.Atoi(tcpPayloadEntry.Text)
+			if err != nil {
+				tcpPayloadCheck = false
+				errMsg.Text = fmt.Sprintf("Invalid Payload Size: %s. Valid number is a integer", tcpPortEntry.Text)
+				errMsg.Refresh()
+				return
+			}
+
+			if tcpPayloadSize > 65535 || tcpPayloadSize < 0 {
+				tcpPayloadCheck = false
+				errMsg.Text = fmt.Sprintf("Invalid Payload Size: %s. Valid range is 0–65535", tcpPortEntry.Text)
+				errMsg.Refresh()
+				return
+			} else {
+				tcpPayloadCheck = true
+				errMsg.Text = ""
+				errMsg.Refresh()
+			}
+
+			// validation check
+			if tcpServerCheck && tcpPortCheck && tcpPayloadCheck {
+				for _, tcpServer := range tcpServers {
+					iv := ntPinger.InputVars{}
+					iv.Type = "tcp"
+					iv.Count = 0
+					iv.Timeout = timeoutValue
+					iv.Interval = intervalValue
+					iv.DestHost = tcpServer
+					iv.DestPort = tcpPort
+					iv.PayLoadSize = tcpPayloadSize
+
+					// start test
+					go TcpAddPingRow(a, &ntGlobal.tcpIndex, &iv, ntGlobal.tcpTable, recording, db, entryChan, errChan)
+
+					// close new test window
+					newTestWindow.Close()
+				}
+			} else {
+				return
+			}
+		}
 	case "icmp":
 
 	}

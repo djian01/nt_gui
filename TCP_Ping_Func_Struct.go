@@ -80,11 +80,11 @@ func (d *tcpGUIRow) Initial() {
 	d.Status.Object = canvas.NewText("--", color.Black)
 
 	d.HostName.Label = "HostName"
-	d.HostName.Length = 65
+	d.HostName.Length = 180
 	d.HostName.Object = widget.NewLabel("--")
 
 	d.IP.Label = "IP"
-	d.IP.Length = 300
+	d.IP.Length = 180
 	d.IP.Object = widget.NewLabel("--")
 
 	d.Port.Label = "Port"
@@ -132,6 +132,8 @@ func (d *tcpGUIRow) Initial() {
 		container.NewGridWrap(fyne.NewSize(float32(d.Port.Length), 30), container.NewCenter(d.Port.Object)),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.Payload.Length), 30), container.NewCenter(d.Payload.Object)),
+		GUIVerticalSeparator(),
+		container.NewGridWrap(fyne.NewSize(float32(d.RTT.Length), 30), container.NewCenter(d.RTT.Object)),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.StartTime.Length), 30), container.NewCenter(d.StartTime.Object)),
 		GUIVerticalSeparator(),
@@ -354,12 +356,14 @@ func TcpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, tc
 	*indexPing++
 
 	// Update HostName
-	mytcpPing.tcpGUI.HostName.Object.(*widget.Label).Text = inputVars.DestHost
+	testDestHost := inputVars.DestHost
+	mytcpPing.tcpGUI.HostName.Object.(*widget.Label).Text = testDestHost
 	mytcpPing.tcpGUI.HostName.Object.(*widget.Label).Refresh()
 
 	// Update IP
-	DestHostIPSlide, _ := net.LookupHost(inputVars.DestHost) // ignore err check as resolvable is checked in the NewTest validation
+	DestHostIPSlide, _ := net.LookupHost(testDestHost) // ignore err check as resolvable is checked in the NewTest validation
 	mytcpPing.tcpGUI.IP.Object.(*widget.Label).Text = DestHostIPSlide[0]
+	(*inputVars).DestHost = DestHostIPSlide[0] // update the input Var DestHost to be IP Address
 	mytcpPing.tcpGUI.IP.Object.(*widget.Label).Refresh()
 
 	// Update Port

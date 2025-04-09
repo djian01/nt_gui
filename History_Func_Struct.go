@@ -179,6 +179,7 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 		case "http":
 			go HttpAddPingRow(a, &ntGlobal.httpIndex, &iv, ntGlobal.httpTable, recording, db, entryChan, errChan)
 		case "tcp":
+			go TcpAddPingRow(a, &ntGlobal.tcpIndex, &iv, ntGlobal.tcpTable, recording, db, entryChan, errChan)
 		case "icmp":
 		}
 	}
@@ -316,10 +317,10 @@ func createTestObj(sumData *SummaryData, chartData *[]ntchart.ChartPoint) (testO
 		obj.ChartData = *chartData
 		return &obj, nil
 	case "tcp":
-		// obj := tcpObject{}
-		// obj.testSummary = sumData
-		// obj.ChartData = *chartData
-		// return &obj, nil
+		obj := tcpObject{}
+		obj.testSummary = sumData
+		obj.ChartData = *chartData
+		return &obj, nil
 	case "icmp":
 		// obj := icmpObject{}
 		// obj.testSummary = sumData

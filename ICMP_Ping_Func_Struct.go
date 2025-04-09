@@ -14,11 +14,12 @@ import (
 type icmpGUIRow struct {
 	Index     pingCell
 	Seq       pingCell
+	Status    pingCell
 	HostName  pingCell
 	IP        pingCell
 	Payload   pingCell
 	RTT       pingCell
-	TimeStamp pingCell // sendDateTime
+	StartTime pingCell // sendDateTime
 	Fail      pingCell
 	AvgRTT    pingCell
 	Recording pingCell

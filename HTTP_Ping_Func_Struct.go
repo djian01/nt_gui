@@ -123,7 +123,7 @@ func (d *httpGUIRow) Initial() {
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.URL.Length), 30), container.NewCenter(d.URL.Object)),
 		GUIVerticalSeparator(),
-		container.NewGridWrap(fyne.NewSize(float32(d.Response_Code.Length), 30), d.Response_Code.Object),
+		container.NewGridWrap(fyne.NewSize(float32(d.Response_Code.Length), 30), container.NewCenter(d.Response_Code.Object)),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.Response_Time.Length), 30), container.NewCenter(d.Response_Time.Object)),
 		GUIVerticalSeparator(),

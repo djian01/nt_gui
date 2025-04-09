@@ -22,7 +22,6 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 
 	// Initial New Test Input Var Window
 	newTestWindow := a.NewWindow(fmt.Sprintf("New %s Test", strings.ToUpper(testType)))
-	newTestWindow.Resize(fyne.NewSize(710, 550))
 	newTestWindow.CenterOnScreen()
 
 	// btns
@@ -111,6 +110,9 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 
 	switch testType {
 	case "dns":
+		// update the New Test Window Size
+		newTestWindow.Resize(fyne.NewSize(710, 550))
+
 		// target server
 		dnsServerCheck := false
 		dnsServerLabel := widget.NewLabel("DNS Server IP/Host(s):")
@@ -188,6 +190,10 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 		}
 
 	case "http":
+
+		// update the New Test Window Size
+		newTestWindow.Resize(fyne.NewSize(710, 300))
+
 		// HTTP Method protocol
 		httpMethod := "GET"
 		httpMethodLabel := widget.NewLabel("HTTP Method:")
@@ -198,10 +204,14 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 		// URL
 		httpURLCheck := false
 		httpURLLabel := widget.NewLabel("Test URL:")
+		httpScheme := "https://"
+		httpSchemeSelect := widget.NewSelect([]string{"https://", "http://"}, func(s string) { httpScheme = s })
+		httpSchemeSelect.Selected = "https://"
 		httpURLEntry := widget.NewEntry()
-		httpURLEntry.SetPlaceHolder("Exapmle: https://www.mywebsite.com:8443/web/img")
-		httpURLEntryContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(504, 150)), httpURLEntry)
-		httpURLContainer := container.New(layout.NewVBoxLayout(), httpURLLabel, httpURLEntryContainer)
+		httpURLEntry.SetPlaceHolder("Exapmle: www.mywebsite.com:8443/web/img")
+		httpURLEntryContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(504, 40)), httpURLEntry)
+		httpURLSchemeURLEntryContainer := container.New(layout.NewBorderLayout(nil, nil, httpSchemeSelect, nil), httpSchemeSelect, httpURLEntryContainer)
+		httpURLContainer := container.New(layout.NewVBoxLayout(), httpURLLabel, httpURLSchemeURLEntryContainer)
 
 		// specific container
 		specificContainer.Add(httpMethodCell)
@@ -210,7 +220,7 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 		// submit on Tap Action
 		submitBtn.OnTapped = func() {
 			// target URL validation
-			httpInputVars, err := ParseTargetURL(httpURLEntry.Text)
+			httpInputVars, err := ParseTargetURL(fmt.Sprintf("%s%s", httpScheme, httpURLEntry.Text))
 			if err != nil {
 				httpURLCheck = false
 				errMsg.Text = err.Error()

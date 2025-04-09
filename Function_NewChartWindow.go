@@ -234,7 +234,8 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 
 		// build recording table if "recording" is enabled
 		recordingTableName := fmt.Sprintf("%s_%s", testType, testObj.GetUUID())
-		err := ntdb.CreateTestResultsTable(db, "dns", recordingTableName)
+
+		err := ntdb.CreateTestResultsTable(db, testType, recordingTableName)
 		if err != nil {
 			errChan <- err
 		}

@@ -470,7 +470,7 @@ func ParseTargetURL(inputURL string) (HttpVars, error) {
 	if testHttpVar.Scheme == "http" || testHttpVar.Scheme == "https" {
 		schemeCheck = true
 	} else {
-		return testHttpVar, fmt.Errorf("Invalid http scheme. It has to be http or https!")
+		return testHttpVar, fmt.Errorf("Invalid http scheme. It has to be either http or https!")
 	}
 
 	// http host check

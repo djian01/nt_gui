@@ -4,7 +4,7 @@ go 1.23.3
 
 require (
 	fyne.io/fyne/v2 v2.5.4
-	github.com/djian01/nt v1.1.3
+	github.com/djian01/nt v1.1.4
 	github.com/wcharczuk/go-chart/v2 v2.1.2
 	modernc.org/sqlite v1.35.0
 )

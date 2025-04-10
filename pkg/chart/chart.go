@@ -3,6 +3,8 @@ package ntchart
 import (
 	"bytes"
 	"image"
+	"image/color"
+	"image/draw"
 	"image/png"
 	"log"
 	"time"
@@ -11,6 +13,9 @@ import (
 	"github.com/djian01/nt_gui/pkg/ntdb"
 	"github.com/wcharczuk/go-chart/v2"
 	"github.com/wcharczuk/go-chart/v2/drawing"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
 )
 
 // ChartData holds the time series data
@@ -68,6 +73,22 @@ func CreateChart(legendName string, chartData *[]ChartPoint) image.Image {
 	// Threshold for annotations
 	annotations := []chart.Value2{}
 
+	// validDataFlag
+	validDataFlag := false
+
+	for _, point := range *chartData {
+		if point.Status {
+			validDataFlag = true
+			break
+		}
+	}
+
+	// return a image place holder instead of creating a chart with empty data
+	if !validDataFlag {
+		return createPlaceholderImage("No valid data to display")
+	}
+
+	// Get False Flags
 	for i, point := range *chartData {
 		//xValues[i] = point.XValues
 		xValues[i] = float64(point.XValues.Unix())
@@ -85,6 +106,7 @@ func CreateChart(legendName string, chartData *[]ChartPoint) image.Image {
 		}
 	}
 
+	// generate graph
 	graph := chart.Chart{
 		Title:  "NT Test Results",
 		Height: 512,
@@ -158,4 +180,40 @@ func CreateChart(legendName string, chartData *[]ChartPoint) image.Image {
 		log.Fatalf("Failed to decode chart image: %v", err)
 	}
 	return img
+}
+
+func createPlaceholderImage(message string) image.Image {
+	width, height := 512, 150
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+
+	// Fill background with white
+	white := color.RGBA{255, 255, 255, 255}
+	draw.Draw(img, img.Bounds(), &image.Uniform{C: white}, image.Point{}, draw.Src)
+
+	// Draw centered label
+	drawCenteredLabel(img, message)
+
+	return img
+}
+
+func drawCenteredLabel(img *image.RGBA, label string) {
+	col := color.RGBA{200, 0, 0, 255} // Red
+	face := basicfont.Face7x13
+
+	labelWidth := len(label) * 7 // Rough width in pixels (7px per char for Face7x13)
+	x := (img.Bounds().Dx() - labelWidth) / 2
+	y := img.Bounds().Dy()/2 + 5 // Rough vertical center, with slight adjustment
+
+	point := fixed.Point26_6{
+		X: fixed.I(x),
+		Y: fixed.I(y),
+	}
+
+	d := &font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(col),
+		Face: face,
+		Dot:  point,
+	}
+	d.DrawString(label)
 }

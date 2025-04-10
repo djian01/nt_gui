@@ -231,6 +231,12 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 			var p *ntPinger.Pinger
 
 			// new chart window
+
+			// if recordingFlag {
+			// 	fmt.Println(testObj.GetChartData())
+
+			// }
+
 			NewChartWindow(a, testObj, &recordingFlag, p, db, entryChan, errChan, &PopUpChartWindowFlag)
 		}
 

@@ -86,8 +86,14 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 
 		confirm := dialog.NewConfirm("Please Confirm", fmt.Sprintf("Do you want to delete %v history records?\n", len(*selectedEntries)), func(b bool) {
 			if b {
+				// record the deleted entry UUIDs
+				deletedEntries := []selectedEntry{}
+
 				// delete entry
 				for _, s := range *selectedEntries {
+
+					// record the deleted UUID
+					deletedEntries = append(deletedEntries, selectedEntry{s.UUID, s.testType})
 
 					// delete history entry
 					err := ntdb.DeleteEntry(db, "history", "uuid", s.UUID)
@@ -113,9 +119,12 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 							return
 						}
 					}
+				}
 
+				// remote the Selected Entry
+				for _, r := range deletedEntries {
 					// delete select entry
-					DelSelectedEntry(selectedEntries, selectedEntry{UUID: s.UUID, testType: s.testType})
+					DelSelectedEntry(selectedEntries, r)
 				}
 
 				// refresh table

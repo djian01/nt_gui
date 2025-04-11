@@ -13,16 +13,20 @@ import (
 	ntdb "github.com/djian01/nt_gui/pkg/ntdb"
 )
 
-func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error, selectedEntries *[]selectedEntry, selectAllCheckBox *widget.Check) *fyne.Container {
+func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error, selectedEntries *[]selectedEntry, displayObjects *[]ntdb.HistoryEntry, selectAllCheckBox *widget.Check) *fyne.Container {
 
 	// history table column: selected id, type, start time, command, btn: record, delete, replay
 
 	// ** Action Card **
 
 	// Create resource from SVG file
-	filterIcon := theme.NewThemedResource(resourceFilterSvg)
+	//filterIcon := theme.NewThemedResource(resourceFilterSvg)
 
 	// filter select
+	historyFilterLabel := widget.NewLabel("Filter: ")
+	historyFilterLabel.TextStyle.Bold = true
+	historyFilterLabelContainerInner := container.NewGridWrap(fyne.NewSize(70, 30), historyFilterLabel)
+
 	filter := "ALL"
 	historyFilterSelect := widget.NewSelect([]string{"ALL", "ICMP", "TCP", "HTTP", "DNS"}, func(s string) {
 		switch s {
@@ -37,6 +41,12 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 		default:
 			filter = "ALL"
 		}
+
+		err := historyRefresh(a, w, db, entryChan, errChan, filter, selectedEntries, displayObjects)
+		if err != nil {
+			errChan <- err
+			return
+		}
 	})
 
 	historyFilterSelect.Selected = "ALL"
@@ -44,23 +54,23 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 	historyFilterSelectContainerInner := container.NewGridWrap(fyne.NewSize(100, 30), historyFilterSelect)
 
 	// filter btn
-	historyFilterBtn := widget.NewButtonWithIcon("Filter", filterIcon, func() {
-		err := historyRefresh(a, w, db, entryChan, errChan, filter, selectedEntries, selectAllCheckBox)
-		if err != nil {
-			errChan <- err
-			return
-		}
+	// historyFilterBtn := widget.NewButtonWithIcon("Filter", filterIcon, func() {
+	// 	err := historyRefresh(a, w, db, entryChan, errChan, filter, selectedEntries, displayObjects)
+	// 	if err != nil {
+	// 		errChan <- err
+	// 		return
+	// 	}
 
-	})
-	historyFilterBtn.Importance = widget.HighImportance
-	historyFilterBtnContainerInner := container.NewGridWrap(fyne.NewSize(120, 30), historyFilterBtn)
+	// })
+	// historyFilterBtn.Importance = widget.HighImportance
+	// historyFilterBtnContainerInner := container.NewGridWrap(fyne.NewSize(120, 30), historyFilterBtn)
 
 	// filter container
-	historyFilterContainer := container.New(layout.NewHBoxLayout(), historyFilterSelectContainerInner, historyFilterBtnContainerInner)
+	historyFilterContainer := container.New(layout.NewHBoxLayout(), historyFilterLabelContainerInner, historyFilterSelectContainerInner)
 
 	// select all onChange func
 	selectAllCheckBox.OnChanged = func(b bool) {
-		err := historyRefresh(a, w, db, entryChan, errChan, "ALL", selectedEntries, selectAllCheckBox)
+		err := historyRefresh(a, w, db, entryChan, errChan, "ALL", selectedEntries, displayObjects)
 		if err != nil {
 			logger.Println(err)
 		}
@@ -70,10 +80,10 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 	selectAllCheckBox.OnChanged = func(b bool) {
 
 		// select operation
-		selectOperation(db, errChan, selectedEntries, b)
+		selectOperation(selectedEntries, displayObjects, b)
 
 		// fresh history table
-		err := historyRefresh(a, w, db, entryChan, errChan, filter, selectedEntries, selectAllCheckBox)
+		err := historyRefresh(a, w, db, entryChan, errChan, filter, selectedEntries, displayObjects)
 		if err != nil {
 			logger.Println(err)
 		}
@@ -128,7 +138,7 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 				}
 
 				// refresh table
-				err := historyRefresh(a, w, db, entryChan, errChan, "ALL", selectedEntries, selectAllCheckBox)
+				err := historyRefresh(a, w, db, entryChan, errChan, "ALL", selectedEntries, displayObjects)
 				if err != nil {
 					errChan <- err
 				}
@@ -163,7 +173,7 @@ func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb
 	historyTableCard := widget.NewCard("", "", hisotryTableContainer)
 
 	// update the history table at the beginning
-	err := historyRefresh(a, w, db, entryChan, errChan, "ALL", selectedEntries, selectAllCheckBox)
+	err := historyRefresh(a, w, db, entryChan, errChan, "ALL", selectedEntries, displayObjects)
 	if err != nil {
 		logger.Println(err)
 	}

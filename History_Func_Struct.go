@@ -166,7 +166,7 @@ type selectedEntry struct {
 }
 
 // Func: add history row
-func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.HistoryEntry, historyTableBody *fyne.Container, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error, selectedEntries *[]selectedEntry, selectAllCheckBox *widget.Check) {
+func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, historyTableBody *fyne.Container, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error, selectedEntries *[]selectedEntry, displayObjects *[]ntdb.HistoryEntry) {
 
 	// create history object
 	ho := historyObject{}
@@ -183,8 +183,6 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 
 	// update replay btn
 	ho.historyGUI.ReplayBtn.OnTapped = func() {
-		// fmt.Println(he.historyEntry.UUID)
-		// re-launch a new go routine for DnsAddPingRow with the same InputVar
 
 		// generate iv
 		recording, iv, _ := NtCmd2Iv(he.Command)
@@ -212,8 +210,6 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 	(ho.historyGUI.Selected.Object.(*widget.Check)).OnChanged = func(b bool) {
 		// uncheck
 		if !b {
-			// selectAllCheckBox.SetChecked(false)
-			// selectAllCheckBox.Refresh()
 			DelSelectedEntry(selectedEntries, selectedEntry{UUID: he.UUID, testType: he.TestType})
 			// check
 		} else {
@@ -302,7 +298,7 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 				DelSelectedEntry(selectedEntries, selectedEntry{UUID: he.UUID, testType: he.TestType})
 
 				// refresh table
-				err = historyRefresh(a, w, db, entryChan, errChan, "ALL", selectedEntries, selectAllCheckBox)
+				err = historyRefresh(a, w, db, entryChan, errChan, "ALL", selectedEntries, displayObjects)
 				if err != nil {
 					errChan <- err
 				}
@@ -314,10 +310,13 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 }
 
 // Func: history table refresh
-func historyRefresh(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error, filter string, selectedEntries *[]selectedEntry, selectAllCheckBox *widget.Check) error {
+func historyRefresh(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error, filter string, selectedEntries *[]selectedEntry, displayObjects *[]ntdb.HistoryEntry) error {
 
 	// clean up all the items in ntGlobal.historyTable
 	ntGlobal.historyTable.Objects = nil // Remove all child objects
+
+	// reset displayObjects
+	*displayObjects = []ntdb.HistoryEntry{}
 
 	// get history entries
 	historyEntries := GetHistoryEntries(db, errChan)
@@ -332,7 +331,11 @@ func historyRefresh(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.D
 					continue
 				}
 			}
-			go historyAddRow(a, w, &(*historyEntries)[i], historyEntries, ntGlobal.historyTable, db, entryChan, errChan, selectedEntries, selectAllCheckBox)
+			// add display object
+			*displayObjects = append(*displayObjects, (*historyEntries)[i])
+
+			// add history table row
+			go historyAddRow(a, w, &(*historyEntries)[i], ntGlobal.historyTable, db, entryChan, errChan, selectedEntries, displayObjects)
 			// add some delays between each row to let the table sort by Id sequence
 			time.Sleep(5 * time.Millisecond)
 		}
@@ -409,15 +412,12 @@ func EntryExist(selectedEntries *[]selectedEntry, UUID string) bool {
 }
 
 // Func: select operation
-func selectOperation(db *sql.DB, errChan chan error, selectedEntries *[]selectedEntry, selectAllCheckBoxFlag bool) {
-
-	// get history entries
-	historyEntries := GetHistoryEntries(db, errChan)
+func selectOperation(selectedEntries *[]selectedEntry, displayObjects *[]ntdb.HistoryEntry, selectAllCheckBoxFlag bool) {
 
 	// update selectedEntries slice
-	if len(*historyEntries) != 0 {
+	if len(*displayObjects) != 0 {
 		if selectAllCheckBoxFlag {
-			for _, s := range *historyEntries {
+			for _, s := range *displayObjects {
 				AddSelectedEntry(selectedEntries, selectedEntry{UUID: s.UUID, testType: s.TestType})
 			}
 		} else {

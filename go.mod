@@ -4,8 +4,9 @@ go 1.23.3
 
 require (
 	fyne.io/fyne/v2 v2.5.4
-	github.com/djian01/nt v1.1.4
+	github.com/djian01/nt v1.1.5
 	github.com/wcharczuk/go-chart/v2 v2.1.2
+	golang.org/x/image v0.18.0
 	modernc.org/sqlite v1.35.0
 )
 
@@ -46,7 +47,6 @@ require (
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/yuin/goldmark v1.7.1 // indirect
 	golang.org/x/exp v0.0.0-20230315142452-642cacee5cc0 // indirect
-	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect

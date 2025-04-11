@@ -6,13 +6,14 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	ntdb "github.com/djian01/nt_gui/pkg/ntdb"
 )
 
-func HistoryContainer(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryEntry, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error, selectedEntries *[]selectedEntry, selectAllCheckBox *widget.Check) *fyne.Container {
+func HistoryContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error, selectedEntries *[]selectedEntry, selectAllCheckBox *widget.Check) *fyne.Container {
 
 	// history table column: selected id, type, start time, command, btn: record, delete, replay
 
@@ -44,7 +45,7 @@ func HistoryContainer(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryE
 
 	// filter btn
 	historyFilterBtn := widget.NewButtonWithIcon("Filter", filterIcon, func() {
-		err := historyRefresh(a, w, historyEntries, db, entryChan, errChan, filter, selectedEntries, selectAllCheckBox)
+		err := historyRefresh(a, w, db, entryChan, errChan, filter, selectedEntries, selectAllCheckBox)
 		if err != nil {
 			errChan <- err
 			return
@@ -59,7 +60,20 @@ func HistoryContainer(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryE
 
 	// select all onChange func
 	selectAllCheckBox.OnChanged = func(b bool) {
-		err := historyRefresh(a, w, historyEntries, db, entryChan, errChan, "ALL", selectedEntries, selectAllCheckBox)
+		err := historyRefresh(a, w, db, entryChan, errChan, "ALL", selectedEntries, selectAllCheckBox)
+		if err != nil {
+			logger.Println(err)
+		}
+	}
+
+	//// *** select all check box func ***
+	selectAllCheckBox.OnChanged = func(b bool) {
+
+		// select operation
+		selectOperation(db, errChan, selectedEntries, b)
+
+		// fresh history table
+		err := historyRefresh(a, w, db, entryChan, errChan, filter, selectedEntries, selectAllCheckBox)
 		if err != nil {
 			logger.Println(err)
 		}
@@ -67,10 +81,53 @@ func HistoryContainer(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryE
 
 	// delete-selected btn
 	deleteSelectedBtn := widget.NewButtonWithIcon("Delete Selected", theme.DeleteIcon(), func() {
-		for _, s := range *selectedEntries {
-			fmt.Println(s)
-		}
-		fmt.Println("===================")
+		// get history entries
+		historyEntries := GetHistoryEntries(db, errChan)
+
+		confirm := dialog.NewConfirm("Please Confirm", fmt.Sprintf("Do you want to delete %v history records?\n", len(*selectedEntries)), func(b bool) {
+			if b {
+				// delete entry
+				for _, s := range *selectedEntries {
+
+					// delete history entry
+					err := ntdb.DeleteEntry(db, "history", "uuid", s.UUID)
+					if err != nil {
+						errChan <- err
+						return
+					}
+
+					// check if the history entry is recorded
+					recordFlag := false
+					for _, he := range *historyEntries {
+						if he.UUID == s.UUID && he.Recorded {
+							recordFlag = true
+							break
+						}
+					}
+
+					// delete record table
+					if recordFlag {
+						err = ntdb.DeleteTable(db, fmt.Sprintf("%s_%s", s.testType, s.UUID))
+						if err != nil {
+							errChan <- err
+							return
+						}
+					}
+
+					// delete select entry
+					DelSelectedEntry(selectedEntries, selectedEntry{UUID: s.UUID, testType: s.testType})
+				}
+
+				// refresh table
+				err := historyRefresh(a, w, db, entryChan, errChan, "ALL", selectedEntries, selectAllCheckBox)
+				if err != nil {
+					errChan <- err
+				}
+			}
+		}, w)
+
+		confirm.Show()
+
 	})
 
 	deleteSelectedBtn.Importance = widget.DangerImportance
@@ -86,10 +143,6 @@ func HistoryContainer(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryE
 	historyHeader.Initial()
 	historyHeaderRow := historyHeader.GenerateHeaderRow(selectAllCheckBox)
 
-	selectAllCheckBox.OnChanged = func(b bool) {
-
-	}
-
 	//// *** body ***
 	historyTableBody := container.New(layout.NewVBoxLayout())
 	ntGlobal.historyTable = historyTableBody
@@ -101,7 +154,7 @@ func HistoryContainer(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryE
 	historyTableCard := widget.NewCard("", "", hisotryTableContainer)
 
 	// update the history table at the beginning
-	err := historyRefresh(a, w, historyEntries, db, entryChan, errChan, "ALL", selectedEntries, selectAllCheckBox)
+	err := historyRefresh(a, w, db, entryChan, errChan, "ALL", selectedEntries, selectAllCheckBox)
 	if err != nil {
 		logger.Println(err)
 	}
@@ -112,41 +165,4 @@ func HistoryContainer(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryE
 	HistoryMainContainerOuter := container.New(layout.NewBorderLayout(HistorySpaceHolder, HistorySpaceHolder, HistorySpaceHolder, HistorySpaceHolder), HistorySpaceHolder, HistoryMainContainerIner)
 
 	return HistoryMainContainerOuter // Temporary empty container, replace with your actual UI
-}
-
-// func: Add selected Entry
-func AddSelectedEntry(selectedEntries *[]selectedEntry, selected selectedEntry) {
-	for _, s := range *selectedEntries {
-		if s.UUID == selected.UUID {
-			return // UUID already exists
-		}
-	}
-	*selectedEntries = append(*selectedEntries, selected)
-}
-
-// func: Delete a selected Entry
-func DelSelectedEntry(selectedUUIDs *[]selectedEntry, selected selectedEntry) {
-	for i, s := range *selectedUUIDs {
-		if s.UUID == selected.UUID {
-			if i == len(*selectedUUIDs)-1 {
-				// UUID is the last element
-				*selectedUUIDs = (*selectedUUIDs)[:i]
-			} else {
-				// UUID is not the last element
-				*selectedUUIDs = append((*selectedUUIDs)[:i], (*selectedUUIDs)[i+1:]...)
-			}
-			return
-		}
-	}
-}
-
-// func: ExtryExist
-func EntryExist(selectedEntries *[]selectedEntry, UUID string) bool {
-
-	for _, s := range *selectedEntries {
-		if s.UUID == UUID {
-			return true
-		}
-	}
-	return false
 }

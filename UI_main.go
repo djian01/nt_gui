@@ -86,9 +86,6 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry, 
 
 	ToolbarContainer := container.New(layout.NewVBoxLayout(), ToolbarWidget)
 
-	// initial history entries
-	historyEntries := []ntdb.HistoryEntry{}
-
 	// initial history selectedEntries
 	selectedEntries := []selectedEntry{}
 
@@ -110,7 +107,7 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry, 
 		container.NewTabItemWithIcon("HTTP Ping", httpIcon, HTTPPingContainer(a, w, db, entryChan, errChan)),
 		container.NewTabItemWithIcon("DNS Ping", dnsIcon, DNSPingContainer(a, w, db, entryChan, errChan)),
 		container.NewTabItemWithIcon("Result Analysis", analyIcon, ResultAnalysisContainer(a, w, db, entryChan, errChan)),
-		container.NewTabItemWithIcon("History", historyIcon, HistoryContainer(a, w, &historyEntries, db, entryChan, errChan, &selectedEntries, selectAllCheckBox)),
+		container.NewTabItemWithIcon("History", historyIcon, HistoryContainer(a, w, db, entryChan, errChan, &selectedEntries, selectAllCheckBox)),
 	)
 
 	AppTabContainer.SetTabLocation(container.TabLocationLeading) // left
@@ -118,7 +115,7 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry, 
 	AppTabContainer.OnSelected = func(ti *container.TabItem) {
 		if ti.Text == "History" {
 			// refresh History table
-			err := historyRefresh(a, w, &historyEntries, db, entryChan, errChan, "ALL", &selectedEntries, selectAllCheckBox)
+			err := historyRefresh(a, w, db, entryChan, errChan, "ALL", &selectedEntries, selectAllCheckBox)
 			if err != nil {
 				logger.Println(err)
 			}

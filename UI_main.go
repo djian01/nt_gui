@@ -112,7 +112,7 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry, 
 	AppTabContainer.OnSelected = func(ti *container.TabItem) {
 		if ti.Text == "History" {
 			// refresh History table
-			err := historyRefresh(a, w, &historyEntries, db, entryChan, errChan)
+			err := historyRefresh(a, w, &historyEntries, db, entryChan, errChan, "--")
 			if err != nil {
 				logger.Println(err)
 			}

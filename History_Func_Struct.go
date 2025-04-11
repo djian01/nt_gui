@@ -21,6 +21,7 @@ import (
 // ******* struct historyGUIRow ********
 
 type historyGUIRow struct {
+	Selected        pingCell
 	Index           pingCell
 	TestType        pingCell
 	StartTime       pingCell
@@ -33,6 +34,10 @@ type historyGUIRow struct {
 }
 
 func (d *historyGUIRow) Initial() {
+
+	d.Selected.Label = "Selected"
+	d.Selected.Length = 50
+	d.Selected.Object = widget.NewCheck("", func(b bool) {})
 
 	d.Index.Label = "Index"
 	d.Index.Length = 50
@@ -66,6 +71,8 @@ func (d *historyGUIRow) Initial() {
 
 	// table row
 	row := container.New(layout.NewHBoxLayout(),
+		container.NewGridWrap(fyne.NewSize(float32(d.Selected.Length), 30), container.NewCenter(d.Selected.Object)),
+		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.Index.Length), 30), container.NewCenter(d.Index.Object)),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.TestType.Length), 30), container.NewCenter(d.TestType.Object)),
@@ -90,8 +97,14 @@ func (d *historyGUIRow) Initial() {
 
 func (d *historyGUIRow) GenerateHeaderRow() *fyne.Container {
 
+	// selected header
+	selectedCheckBox := widget.NewCheck("", func(b bool) {})
+	selectedContainer := container.New(layout.NewCenterLayout(), selectedCheckBox)
+
 	// table row
 	header := container.New(layout.NewHBoxLayout(),
+		container.NewGridWrap(fyne.NewSize(float32(d.Selected.Length), 30), selectedContainer),
+		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.Index.Length), 30), widget.NewLabelWithStyle(d.Index.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.TestType.Length), 30), widget.NewLabelWithStyle(d.TestType.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
@@ -264,7 +277,7 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 				}
 
 				// refresh table
-				err = historyRefresh(a, w, hs, db, entryChan, errChan)
+				err = historyRefresh(a, w, hs, db, entryChan, errChan, "--")
 				if err != nil {
 					errChan <- err
 				}
@@ -276,7 +289,7 @@ func historyAddRow(a fyne.App, w fyne.Window, he *ntdb.HistoryEntry, hs *[]ntdb.
 }
 
 // Func: history table refresh
-func historyRefresh(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryEntry, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) error {
+func historyRefresh(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryEntry, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error, filter string) error {
 
 	// clean up all the items in ntGlobal.historyTable
 	ntGlobal.historyTable.Objects = nil // Remove all child objects
@@ -298,6 +311,11 @@ func historyRefresh(a fyne.App, w fyne.Window, historyEntries *[]ntdb.HistoryEnt
 		return nil
 	} else {
 		for i := 0; i < len(*historyEntries); i++ {
+			if filter != "--" {
+				if (*historyEntries)[i].TestType != filter {
+					continue
+				}
+			}
 			go historyAddRow(a, w, &(*historyEntries)[i], historyEntries, ntGlobal.historyTable, db, entryChan, errChan)
 			// add some delays between each row to let the table sort by Id sequence
 			time.Sleep(5 * time.Millisecond)

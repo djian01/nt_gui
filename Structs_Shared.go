@@ -234,7 +234,7 @@ func (sui *SummaryUI) Initial() {
 
 	sui.ntCmdLabel = widget.NewLabel("nt CMD         ")
 	sui.ntCmdEntry = widget.NewEntry()
-	sui.ntCmdBtn = widget.NewButton("Relaunch CMD", func() {})
+	sui.ntCmdBtn = widget.NewButton("Relaunch Test", func() {})
 	sui.ntCmdBtn.Disable()
 	sui.ntCmdBtn.Importance = widget.HighImportance
 }

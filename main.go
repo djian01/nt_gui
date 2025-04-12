@@ -26,7 +26,7 @@ var (
 )
 
 // app Version
-var appVersion string = "1.0.0"
+var appVersion string = "1.0.1"
 
 // Create a global cancelable context
 var appCtx, cancelFunc = context.WithCancel(context.Background())
@@ -97,7 +97,7 @@ func main() {
 		}
 	}()
 
-	a := app.NewWithID("local.ntgui")
+	a := app.NewWithID("net.packetstreams.ntgui")
 
 	// Ensure cleanup when the app closes
 	a.Lifecycle().SetOnStopped(func() {

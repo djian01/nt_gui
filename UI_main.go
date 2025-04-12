@@ -29,6 +29,8 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry, 
 	}
 
 	// ToolbarContainer
+	infoIcon := theme.NewThemedResource(resourceInfoIconSvg)
+
 	ToolbarWidget := widget.NewToolbar(
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.RadioButtonCheckedIcon(), func() {
@@ -41,7 +43,7 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry, 
 				fyne.CurrentApp().Settings().SetTheme(theme.LightTheme())
 			}
 		}),
-		widget.NewToolbarAction(theme.HelpIcon(), func() {
+		widget.NewToolbarAction(infoIcon, func() {
 
 			// fyne bundle -append Icon.png >> Resource_Shared.go
 			appImage := canvas.NewImageFromResource(resourceIconPng) // auto-generated name

@@ -15,9 +15,11 @@
 ## Screenshots
 
 ### Main Dashboard
+
 ![Main Dashboard](assets/ntgui_mainWindow.png)
 
-### TCP Ping Result
+### Test Result & Chart
+
 ![Test Results Chart](assets/ntgui_chart.png)
 
 ## Downloads
@@ -33,17 +35,18 @@ Precompiled executables for **Windows**, **Linux**, and **macOS** are available 
 ### Steps
 
 1. **Clone the Repository**:
+
    ```bash
    git clone https://github.com/djian01/nt_gui.git
    cd nt_gui
    ```
-
 2. **Build the Application**:
+
    ```bash
    go build -o nt_gui
    ```
-
 3. **Run the Application**:
+
    ```bash
    ./nt_gui
    ```

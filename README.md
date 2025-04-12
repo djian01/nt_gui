@@ -31,27 +31,43 @@ Precompiled executables for **Windows**, **Linux**, and **macOS** are available 
 ### Prerequisites
 
 - [Go](https://golang.org/dl/) 1.16 or later
+- [Fyne CLI](https://developer.fyne.io/started/packaging) (optional, for packaging)
 
-### Steps
+### Option 1: Build using Go
 
 1. **Clone the Repository**:
-
    ```bash
    git clone https://github.com/djian01/nt_gui.git
    cd nt_gui
    ```
+
 2. **Build the Application**:
-
    ```bash
-   go build -o nt_gui
+   go build -o NTGUI.exe
    ```
+
 3. **Run the Application**:
-
    ```bash
-   ./nt_gui
+   ./NTGUI.exe
    ```
+
+### Option 2: Package using Fyne
+
+1. **Install the Fyne CLI** (if not installed):
+   ```bash
+   go install fyne.io/fyne/v2/cmd/fyne@latest
+   ```
+
+2. **Package the App**:
+   ```bash
+   fyne package --name NTGUI
+   ```
+
+3. The output will be a platform-native bundle (e.g., `.app`, `.exe`, or a package installer).
 
 ## Usage
+
+All test history data is stored in a local **SQLite** database automatically. This allows you to review, analyze, and export historical results even after restarting the application.
 
 Upon launching the application:
 

@@ -64,7 +64,7 @@ func NewChartWindow(a fyne.App, testObj testObject, recording *bool, p *ntPinger
 	chartBtnPauseContainer := container.New(layout.NewGridWrapLayout(fyne.NewSize(220, 30)), chartBtnPause)
 
 	//// Chart Btn Play
-	chartBtnPlay := widget.NewButtonWithIcon("Continue Chart Update", theme.MediaPlayIcon(), func() {})
+	chartBtnPlay := widget.NewButtonWithIcon("Resume Chart Update", theme.MediaPlayIcon(), func() {})
 	chartBtnPlay.Importance = widget.WarningImportance
 
 	if chartPauseFlag {

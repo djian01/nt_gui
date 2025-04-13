@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Icon.png" alt="NTGUI Logo" width="150"/>
+</p>
+
 # nt_gui
 
 **nt_gui** is a cross-platform network diagnostics tool developed in Go, featuring a graphical user interface (GUI) built with the [Fyne](https://fyne.io) toolkit. It offers a suite of network testing utilities, including ICMP, TCP, DNS, and HTTP pings, along with result visualization and export capabilities.

@@ -304,18 +304,9 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 		tcpPortEntry.Resize(fyne.NewSize(100, 3))
 		tcpPortCell := formCell(tcpPortLabel, 100, tcpPortEntry, 100)
 
-		// tcp Payload
-		tcpPayloadCheck := false
-		tcpPayloadLabel := widget.NewLabel("PayloadSize:")
-		tcpPayloadEntry := widget.NewEntry()
-		tcpPayloadEntry.Text = "0"
-		tcpPayloadEntry.Resize(fyne.NewSize(100, 3))
-		tcpPayloadCell := formCell(tcpPayloadLabel, 100, tcpPayloadEntry, 100)
-
 		// specific container
 		specificContainer.Add(tcpServerContainer)
 		specificContainer.Add(tcpPortCell)
-		specificContainer.Add(tcpPayloadCell)
 
 		// submit on Tap Action
 		submitBtn.OnTapped = func() {
@@ -361,29 +352,8 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 				errMsg.Refresh()
 			}
 
-			// tcp payload validation
-			var tcpPayloadSize int
-			tcpPayloadSize, err = strconv.Atoi(tcpPayloadEntry.Text)
-			if err != nil {
-				tcpPayloadCheck = false
-				errMsg.Text = fmt.Sprintf("Invalid Payload Size: %s. Valid number is a integer", tcpPayloadEntry.Text)
-				errMsg.Refresh()
-				return
-			}
-
-			if tcpPayloadSize > 65535 || tcpPayloadSize < 0 {
-				tcpPayloadCheck = false
-				errMsg.Text = fmt.Sprintf("Invalid Payload Size: %s. Valid range is 0–65535", tcpPayloadEntry.Text)
-				errMsg.Refresh()
-				return
-			} else {
-				tcpPayloadCheck = true
-				errMsg.Text = ""
-				errMsg.Refresh()
-			}
-
 			// validation check
-			if tcpServerCheck && tcpPortCheck && tcpPayloadCheck {
+			if tcpServerCheck && tcpPortCheck {
 				for _, tcpServer := range tcpServers {
 					iv := ntPinger.InputVars{}
 					iv.Type = "tcp"
@@ -392,7 +362,7 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 					iv.Interval = intervalValue
 					iv.DestHost = tcpServer
 					iv.DestPort = tcpPort
-					iv.PayLoadSize = tcpPayloadSize
+					iv.PayLoadSize = 0
 
 					// start test
 					go TcpAddPingRow(a, &ntGlobal.tcpIndex, &iv, ntGlobal.tcpTable, recording, db, entryChan, errChan)

@@ -32,7 +32,6 @@ type tcpGUIRow struct {
 	HostName  pingCell // fixed
 	IP        pingCell // fixed
 	Port      pingCell // fixed
-	Payload   pingCell // fixed
 	RTT       pingCell
 	StartTime pingCell // sendDateTime
 	Fail      pingCell
@@ -91,10 +90,6 @@ func (d *tcpGUIRow) Initial() {
 	d.Port.Length = 100
 	d.Port.Object = widget.NewLabel("--")
 
-	d.Payload.Label = "Payload"
-	d.Payload.Length = 90
-	d.Payload.Object = widget.NewLabel("--")
-
 	d.RTT.Label = "RTT"
 	d.RTT.Length = 90
 	d.RTT.Object = widget.NewLabel("--")
@@ -130,8 +125,6 @@ func (d *tcpGUIRow) Initial() {
 		container.NewGridWrap(fyne.NewSize(float32(d.IP.Length), 30), container.NewCenter(d.IP.Object)),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.Port.Length), 30), container.NewCenter(d.Port.Object)),
-		GUIVerticalSeparator(),
-		container.NewGridWrap(fyne.NewSize(float32(d.Payload.Length), 30), container.NewCenter(d.Payload.Object)),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.RTT.Length), 30), container.NewCenter(d.RTT.Object)),
 		GUIVerticalSeparator(),
@@ -172,8 +165,6 @@ func (d *tcpGUIRow) GenerateHeaderRow() *fyne.Container {
 		container.NewGridWrap(fyne.NewSize(float32(d.IP.Length), 30), widget.NewLabelWithStyle(d.IP.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.Port.Length), 30), widget.NewLabelWithStyle(d.Port.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
-		GUIVerticalSeparator(),
-		container.NewGridWrap(fyne.NewSize(float32(d.Payload.Length), 30), widget.NewLabelWithStyle(d.Payload.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
 		GUIVerticalSeparator(),
 		container.NewGridWrap(fyne.NewSize(float32(d.RTT.Length), 30), widget.NewLabelWithStyle(d.RTT.Label, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})),
 		GUIVerticalSeparator(),
@@ -369,10 +360,6 @@ func TcpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, tc
 	// Update Port
 	mytcpPing.tcpGUI.Port.Object.(*widget.Label).Text = strconv.Itoa(inputVars.DestPort)
 	mytcpPing.tcpGUI.Port.Object.(*widget.Label).Refresh()
-
-	// Update Payload
-	mytcpPing.tcpGUI.Payload.Object.(*widget.Label).Text = strconv.Itoa(inputVars.PayLoadSize)
-	mytcpPing.tcpGUI.Payload.Object.(*widget.Label).Refresh()
 
 	// Update StartTime
 	mytcpPing.tcpGUI.StartTime.Object.(*widget.Label).Text = mySumData.StartTime.Format("2006-01-02 15:04:05 MST")

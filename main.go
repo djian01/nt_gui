@@ -128,7 +128,14 @@ func main() {
 		a.Quit()
 	})
 
-	w.Resize(fyne.NewSize(1650, 950))
+	// set window size, default: max window
+	screenSize, err := getPrimaryScreenSize()
+	if err != nil {
+		//log.Println("Failed to get screen size:", err)
+		screenSize = fyne.NewSize(1650, 950) // fallback
+	}
+
+	w.Resize(screenSize)
 	w.CenterOnScreen()
 
 	// Open NT DB

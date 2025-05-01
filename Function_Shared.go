@@ -21,6 +21,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"github.com/djian01/nt/pkg/ntPinger"
 	ntchart "github.com/djian01/nt_gui/pkg/chart"
+	"github.com/kbinani/screenshot"
 )
 
 // Func: get the config file path for different OS
@@ -497,4 +498,15 @@ func IsValidIP(ipStr string) error {
 		return fmt.Errorf("invalid IP address: %s", ipStr)
 	}
 	return nil
+}
+
+// function: set the max window size
+func getPrimaryScreenSize() (fyne.Size, error) {
+	n := screenshot.NumActiveDisplays()
+	if n <= 0 {
+		return fyne.Size{}, fmt.Errorf("no active displays found")
+	}
+
+	bounds := screenshot.GetDisplayBounds(0) // Primary display
+	return fyne.NewSize(float32(bounds.Dx()), float32(bounds.Dy())), nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -26,7 +27,7 @@ var (
 )
 
 // app Version
-var appVersion string = "1.0.2"
+var appVersion string = "1.0.3"
 
 // Create a global cancelable context
 var appCtx, cancelFunc = context.WithCancel(context.Background())
@@ -134,7 +135,8 @@ func main() {
 		//log.Println("Failed to get screen size:", err)
 		screenSize = fyne.NewSize(1650, 950) // fallback
 	}
-
+	fmt.Println(screenSize.Height)
+	fmt.Println(screenSize.Width)
 	w.Resize(screenSize)
 	w.CenterOnScreen()
 

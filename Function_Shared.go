@@ -508,5 +508,6 @@ func getPrimaryScreenSize() (fyne.Size, error) {
 	}
 
 	bounds := screenshot.GetDisplayBounds(0) // Primary display
-	return fyne.NewSize(float32(bounds.Dx()), float32(bounds.Dy())), nil
+
+	return fyne.NewSize(float32(bounds.Dx())*0.4, float32(bounds.Dy())*0.4), nil
 }

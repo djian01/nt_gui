@@ -5,6 +5,7 @@ go 1.23.3
 require (
 	fyne.io/fyne/v2 v2.5.4
 	github.com/djian01/nt v1.1.5
+	github.com/kbinani/screenshot v0.0.0-20250118074034-a3924b7bbc8c
 	github.com/wcharczuk/go-chart/v2 v2.1.2
 	golang.org/x/image v0.18.0
 	modernc.org/sqlite v1.35.0
@@ -34,7 +35,6 @@ require (
 	github.com/jeandeaual/go-locale v0.0.0-20240223122105-ce5225dcaa49 // indirect
 	github.com/jezek/xgb v1.1.1 // indirect
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
-	github.com/kbinani/screenshot v0.0.0-20250118074034-a3924b7bbc8c // indirect
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

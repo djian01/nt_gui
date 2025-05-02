@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -135,8 +134,7 @@ func main() {
 		//log.Println("Failed to get screen size:", err)
 		screenSize = fyne.NewSize(1650, 950) // fallback
 	}
-	fmt.Println(screenSize.Height)
-	fmt.Println(screenSize.Width)
+
 	w.Resize(screenSize)
 	w.CenterOnScreen()
 

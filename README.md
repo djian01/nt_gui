@@ -69,6 +69,23 @@ Precompiled executables for **Windows**, **Linux**, and **macOS** are available 
 
 3. The output will be a platform-native bundle (e.g., `.app`, `.exe`, or a package installer).
 
+### Option 3: Download Executable from Releases
+
+Go to the [Releases](https://github.com/djian01/nt_gui/releases) page and download the appropriate package for your OS.
+
+#### On **Windows**:
+1. Download `ntgui_windows_amd64_<version>.zip`
+2. Unzip it and place the `/NTGUI` folder in your preferred location
+3. Run `NTGUI.exe` inside the folder
+
+#### On **Linux**:
+```bash
+mkdir -p ~/NTGUI
+cd ~/NTGUI
+tar -xf /<parent folder of the downloaded file>/ntgui_linux_amd64_<version>.tar.xz
+make user-install
+```
+
 ## Usage
 
 All test history data is stored in a local **SQLite** database automatically. This allows you to review, analyze, and export historical results even after restarting the application.

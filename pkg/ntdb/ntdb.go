@@ -33,6 +33,26 @@ func DBOpen(dbFile string) (*sql.DB, error) {
 		return nil, errors.New("failed to open database")
 	}
 
+	// ---- Apply per-connection PRAGMAs ----
+	// These do not persist in the DB file, they must be set on every new connection.
+	if _, err := db.Exec(`PRAGMA busy_timeout = 5000;`); err != nil {
+		return nil, fmt.Errorf("failed to set busy_timeout: %w", err)
+	}
+	if _, err := db.Exec(`PRAGMA foreign_keys = ON;`); err != nil {
+		return nil, fmt.Errorf("failed to enable foreign_keys: %w", err)
+	}
+	if _, err := db.Exec(`PRAGMA synchronous = NORMAL;`); err != nil {
+		return nil, fmt.Errorf("failed to set synchronous: %w", err)
+	}
+
+	// Optional: reinforce WAL mode (should persist, but harmless to assert again).
+	if _, err := db.Exec(`PRAGMA journal_mode = WAL;`); err != nil {
+		return nil, fmt.Errorf("failed to set journal_mode=WAL: %w", err)
+	}
+
+	// Optional: cap open conns to avoid multiple writers in one process.
+	db.SetMaxOpenConns(1)
+
 	return db, nil
 }
 
@@ -51,6 +71,13 @@ func createDatabase(dbFile string) error {
 		return err
 	}
 	defer db.Close()
+
+	// ---- Persistent DB-wide settings ----
+
+	// Enable WAL to allow readers during writes (saved in DB)
+	if _, err := db.Exec(`PRAGMA journal_mode=WAL;`); err != nil {
+		return fmt.Errorf("failed to set journal_mode=WAL: %v", err)
+	}
 
 	// Enable auto_vacuum mode
 	_, err = db.Exec("PRAGMA auto_vacuum = FULL;")

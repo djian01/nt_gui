@@ -64,7 +64,7 @@ Precompiled executables for **Windows**, **Linux**, and **macOS** are available 
 
 2. **Package the App**:
    ```bash
-   fyne package --name NTGUI
+   fyne package -name "NTGUI" -appID "com.djian.ntgui" -appVersion 1.0.4
    ```
 
 3. The output will be a platform-native bundle (e.g., `.app`, `.exe`, or a package installer).

@@ -123,6 +123,6 @@ This project is licensed under a **Personal-Use License**:
 - Organizational or commercial use (including businesses, institutions, and government) requires a **commercial license**.  
 
 To obtain a commercial license, please contact:  
-[dennis.jian@packetstreams.net]
+[dennis.jian@packetstreams.net](mailto:dennis.jian@packetstreams.net)
 
 See the [LICENSE](LICENSE) file for full terms and conditions.

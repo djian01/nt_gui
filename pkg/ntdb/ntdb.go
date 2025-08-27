@@ -1,9 +1,11 @@
 package ntdb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"sort"
 	"strconv"
@@ -13,6 +15,55 @@ import (
 	"github.com/djian01/nt/pkg/ntPinger"
 	_ "modernc.org/sqlite" // Import SQLite driver
 )
+
+const (
+	sqlBusyWindow = 3 * time.Second
+	minBackoff    = 30 * time.Millisecond
+	maxBackoff    = 120 * time.Millisecond
+)
+
+func isBusyOrLocked(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	return strings.Contains(s, "database is locked") ||
+		strings.Contains(s, "database is busy") ||
+		strings.Contains(s, "SQLITE_BUSY") ||
+		strings.Contains(s, "SQLITE_LOCKED")
+}
+
+func queryWithRetry(ctx context.Context, db *sql.DB, q string, args ...any) (*sql.Rows, error) {
+	deadline, cancel := context.WithTimeout(ctx, sqlBusyWindow)
+	defer cancel()
+	for {
+		rows, err := db.QueryContext(deadline, q, args...)
+		if err == nil || !isBusyOrLocked(err) || deadline.Err() != nil {
+			return rows, err
+		}
+		d := minBackoff + time.Duration(rand.Int63n(int64(maxBackoff-minBackoff)))
+		time.Sleep(d)
+	}
+}
+
+// execWithRetry executes a statement with retry + jittered backoff
+// if SQLITE_BUSY/LOCKED is encountered. It respects a timeout window.
+func execWithRetry(ctx context.Context, db *sql.DB, q string, args ...any) error {
+	deadline, cancel := context.WithTimeout(ctx, sqlBusyWindow)
+	defer cancel()
+
+	for {
+		_, err := db.ExecContext(deadline, q, args...)
+		// success OR non-busy error OR ctx timeout
+		if err == nil || !isBusyOrLocked(err) || deadline.Err() != nil {
+			return err
+		}
+
+		// sleep a bit with jitter
+		d := minBackoff + time.Duration(rand.Int63n(int64(maxBackoff-minBackoff)))
+		time.Sleep(d)
+	}
+}
 
 func DBOpen(dbFile string) (*sql.DB, error) {
 
@@ -181,20 +232,14 @@ func CreateTestResultsTable(db *sql.DB, testType, testTableName string) error {
 			avg_rtt TEXT,
 			additional_info TEXT
 		);`, testTableName)
+
+	default:
+		return fmt.Errorf("unsupported test type: %q", testType)
 	}
 
-	for {
-		_, err := db.Exec(query)
-		if err != nil {
-			// handle the "database is locked" error
-			if strings.Contains(err.Error(), "database is locked") {
-				time.Sleep(time.Millisecond * 100)
-			} else {
-				return fmt.Errorf("failed to create table %s: %v", testTableName, err)
-			}
-		} else {
-			break
-		}
+	// Use retry with a bounded window; DDL can conflict briefly in WAL mode.
+	if err := execWithRetry(context.Background(), db, query); err != nil {
+		return fmt.Errorf("failed to create table %s: %w", testTableName, err)
 	}
 
 	return nil
@@ -284,9 +329,6 @@ func ConvertPkt2DbEntry(pkt ntPinger.Packet, tableName string) (dbEntry DbEntry)
 // InsertEntry inserts a log entry into the "history" table
 func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 
-	// initial err
-	var err error = nil
-
 	// read from channel
 	for entry := range entryChan {
 		tableName := entry.GetTableName()
@@ -309,20 +351,10 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 			}
 
 			// Execute the query safely with placeholders for values
-			for {
-				_, err = ntdb.Exec(query, he.TableName, he.TestType, startTime, he.Command, he.UUID, recordedInt)
-
-				if err != nil {
-					// handle the "database is locked" error
-					if strings.Contains(err.Error(), "database is locked") {
-						time.Sleep(time.Millisecond * 100)
-					} else {
-						errChan <- err
-						break
-					}
-				} else {
-					break
-				}
+			if err := execWithRetry(context.Background(), ntdb, query,
+				he.TableName, he.TestType, startTime, he.Command, he.UUID, recordedInt,
+			); err != nil {
+				errChan <- err
 			}
 
 		default:
@@ -343,20 +375,13 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 					responseTime := en.ResponseTime.String()
 
 					// Execute the query safely with placeholders for values
-					for {
-						_, err = ntdb.Exec(query, en.Seq, en.Status, en.DnsResponse, en.DnsRecord, responseTime, sendDateTime, en.SuccessResponse, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
-						if err != nil {
-							// handle the "database is locked" error
-							if strings.Contains(err.Error(), "database is locked") {
-								time.Sleep(time.Millisecond * 100)
-							} else {
-								errChan <- err
-								break
-							}
-						} else {
-							break
-						}
+					if err := execWithRetry(context.Background(), ntdb, query,
+						en.Seq, en.Status, en.DnsResponse, en.DnsRecord, responseTime, sendDateTime,
+						en.SuccessResponse, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo,
+					); err != nil {
+						errChan <- err
 					}
+
 				case "http":
 					en := entry.(*RecordHTTPEntry)
 					// Construct SQL query with the dynamic table name
@@ -369,20 +394,13 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 					responseTime := en.ResponseTime.String()
 
 					// Execute the query safely with placeholders for values
-					for {
-						_, err = ntdb.Exec(query, en.Seq, en.Status, en.ResponseCode, en.ResponsePhase, responseTime, sendDateTime, en.SuccessResponse, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
-						if err != nil {
-							// handle the "database is locked" error
-							if strings.Contains(err.Error(), "database is locked") {
-								time.Sleep(time.Millisecond * 100)
-							} else {
-								errChan <- err
-								break
-							}
-						} else {
-							break
-						}
+					if err := execWithRetry(context.Background(), ntdb, query,
+						en.Seq, en.Status, en.ResponseCode, en.ResponsePhase, responseTime, sendDateTime,
+						en.SuccessResponse, en.FailRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo,
+					); err != nil {
+						errChan <- err
 					}
+
 				case "tcp":
 					en := entry.(*RecordTCPEntry)
 					// Construct SQL query with the dynamic table name
@@ -395,20 +413,13 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 					RTT := en.RTT.String()
 
 					// Execute the query safely with placeholders for values
-					for {
-						_, err = ntdb.Exec(query, en.Seq, en.Status, RTT, sendDateTime, en.PacketRecv, en.PacketLossRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
-						if err != nil {
-							// handle the "database is locked" error
-							if strings.Contains(err.Error(), "database is locked") {
-								time.Sleep(time.Millisecond * 100)
-							} else {
-								errChan <- err
-								break
-							}
-						} else {
-							break
-						}
+					if err := execWithRetry(context.Background(), ntdb, query,
+						en.Seq, en.Status, RTT, sendDateTime, en.PacketRecv, en.PacketLossRate,
+						en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo,
+					); err != nil {
+						errChan <- err
 					}
+
 				case "icmp":
 					en := entry.(*RecordICMPEntry)
 					// Construct SQL query with the dynamic table name
@@ -421,19 +432,11 @@ func InsertEntry(ntdb *sql.DB, entryChan <-chan DbEntry, errChan chan error) {
 					RTT := en.RTT.String()
 
 					// Execute the query safely with placeholders for values
-					for {
-						_, err = ntdb.Exec(query, en.Seq, en.Status, RTT, sendDateTime, en.PacketRecv, en.PacketLossRate, en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo)
-						if err != nil {
-							// handle the "database is locked" error
-							if strings.Contains(err.Error(), "database is locked") {
-								time.Sleep(time.Millisecond * 100)
-							} else {
-								errChan <- err
-								break
-							}
-						} else {
-							break
-						}
+					if err := execWithRetry(context.Background(), ntdb, query,
+						en.Seq, en.Status, RTT, sendDateTime, en.PacketRecv, en.PacketLossRate,
+						en.MinRTT, en.MaxRTT, en.AvgRTT, en.AddInfo,
+					); err != nil {
+						errChan <- err
 					}
 				}
 			}
@@ -857,42 +860,18 @@ func DeleteEntry(db *sql.DB, table, key, value string) error {
 	query := fmt.Sprintf("DELETE FROM %s WHERE %s = ?;", table, key)
 
 	// Execute the delete statement
-	for {
-		_, err := db.Exec(query, value)
-		if err != nil {
-			// handle the "database is locked" error
-			if strings.Contains(err.Error(), "database is locked") {
-				time.Sleep(time.Millisecond * 100)
-			} else {
-				return fmt.Errorf("error deleting entry from %s: %v", table, err)
-			}
-		} else {
-			break
-		}
+	if err := execWithRetry(context.Background(), db, query, value); err != nil {
+		return fmt.Errorf("error deleting entry from %s: %v", table, err)
 	}
-
-	//fmt.Printf("Successfully deleted entry with ID %d from table %s.\n", id, tableName)
 	return nil
 }
 
 // Func: Delete table based on table name
 func DeleteTable(db *sql.DB, tableName string) error {
-
 	query := fmt.Sprintf("DROP TABLE IF EXISTS %q", tableName)
-	for {
-		_, err := db.Exec(query)
-		if err != nil {
-			// handle the "database is locked" error
-			if strings.Contains(err.Error(), "database is locked") {
-				time.Sleep(time.Millisecond * 100)
-			} else {
-				return err
-			}
-		} else {
-			break
-		}
+	if err := execWithRetry(context.Background(), db, query); err != nil {
+		return err
 	}
-
 	return nil
 }
 
@@ -952,18 +931,8 @@ func UpdateFieldValue(db *sql.DB, table, searchKey, searchType, searchValue, upd
 
 	query := fmt.Sprintf(`UPDATE %s SET %s = $1 WHERE %s = $2`, table, updateKey, searchKey)
 
-	for {
-		_, err := db.Exec(query, updateVal, searchVal)
-		if err != nil {
-			// handle the "database is locked" error
-			if strings.Contains(err.Error(), "database is locked") {
-				time.Sleep(time.Millisecond * 100)
-			} else {
-				return fmt.Errorf("failed to update field: %w", err)
-			}
-		} else {
-			break
-		}
+	if err := execWithRetry(context.Background(), db, query, updateVal, searchVal); err != nil {
+		return fmt.Errorf("failed to update field: %w", err)
 	}
 	return nil
 }

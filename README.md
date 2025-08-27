@@ -40,17 +40,18 @@ Precompiled executables for **Windows**, **Linux**, and **macOS** are available 
 ### Option 1: Build using Go
 
 1. **Clone the Repository**:
+
    ```bash
    git clone https://github.com/djian01/nt_gui.git
    cd nt_gui
    ```
-
 2. **Build the Application**:
+
    ```bash
    go build -o NTGUI.exe
    ```
-
 3. **Run the Application**:
+
    ```bash
    ./NTGUI.exe
    ```
@@ -58,33 +59,16 @@ Precompiled executables for **Windows**, **Linux**, and **macOS** are available 
 ### Option 2: Package using Fyne
 
 1. **Install the Fyne CLI** (if not installed):
+
    ```bash
    go install fyne.io/fyne/v2/cmd/fyne@latest
    ```
-
 2. **Package the App**:
+
    ```bash
-   fyne package -name "NTGUI" -appID "com.djian.ntgui" -appVersion 1.0.4
+   fyne package --name NTGUI
    ```
-
 3. The output will be a platform-native bundle (e.g., `.app`, `.exe`, or a package installer).
-
-### Option 3: Download Executable from Releases
-
-Go to the [Releases](https://github.com/djian01/nt_gui/releases) page and download the appropriate package for your OS.
-
-#### On **Windows**:
-1. Download `ntgui_windows_amd64_<version>.zip`
-2. Unzip it and place the `/NTGUI` folder in your preferred location
-3. Run `NTGUI.exe` inside the folder
-
-#### On **Linux**:
-```bash
-mkdir -p ~/NTGUI
-cd ~/NTGUI
-tar -xf /<parent folder of the downloaded file>/ntgui_linux_amd64_<version>.tar.xz
-make user-install
-```
 
 ## Usage
 
@@ -117,12 +101,6 @@ Upon launching the application:
 
 ## License
 
-This project is licensed under a **Personal-Use License**:
-
-- Free for individuals for personal, educational, or hobby use.  
-- Organizational or commercial use (including businesses, institutions, and government) requires a **commercial license**.  
-
-To obtain a commercial license, please contact:  
-[dennis.jian@packetstreams.net](mailto:dennis.jian@packetstreams.net)
+This project is licensed under the **Apache License 2.0 with the Commons Clause**, restricting commercial use without written permission from the author.
 
 See the [LICENSE](LICENSE) file for full terms and conditions.

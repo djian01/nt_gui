@@ -117,6 +117,12 @@ Upon launching the application:
 
 ## License
 
-This project is licensed under the **Apache License 2.0 with the Commons Clause**, restricting commercial use without written permission from the author.
+This project is licensed under a **Personal-Use License**:
+
+- Free for individuals for personal, educational, or hobby use.  
+- Organizational or commercial use (including businesses, institutions, and government) requires a **commercial license**.  
+
+To obtain a commercial license, please contact:  
+[dennis.jian@packetstreams.net]
 
 See the [LICENSE](LICENSE) file for full terms and conditions.

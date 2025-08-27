@@ -1,26 +1,37 @@
-The Software is provided to you under the Apache License, Version 2.0 (the "License"), with the Commons Clause Restriction.
+Personal-Use License for nt_gui
+Copyright (c) 2025 Dennis Jian
 
-Commons Clause Restriction:
-You may not sell the Software. This includes the right to sell access to the Software, host the Software for commercial purposes, or include the Software in a commercial product or service without prior written permission.
+1. Grant of Rights
+You are free to use, copy, modify, and distribute this software at no cost for 
+**personal, non-commercial, non-organizational purposes**. 
 
---------------------------------------------------------------------------------
+“Personal use” means use by a natural person for private projects, learning, or 
+hobby purposes, where the software is not used in connection with any company, 
+organization, or government entity.
 
-                                 Apache License
-                           Version 2.0, January 2004
-                        http://www.apache.org/licenses/
+2. Organizational / Commercial Use
+Any use of this software by a company, business, institution, or government entity 
+(“Organization”) requires a **separate commercial license** from the copyright holder.  
+This includes, but is not limited to:
+- Internal use within an organization
+- Use in products, services, or workflows related to an organization
+- Use by contractors or employees on behalf of an organization
 
-TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+To obtain a commercial license, please contact:
+  Email: dennis.jian@packetstreams.net
 
-Copyright 2025 djian01
+3. Redistribution
+Redistributions of this software, in source or binary form, must include this license.  
+Any modifications must be clearly documented.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+4. No Trademark Rights
+This license does not grant permission to use the name, logo, or trademarks of 
+the copyright holder.
 
-    http://www.apache.org/licenses/LICENSE-2.0
+5. Disclaimer of Warranty
+This software is provided “as is,” without any warranties of any kind, express or implied.  
+The copyright holder is not liable for any damages arising from its use.
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+6. Termination
+Any violation of this license automatically terminates the rights granted herein.  
+Organizational use without a commercial license constitutes infringement.

@@ -68,6 +68,11 @@ Precompiled executables for **Windows**, **Linux**, and **macOS** are available 
    ```bash
    fyne package --name NTGUI
    ```
+   Or specific the App Version (Optional)
+   ```bash
+   fyne package -name NTGUI -appVersion <version>
+   ```
+
 3. The output will be a platform-native bundle (e.g., `.app`, `.exe`, or a package installer).
 
 ## Usage

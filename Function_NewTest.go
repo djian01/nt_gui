@@ -214,7 +214,7 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 		httpMethodCell := formCell(httpMethodLabel, 100, httpMethodSelect, 150)
 
 		// HTTP Status Codes
-		httpStatusLabel := widget.NewLabel("HTTP Status Codes:")
+		httpStatusLabel := widget.NewLabel("Expected HTTP Status Codes:")
 
 		s2xxLabel := widget.NewLabel("2xx")
 		s2xxCheck := widget.NewCheck("", func(b bool) {})

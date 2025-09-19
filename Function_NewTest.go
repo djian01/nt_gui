@@ -219,20 +219,20 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 		s2xxLabel := widget.NewLabel("2xx")
 		s2xxCheck := widget.NewCheck("", func(b bool) {})
 		s2xxCheck.SetChecked(true)
-		s2xxCell := formCell(s2xxLabel, 50, s2xxCheck, 50)
+		s2xxCell := formCell(s2xxLabel, 30, s2xxCheck, 60)
 
 		s3xxLabel := widget.NewLabel("3xx")
 		s3xxCheck := widget.NewCheck("", func(b bool) {})
 		s3xxCheck.SetChecked(true)
-		s3xxCell := formCell(s3xxLabel, 50, s3xxCheck, 50)
+		s3xxCell := formCell(s3xxLabel, 30, s3xxCheck, 60)
 
 		s4xxLabel := widget.NewLabel("4xx")
 		s4xxCheck := widget.NewCheck("", func(b bool) {})
-		s4xxCell := formCell(s4xxLabel, 50, s4xxCheck, 50)
+		s4xxCell := formCell(s4xxLabel, 30, s4xxCheck, 60)
 
 		s5xxLabel := widget.NewLabel("5xx")
 		s5xxCheck := widget.NewCheck("", func(b bool) {})
-		s5xxCell := formCell(s5xxLabel, 50, s5xxCheck, 50)
+		s5xxCell := formCell(s5xxLabel, 30, s5xxCheck, 60)
 
 		sCustomLabel := widget.NewLabel("Custom (Optional)")
 		sCustomCheck := true

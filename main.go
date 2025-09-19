@@ -26,7 +26,7 @@ var (
 )
 
 // app Version
-var appVersion string = "1.0.5"
+var appVersion string = "1.0.6"
 
 // Create a global cancelable context
 var appCtx, cancelFunc = context.WithCancel(context.Background())

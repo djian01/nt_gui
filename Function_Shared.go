@@ -110,11 +110,19 @@ func Iv2NtCmd(recording bool, iv ntPinger.InputVars) string {
 			CmdHttpMethod = fmt.Sprintf(" -m %s", iv.Http_method)
 		}
 
+		// HttpStatusCode
+		CmdHttpStatusCode := ""
+		if len(iv.Http_statusCodes) > 0 {
+			for _, s := range iv.Http_statusCodes {
+				CmdHttpStatusCode += fmt.Sprintf(" -s %s", s.Code2String())
+			}
+		}
+
 		// Http URL
 		httpUrl := ntPinger.ConstructURL(iv.Http_scheme, iv.DestHost, iv.Http_path, iv.DestPort)
 
 		// ntCmd
-		ntCmd = fmt.Sprintf("nt%s http%s%s%s %s", CmdRecording, CmdHttpMethod, CmdInterval, CmdTimeout, httpUrl)
+		ntCmd = fmt.Sprintf("nt%s http%s%s%s%s %s", CmdRecording, CmdHttpMethod, CmdHttpStatusCode, CmdInterval, CmdTimeout, httpUrl)
 
 	case "tcp":
 		// Interval

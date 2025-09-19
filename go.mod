@@ -4,7 +4,7 @@ go 1.23.3
 
 require (
 	fyne.io/fyne/v2 v2.5.4
-	github.com/djian01/nt v1.2.0
+	github.com/djian01/nt v1.2.1
 	github.com/kbinani/screenshot v0.0.0-20250118074034-a3924b7bbc8c
 	github.com/wcharczuk/go-chart/v2 v2.1.2
 	golang.org/x/image v0.18.0

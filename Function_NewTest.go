@@ -213,6 +213,62 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 		httpMethodSelect.Selected = "GET"
 		httpMethodCell := formCell(httpMethodLabel, 100, httpMethodSelect, 150)
 
+		// HTTP Status Codes
+		httpStatusLabel := widget.NewLabel("HTTP Status Codes:")
+
+		s2xxLabel := widget.NewLabel("2xx")
+		s2xxCheck := widget.NewCheck("", func(b bool) {})
+		s2xxCheck.SetChecked(true)
+		s2xxCell := formCell(s2xxLabel, 50, s2xxCheck, 50)
+
+		s3xxLabel := widget.NewLabel("3xx")
+		s3xxCheck := widget.NewCheck("", func(b bool) {})
+		s3xxCheck.SetChecked(true)
+		s3xxCell := formCell(s3xxLabel, 50, s3xxCheck, 50)
+
+		s4xxLabel := widget.NewLabel("4xx")
+		s4xxCheck := widget.NewCheck("", func(b bool) {})
+		s4xxCell := formCell(s4xxLabel, 50, s4xxCheck, 50)
+
+		s5xxLabel := widget.NewLabel("5xx")
+		s5xxCheck := widget.NewCheck("", func(b bool) {})
+		s5xxCell := formCell(s5xxLabel, 50, s5xxCheck, 50)
+
+		sCustomLabel := widget.NewLabel("Custom (Optional)")
+		sCustomCheck := true
+		sCustomEntry := widget.NewEntry()
+		sCustomEntry.SetPlaceHolder("Enter a value between 200 and 599")
+		sCustomEntry.OnChanged = func(s string) {
+			// Custom Status Code Entry is Empty
+			if s == "" {
+				sCustomCheck = true // allow clearing
+				errMsg.Text = ""
+				errMsg.Refresh()
+				return
+			}
+			// Custom Status Code Entry is outside of the valid range
+			if val, err := strconv.Atoi(s); err != nil || val < 200 || val > 599 {
+				sCustomCheck = false
+				errMsg.Text = "HTTP status code must be between 200 and 599."
+				errMsg.Refresh()
+				return
+			}
+
+			sCustomCheck = true
+			errMsg.Text = ""
+			errMsg.Refresh()
+		}
+
+		sCustomCell := formCell(sCustomLabel, 150, sCustomEntry, 260)
+
+		httpStatusInUpContainer := container.New(layout.NewHBoxLayout(), s2xxCell, s3xxCell, s4xxCell, s5xxCell)
+		httpStatusInDownContainer := container.New(layout.NewVBoxLayout(), httpStatusInUpContainer, sCustomCell)
+		httpStatusOutContainer := container.New(layout.NewVBoxLayout(), httpStatusLabel, httpStatusInDownContainer)
+
+		httpStatusCard := widget.NewCard("", "", httpStatusOutContainer)
+
+		specificContainer.Add(httpStatusCard)
+
 		// URL
 		httpURLCheck := false
 		httpURLLabel := widget.NewLabel("Test URL:")
@@ -261,8 +317,47 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 				errMsg.Refresh()
 			}
 
+			// Custom Status Code Check
+			statusCodeCheck := false
+			httpStatusCodes := []ntPinger.HttpStatusCode{}
+
+			if sCustomEntry.Text != "" {
+				if val, err := strconv.Atoi(sCustomEntry.Text); err != nil {
+					sCustomCheck = false
+					errMsg.Text = err.Error()
+					errMsg.Refresh()
+					return
+				} else {
+					httpStatusCodes = append(httpStatusCodes, ntPinger.HttpStatusCode{LowerCode: val, UpperCode: val})
+					statusCodeCheck = true
+				}
+			}
+
+			// Status Code Check
+			if s2xxCheck.Checked {
+				httpStatusCodes = append(httpStatusCodes, ntPinger.HttpStatusCode{LowerCode: 200, UpperCode: 299})
+				statusCodeCheck = true
+			}
+			if s3xxCheck.Checked {
+				httpStatusCodes = append(httpStatusCodes, ntPinger.HttpStatusCode{LowerCode: 300, UpperCode: 399})
+				statusCodeCheck = true
+			}
+			if s4xxCheck.Checked {
+				httpStatusCodes = append(httpStatusCodes, ntPinger.HttpStatusCode{LowerCode: 400, UpperCode: 499})
+				statusCodeCheck = true
+			}
+			if s5xxCheck.Checked {
+				httpStatusCodes = append(httpStatusCodes, ntPinger.HttpStatusCode{LowerCode: 500, UpperCode: 599})
+				statusCodeCheck = true
+			}
+
+			if !statusCodeCheck {
+				errMsg.Text = "Please Select at least one HTTP Status Code!"
+				errMsg.Refresh()
+				return
+			}
 			// validation check
-			if intervalCheck && timeoutCheck && httpURLCheck {
+			if intervalCheck && timeoutCheck && httpURLCheck && sCustomCheck && statusCodeCheck {
 
 				// construct iput var
 				iv := ntPinger.InputVars{}
@@ -271,6 +366,7 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 				iv.Timeout = timeoutValue
 				iv.Interval = intervalValue
 				iv.Http_method = httpMethod
+				iv.Http_statusCodes = httpStatusCodes
 				iv.DestHost = httpInputVars.Hostname
 				iv.Http_path = httpInputVars.Path
 				iv.Http_scheme = httpInputVars.Scheme

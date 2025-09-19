@@ -68,11 +68,12 @@ Precompiled executables for **Windows**, **Linux**, and **macOS** are available 
    ```bash
    fyne package --name NTGUI
    ```
-   Or specific the App Version (Optional)
-   ```bash
-   fyne package -name NTGUI -appVersion <version>
-   ```
 
+   Or specific the App Version (Optional)
+
+   ```bash
+   fyne package --name NTGUI --appVersion <version>
+   ```
 3. The output will be a platform-native bundle (e.g., `.app`, `.exe`, or a package installer).
 
 ## Usage
@@ -108,10 +109,10 @@ Upon launching the application:
 
 This project is licensed under a **Personal-Use License**:
 
-- Free for individuals for personal, educational, or hobby use.  
-- Organizational or commercial use (including businesses, institutions, and government) requires a **commercial license**.  
+- Free for individuals for personal, educational, or hobby use.
+- Organizational or commercial use (including businesses, institutions, and government) requires a **commercial license**.
 
-To obtain a commercial license, please contact:  
+To obtain a commercial license, please contact:
 [dennis.jian@packetstreams.net](mailto:dennis.jian@packetstreams.net)
 
 See the [LICENSE](LICENSE) file for full terms and conditions.

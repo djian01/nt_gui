@@ -216,6 +216,21 @@ func NtCmd2Iv(cmd string) (recording bool, iv ntPinger.InputVars, err error) {
 		case "-s":
 			if i+1 < len(args) && iv.Type == "icmp" {
 				iv.PayLoadSize, _ = strconv.Atoi(args[i+1])
+			} else if iv.Type == "http" {
+				// HTTP Status Code
+				switch args[i+1] {
+				case "2xx":
+					iv.Http_statusCodes = append(iv.Http_statusCodes, ntPinger.HttpStatusCode{LowerCode: 200, UpperCode: 299})
+				case "3xx":
+					iv.Http_statusCodes = append(iv.Http_statusCodes, ntPinger.HttpStatusCode{LowerCode: 300, UpperCode: 399})
+				case "4xx":
+					iv.Http_statusCodes = append(iv.Http_statusCodes, ntPinger.HttpStatusCode{LowerCode: 400, UpperCode: 499})
+				case "5xx":
+					iv.Http_statusCodes = append(iv.Http_statusCodes, ntPinger.HttpStatusCode{LowerCode: 500, UpperCode: 599})
+				default:
+					sCustom, _ := strconv.Atoi(args[i+1])
+					iv.Http_statusCodes = append(iv.Http_statusCodes, ntPinger.HttpStatusCode{LowerCode: sCustom, UpperCode: sCustom})
+				}
 			}
 		case "-d":
 			if iv.Type == "icmp" {

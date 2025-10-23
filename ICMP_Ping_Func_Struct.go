@@ -202,7 +202,9 @@ func (d *icmpGUIRow) UpdateRow(p *ntPinger.Packet) {
 
 	// seq
 	d.Seq.Object.(*widget.Label).Text = strconv.Itoa((*p).(*ntPinger.PacketICMP).Seq)
-	d.Seq.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.Seq.Object.(*widget.Label).Refresh()
+	})
 
 	// status
 	d.Status.Object.(*canvas.Text).TextStyle.Bold = true
@@ -214,7 +216,9 @@ func (d *icmpGUIRow) UpdateRow(p *ntPinger.Packet) {
 		d.Status.Object.(*canvas.Text).Text = "Fail"
 		d.Status.Object.(*canvas.Text).Color = color.RGBA{255, 0, 0, 255}
 	}
-	d.Status.Object.(*canvas.Text).Refresh()
+	fyne.Do(func() {
+		d.Status.Object.(*canvas.Text).Refresh()
+	})
 
 	// Response Time
 	if (*p).(*ntPinger.PacketICMP).Status {
@@ -222,15 +226,22 @@ func (d *icmpGUIRow) UpdateRow(p *ntPinger.Packet) {
 	} else {
 		d.RTT.Object.(*widget.Label).Text = "--"
 	}
-	d.RTT.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.RTT.Object.(*widget.Label).Refresh()
+	})
 
 	// Fail Rate
 	d.Fail.Object.(*widget.Label).Text = fmt.Sprintf("%.2f%%", (*p).(*ntPinger.PacketICMP).PacketLoss*100)
-	d.Fail.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.Fail.Object.(*widget.Label).Refresh()
+	})
 
 	// AvgRTT
 	d.AvgRTT.Object.(*widget.Label).Text = (*p).(*ntPinger.PacketICMP).AvgRtt.String()
-	d.AvgRTT.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.AvgRTT.Object.(*widget.Label).Refresh()
+	})
+
 }
 
 // ******* struct icmpObject ********
@@ -264,7 +275,10 @@ func (d *icmpObject) UpdateRecording(recording bool) {
 		d.icmpGUI.Recording.Object.(*widget.Label).Text = "OFF"
 	}
 
-	d.icmpGUI.Recording.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.icmpGUI.Recording.Object.(*widget.Label).Refresh()
+	})
+
 }
 
 func (d *icmpObject) Initial(testSummary *SummaryData) {
@@ -304,7 +318,9 @@ func (d *icmpObject) Stop(p *ntPinger.Pinger) {
 
 	d.icmpGUI.Status.Object.(*canvas.Text).Text = "Stop"
 	d.icmpGUI.Status.Object.(*canvas.Text).Color = color.RGBA{165, 42, 42, 255}
-	d.icmpGUI.Status.Object.(*canvas.Text).Refresh()
+	fyne.Do(func() {
+		d.icmpGUI.Status.Object.(*canvas.Text).Refresh()
+	})
 
 	// Unregister test from test register
 	UnregisterTest(&testRegister, d.GetUUID())
@@ -352,23 +368,32 @@ func IcmpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, i
 	myPingIndex := strconv.Itoa(*indexPing)
 
 	myicmpPing.icmpGUI.Index.Object.(*widget.Label).Text = myPingIndex
-	myicmpPing.icmpGUI.Index.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myicmpPing.icmpGUI.Index.Object.(*widget.Label).Refresh()
+	})
+
 	*indexPing++
 
 	// Update HostName
 	testDestHost := inputVars.DestHost
 	myicmpPing.icmpGUI.HostName.Object.(*widget.Label).Text = testDestHost
-	myicmpPing.icmpGUI.HostName.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myicmpPing.icmpGUI.HostName.Object.(*widget.Label).Refresh()
+	})
 
 	// Update IP
 	DestHostIPSlide, _ := net.LookupHost(testDestHost) // ignore err check as resolvable is checked in the NewTest validation
 	myicmpPing.icmpGUI.IP.Object.(*widget.Label).Text = DestHostIPSlide[0]
 	(*inputVars).DestHost = DestHostIPSlide[0] // update the input Var DestHost to be IP Address
-	myicmpPing.icmpGUI.IP.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myicmpPing.icmpGUI.IP.Object.(*widget.Label).Refresh()
+	})
 
 	// Update Payload
 	myicmpPing.icmpGUI.Payload.Object.(*widget.Label).Text = strconv.Itoa(inputVars.PayLoadSize)
-	myicmpPing.icmpGUI.Payload.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myicmpPing.icmpGUI.Payload.Object.(*widget.Label).Refresh()
+	})
 
 	// Update DF
 	DfBit := "OFF"
@@ -378,11 +403,15 @@ func IcmpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, i
 		DfBit = "OFF"
 	}
 	myicmpPing.icmpGUI.DF.Object.(*widget.Label).Text = DfBit
-	myicmpPing.icmpGUI.DF.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myicmpPing.icmpGUI.DF.Object.(*widget.Label).Refresh()
+	})
 
 	// Update StartTime
 	myicmpPing.icmpGUI.StartTime.Object.(*widget.Label).Text = mySumData.StartTime.Format("2006-01-02 15:04:05 MST")
-	myicmpPing.icmpGUI.StartTime.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myicmpPing.icmpGUI.StartTime.Object.(*widget.Label).Refresh()
+	})
 
 	// update recording
 	if recording {
@@ -390,11 +419,15 @@ func IcmpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, i
 	} else {
 		myicmpPing.icmpGUI.Recording.Object.(*widget.Label).Text = "OFF"
 	}
-	myicmpPing.icmpGUI.Recording.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myicmpPing.icmpGUI.Recording.Object.(*widget.Label).Refresh()
+	})
 
 	// update table body
 	icmpTableBody.Add(myicmpPing.icmpGUI.icmpTableRow)
-	icmpTableBody.Refresh()
+	fyne.Do(func() {
+		icmpTableBody.Refresh()
+	})
 
 	// ** start ntPinger Probe **
 
@@ -434,7 +467,9 @@ func IcmpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, i
 	// OnTapped Func - close btn
 	myicmpPing.icmpGUI.CloseBtn.OnTapped = func() {
 		icmpTableBody.Remove(myicmpPing.icmpGUI.icmpTableRow)
-		icmpTableBody.Refresh()
+		fyne.Do(func() {
+			icmpTableBody.Refresh()
+		})
 	}
 
 	// start ping go routing

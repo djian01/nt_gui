@@ -57,8 +57,13 @@ func (c *Chart) Initial() {
 func (c *Chart) ChartUpdate(RaType string, chartData *[]ntchart.ChartPoint) {
 	c.chartImage.Image = ntchart.CreateChart(RaType, chartData)
 	c.chartImage.FillMode = canvas.ImageFillStretch
-	c.chartImage.Refresh()
-	c.chartContainer.Refresh()
+	fyne.Do(func() {
+		c.chartImage.Refresh()
+	})
+	fyne.Do(func() {
+		c.chartContainer.Refresh()
+	})
+
 }
 
 // ********* Summary Data ***************
@@ -280,18 +285,20 @@ func (sui *SummaryUI) CreateCard() {
 // Update Summary UI with all fields
 func (sui *SummaryUI) UpdateStaticUI(sd *SummaryData) {
 
-	// update summary UI
-	sui.typeEntry.SetText((*sd).Type)
-	sui.destHostEntry.SetText((*sd).DestHost)
-	sui.startTimeEntry.SetText((*sd).StartTime.Format(("2006-01-02 15:04:05 MST")))
-	sui.endTimeEntry.SetText((*sd).EndTime.Format(("2006-01-02 15:04:05 MST")))
-	sui.packetSentEntry.SetText(strconv.Itoa((*sd).PacketSent))
-	sui.successResponseEntry.SetText(strconv.Itoa((*sd).SuccessResponse))
-	sui.failRateEntry.SetText((*sd).FailRate)
-	sui.minRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MinRTT.Milliseconds()))
-	sui.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MaxRTT.Milliseconds()))
-	sui.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).AvgRTT.Milliseconds()))
-	sui.ntCmdEntry.SetText((*sd).ntCmd)
+	fyne.Do(func() {
+		// update summary UI
+		sui.typeEntry.SetText((*sd).Type)
+		sui.destHostEntry.SetText((*sd).DestHost)
+		sui.startTimeEntry.SetText((*sd).StartTime.Format(("2006-01-02 15:04:05 MST")))
+		sui.endTimeEntry.SetText((*sd).EndTime.Format(("2006-01-02 15:04:05 MST")))
+		sui.packetSentEntry.SetText(strconv.Itoa((*sd).PacketSent))
+		sui.successResponseEntry.SetText(strconv.Itoa((*sd).SuccessResponse))
+		sui.failRateEntry.SetText((*sd).FailRate)
+		sui.minRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MinRTT.Milliseconds()))
+		sui.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MaxRTT.Milliseconds()))
+		sui.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).AvgRTT.Milliseconds()))
+		sui.ntCmdEntry.SetText((*sd).ntCmd)
+	})
 
 	// ntCmdBtn
 	if !existingTestCheck(&testRegister, sd.GetUUID()) {
@@ -303,34 +310,45 @@ func (sui *SummaryUI) UpdateStaticUI(sd *SummaryData) {
 
 // Update Summary UI Initial - when the test is running.
 func (sui *SummaryUI) UpdateUI_Initial(sd *SummaryData) {
-	// update summary UI
-	sui.typeEntry.SetText((*sd).Type)
-	sui.destHostEntry.SetText((*sd).DestHost)
-	sui.startTimeEntry.SetText((*sd).StartTime.Format(("2006-01-02 15:04:05 MST")))
-	// s.UI.endTimeEntry.SetText("--")
-	// s.UI.packetSentEntry.SetText("--")
-	// s.UI.successResponseEntry.SetText("--")
-	// s.UI.failRateEntry.SetText("--")
-	// s.UI.minRttEntry.SetText("--")
-	// s.UI.maxRttEntry.SetText("--")
-	// s.UI.avgRttEntry.SetText("--")
-	sui.ntCmdEntry.SetText((*sd).ntCmd)
+
+	fyne.Do(func() {
+		// update summary UI
+		sui.typeEntry.SetText((*sd).Type)
+		sui.destHostEntry.SetText((*sd).DestHost)
+		sui.startTimeEntry.SetText((*sd).StartTime.Format(("2006-01-02 15:04:05 MST")))
+		// s.UI.endTimeEntry.SetText("--")
+		// s.UI.packetSentEntry.SetText("--")
+		// s.UI.successResponseEntry.SetText("--")
+		// s.UI.failRateEntry.SetText("--")
+		// s.UI.minRttEntry.SetText("--")
+		// s.UI.maxRttEntry.SetText("--")
+		// s.UI.avgRttEntry.SetText("--")
+		sui.ntCmdEntry.SetText((*sd).ntCmd)
+	})
+
 }
 
 // Update Summary UI Initial - when the test is running.
 func (sui *SummaryUI) UpdateUI_Running(sd *SummaryData) {
-	sui.packetSentEntry.SetText(strconv.Itoa((*sd).PacketSent))
-	sui.successResponseEntry.SetText(strconv.Itoa((*sd).SuccessResponse))
-	sui.failRateEntry.SetText((*sd).FailRate)
-	sui.minRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MinRTT.Milliseconds()))
-	sui.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MaxRTT.Milliseconds()))
-	sui.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).AvgRTT.Milliseconds()))
-	sui.addInfoEntry.SetText((*sd).AddInfo)
+
+	fyne.Do(func() {
+		sui.packetSentEntry.SetText(strconv.Itoa((*sd).PacketSent))
+		sui.successResponseEntry.SetText(strconv.Itoa((*sd).SuccessResponse))
+		sui.failRateEntry.SetText((*sd).FailRate)
+		sui.minRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MinRTT.Milliseconds()))
+		sui.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MaxRTT.Milliseconds()))
+		sui.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).AvgRTT.Milliseconds()))
+		sui.addInfoEntry.SetText((*sd).AddInfo)
+	})
+
 }
 
 // Update Summary UI Initial - when the test is ended.
 func (sui *SummaryUI) UpdateUI_Ended(sd *SummaryData) {
-	sui.endTimeEntry.SetText((*sd).EndTime.Format(("2006-01-02 15:04:05 MST")))
+
+	fyne.Do(func() {
+		sui.endTimeEntry.SetText((*sd).EndTime.Format(("2006-01-02 15:04:05 MST")))
+	})
 }
 
 // ********* Chart Update Slider ***************
@@ -387,9 +405,15 @@ func (s *Slider) CreateCard() {
 
 func (s *Slider) update() {
 	s.startValue.Text = (*s.chartData)[int(s.rangeSlider.Start)].XValues.Format("2006-01-02 15:04:05 MST")
-	s.startValue.Refresh()
+	fyne.Do(func() {
+		s.startValue.Refresh()
+	})
+
 	s.endValue.Text = (*s.chartData)[int(s.rangeSlider.End)].XValues.Format("2006-01-02 15:04:05 MST")
-	s.endValue.Refresh()
+	fyne.Do(func() {
+		s.endValue.Refresh()
+	})
+
 	s.rangeSlider.Layout(s.rangeSlider.Size())
 }
 

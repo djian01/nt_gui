@@ -192,7 +192,9 @@ func (d *httpGUIRow) UpdateRow(p *ntPinger.Packet) {
 
 	// seq
 	d.Seq.Object.(*widget.Label).Text = strconv.Itoa((*p).(*ntPinger.PacketHTTP).Seq)
-	d.Seq.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.Seq.Object.(*widget.Label).Refresh()
+	})
 
 	// status
 	d.Status.Object.(*canvas.Text).TextStyle.Bold = true
@@ -204,11 +206,17 @@ func (d *httpGUIRow) UpdateRow(p *ntPinger.Packet) {
 		d.Status.Object.(*canvas.Text).Text = "Fail"
 		d.Status.Object.(*canvas.Text).Color = color.RGBA{255, 0, 0, 255}
 	}
-	d.Status.Object.(*canvas.Text).Refresh()
+
+	fyne.Do(func() {
+		d.Status.Object.(*canvas.Text).Refresh()
+	})
 
 	// Response_Code
 	d.Response_Code.Object.(*widget.Label).Text = strconv.Itoa((*p).(*ntPinger.PacketHTTP).Http_response_code)
-	d.Response_Code.Object.(*widget.Label).Refresh()
+
+	fyne.Do(func() {
+		d.Response_Code.Object.(*widget.Label).Refresh()
+	})
 
 	// Response Time
 	if (*p).(*ntPinger.PacketHTTP).Status {
@@ -216,15 +224,25 @@ func (d *httpGUIRow) UpdateRow(p *ntPinger.Packet) {
 	} else {
 		d.Response_Time.Object.(*widget.Label).Text = "--"
 	}
-	d.Response_Time.Object.(*widget.Label).Refresh()
+
+	fyne.Do(func() {
+		d.Response_Time.Object.(*widget.Label).Refresh()
+	})
 
 	// Fail Rate
 	d.Fail.Object.(*widget.Label).Text = fmt.Sprintf("%.2f%%", (*p).(*ntPinger.PacketHTTP).PacketLoss*100)
-	d.Fail.Object.(*widget.Label).Refresh()
+
+	fyne.Do(func() {
+		d.Fail.Object.(*widget.Label).Refresh()
+	})
 
 	// AvgRTT
 	d.AvgRTT.Object.(*widget.Label).Text = (*p).(*ntPinger.PacketHTTP).AvgRtt.String()
-	d.AvgRTT.Object.(*widget.Label).Refresh()
+
+	fyne.Do(func() {
+		d.AvgRTT.Object.(*widget.Label).Refresh()
+	})
+
 }
 
 // ******* struct httpObject ********
@@ -258,7 +276,9 @@ func (d *httpObject) UpdateRecording(recording bool) {
 		d.httpGUI.Recording.Object.(*widget.Label).Text = "OFF"
 	}
 
-	d.httpGUI.Recording.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.httpGUI.Recording.Object.(*widget.Label).Refresh()
+	})
 }
 
 func (d *httpObject) Initial(testSummary *SummaryData) {
@@ -298,7 +318,10 @@ func (d *httpObject) Stop(p *ntPinger.Pinger) {
 
 	d.httpGUI.Status.Object.(*canvas.Text).Text = "Stop"
 	d.httpGUI.Status.Object.(*canvas.Text).Color = color.RGBA{165, 42, 42, 255}
-	d.httpGUI.Status.Object.(*canvas.Text).Refresh()
+
+	fyne.Do(func() {
+		d.httpGUI.Status.Object.(*canvas.Text).Refresh()
+	})
 
 	// Unregister test from test register
 	UnregisterTest(&testRegister, d.GetUUID())
@@ -346,21 +369,30 @@ func HttpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, h
 	myPingIndex := strconv.Itoa(*indexPing)
 
 	myhttpPing.httpGUI.Index.Object.(*widget.Label).Text = myPingIndex
-	myhttpPing.httpGUI.Index.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myhttpPing.httpGUI.Index.Object.(*widget.Label).Refresh()
+	})
+
 	*indexPing++
 
 	// Update Method
 	myhttpPing.httpGUI.Method.Object.(*widget.Label).Text = inputVars.Http_method
-	myhttpPing.httpGUI.Method.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myhttpPing.httpGUI.Method.Object.(*widget.Label).Refresh()
+	})
 
 	// Update URL
 	testURL := ConstructURL(inputVars.Http_scheme, inputVars.DestHost, inputVars.Http_path, inputVars.DestPort)
 	myhttpPing.httpGUI.URL.Object.(*widget.Label).Text = TruncateString(testURL, 42)
-	myhttpPing.httpGUI.URL.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myhttpPing.httpGUI.URL.Object.(*widget.Label).Refresh()
+	})
 
 	// Update StartTime
 	myhttpPing.httpGUI.StartTime.Object.(*widget.Label).Text = mySumData.StartTime.Format("2006-01-02 15:04:05 MST")
-	myhttpPing.httpGUI.StartTime.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myhttpPing.httpGUI.StartTime.Object.(*widget.Label).Refresh()
+	})
 
 	// update recording
 	if recording {
@@ -368,11 +400,15 @@ func HttpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, h
 	} else {
 		myhttpPing.httpGUI.Recording.Object.(*widget.Label).Text = "OFF"
 	}
-	myhttpPing.httpGUI.Recording.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myhttpPing.httpGUI.Recording.Object.(*widget.Label).Refresh()
+	})
 
 	// update table body
 	httpTableBody.Add(myhttpPing.httpGUI.httpTableRow)
-	httpTableBody.Refresh()
+	fyne.Do(func() {
+		httpTableBody.Refresh()
+	})
 
 	// ** start ntPinger Probe **
 
@@ -412,7 +448,11 @@ func HttpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, h
 	// OnTapped Func - close btn
 	myhttpPing.httpGUI.CloseBtn.OnTapped = func() {
 		httpTableBody.Remove(myhttpPing.httpGUI.httpTableRow)
-		httpTableBody.Refresh()
+
+		fyne.Do(func() {
+			httpTableBody.Refresh()
+		})
+
 	}
 
 	// start ping go routing

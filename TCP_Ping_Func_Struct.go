@@ -193,7 +193,9 @@ func (d *tcpGUIRow) UpdateRow(p *ntPinger.Packet) {
 
 	// seq
 	d.Seq.Object.(*widget.Label).Text = strconv.Itoa((*p).(*ntPinger.PacketTCP).Seq)
-	d.Seq.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.Seq.Object.(*widget.Label).Refresh()
+	})
 
 	// status
 	d.Status.Object.(*canvas.Text).TextStyle.Bold = true
@@ -205,7 +207,9 @@ func (d *tcpGUIRow) UpdateRow(p *ntPinger.Packet) {
 		d.Status.Object.(*canvas.Text).Text = "Fail"
 		d.Status.Object.(*canvas.Text).Color = color.RGBA{255, 0, 0, 255}
 	}
-	d.Status.Object.(*canvas.Text).Refresh()
+	fyne.Do(func() {
+		d.Status.Object.(*canvas.Text).Refresh()
+	})
 
 	// Response Time
 	if (*p).(*ntPinger.PacketTCP).Status {
@@ -213,15 +217,22 @@ func (d *tcpGUIRow) UpdateRow(p *ntPinger.Packet) {
 	} else {
 		d.RTT.Object.(*widget.Label).Text = "--"
 	}
-	d.RTT.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.RTT.Object.(*widget.Label).Refresh()
+	})
 
 	// Fail Rate
 	d.Fail.Object.(*widget.Label).Text = fmt.Sprintf("%.2f%%", (*p).(*ntPinger.PacketTCP).PacketLoss*100)
-	d.Fail.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.Fail.Object.(*widget.Label).Refresh()
+	})
 
 	// AvgRTT
 	d.AvgRTT.Object.(*widget.Label).Text = (*p).(*ntPinger.PacketTCP).AvgRtt.String()
-	d.AvgRTT.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.AvgRTT.Object.(*widget.Label).Refresh()
+	})
+
 }
 
 // ******* struct tcpObject ********
@@ -255,7 +266,10 @@ func (d *tcpObject) UpdateRecording(recording bool) {
 		d.tcpGUI.Recording.Object.(*widget.Label).Text = "OFF"
 	}
 
-	d.tcpGUI.Recording.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.tcpGUI.Recording.Object.(*widget.Label).Refresh()
+	})
+
 }
 
 func (d *tcpObject) Initial(testSummary *SummaryData) {
@@ -295,7 +309,9 @@ func (d *tcpObject) Stop(p *ntPinger.Pinger) {
 
 	d.tcpGUI.Status.Object.(*canvas.Text).Text = "Stop"
 	d.tcpGUI.Status.Object.(*canvas.Text).Color = color.RGBA{165, 42, 42, 255}
-	d.tcpGUI.Status.Object.(*canvas.Text).Refresh()
+	fyne.Do(func() {
+		d.tcpGUI.Status.Object.(*canvas.Text).Refresh()
+	})
 
 	// Unregister test from test register
 	UnregisterTest(&testRegister, d.GetUUID())
@@ -343,27 +359,38 @@ func TcpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, tc
 	myPingIndex := strconv.Itoa(*indexPing)
 
 	mytcpPing.tcpGUI.Index.Object.(*widget.Label).Text = myPingIndex
-	mytcpPing.tcpGUI.Index.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		mytcpPing.tcpGUI.Index.Object.(*widget.Label).Refresh()
+	})
+
 	*indexPing++
 
 	// Update HostName
 	testDestHost := inputVars.DestHost
 	mytcpPing.tcpGUI.HostName.Object.(*widget.Label).Text = testDestHost
-	mytcpPing.tcpGUI.HostName.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		mytcpPing.tcpGUI.HostName.Object.(*widget.Label).Refresh()
+	})
 
 	// Update IP
 	DestHostIPSlide, _ := net.LookupHost(testDestHost) // ignore err check as resolvable is checked in the NewTest validation
 	mytcpPing.tcpGUI.IP.Object.(*widget.Label).Text = DestHostIPSlide[0]
 	(*inputVars).DestHost = DestHostIPSlide[0] // update the input Var DestHost to be IP Address
-	mytcpPing.tcpGUI.IP.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		mytcpPing.tcpGUI.IP.Object.(*widget.Label).Refresh()
+	})
 
 	// Update Port
 	mytcpPing.tcpGUI.Port.Object.(*widget.Label).Text = strconv.Itoa(inputVars.DestPort)
-	mytcpPing.tcpGUI.Port.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		mytcpPing.tcpGUI.Port.Object.(*widget.Label).Refresh()
+	})
 
 	// Update StartTime
 	mytcpPing.tcpGUI.StartTime.Object.(*widget.Label).Text = mySumData.StartTime.Format("2006-01-02 15:04:05 MST")
-	mytcpPing.tcpGUI.StartTime.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		mytcpPing.tcpGUI.StartTime.Object.(*widget.Label).Refresh()
+	})
 
 	// update recording
 	if recording {
@@ -371,11 +398,15 @@ func TcpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, tc
 	} else {
 		mytcpPing.tcpGUI.Recording.Object.(*widget.Label).Text = "OFF"
 	}
-	mytcpPing.tcpGUI.Recording.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		mytcpPing.tcpGUI.Recording.Object.(*widget.Label).Refresh()
+	})
 
 	// update table body
 	tcpTableBody.Add(mytcpPing.tcpGUI.tcpTableRow)
-	tcpTableBody.Refresh()
+	fyne.Do(func() {
+		tcpTableBody.Refresh()
+	})
 
 	// ** start ntPinger Probe **
 
@@ -415,7 +446,9 @@ func TcpAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, tc
 	// OnTapped Func - close btn
 	mytcpPing.tcpGUI.CloseBtn.OnTapped = func() {
 		tcpTableBody.Remove(mytcpPing.tcpGUI.tcpTableRow)
-		tcpTableBody.Refresh()
+		fyne.Do(func() {
+			tcpTableBody.Refresh()
+		})
 	}
 
 	// start ping go routing

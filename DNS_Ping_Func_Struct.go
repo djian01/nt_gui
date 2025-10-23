@@ -191,7 +191,9 @@ func (d *dnsGUIRow) UpdateRow(p *ntPinger.Packet) {
 
 	// seq
 	d.Seq.Object.(*widget.Label).Text = strconv.Itoa((*p).(*ntPinger.PacketDNS).Seq)
-	d.Seq.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.Seq.Object.(*widget.Label).Refresh()
+	})
 
 	// status
 	d.Status.Object.(*canvas.Text).TextStyle.Bold = true
@@ -203,12 +205,16 @@ func (d *dnsGUIRow) UpdateRow(p *ntPinger.Packet) {
 		d.Status.Object.(*canvas.Text).Text = "Fail"
 		d.Status.Object.(*canvas.Text).Color = color.RGBA{255, 0, 0, 255}
 	}
-	d.Status.Object.(*canvas.Text).Refresh()
+	fyne.Do(func() {
+		d.Status.Object.(*canvas.Text).Refresh()
+	})
 
 	// Response
 	d.Response.Object.(*widget.Label).Text = (*p).(*ntPinger.PacketDNS).Dns_response
 	d.Response.Object.(*widget.Label).Wrapping = fyne.TextWrap(fyne.TextTruncateClip)
-	d.Response.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.Response.Object.(*widget.Label).Refresh()
+	})
 
 	// RTT
 	if (*p).(*ntPinger.PacketDNS).Status {
@@ -216,15 +222,21 @@ func (d *dnsGUIRow) UpdateRow(p *ntPinger.Packet) {
 	} else {
 		d.RTT.Object.(*widget.Label).Text = "--"
 	}
-	d.RTT.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.RTT.Object.(*widget.Label).Refresh()
+	})
 
 	// Fail Rate
 	d.Fail.Object.(*widget.Label).Text = fmt.Sprintf("%.2f%%", (*p).(*ntPinger.PacketDNS).PacketLoss*100)
-	d.Fail.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.Fail.Object.(*widget.Label).Refresh()
+	})
 
 	// AvgRTT
 	d.AvgRTT.Object.(*widget.Label).Text = (*p).(*ntPinger.PacketDNS).AvgRtt.String()
-	d.AvgRTT.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		d.AvgRTT.Object.(*widget.Label).Refresh()
+	})
 }
 
 // ******* struct dnsObject ********
@@ -257,8 +269,10 @@ func (d *dnsObject) UpdateRecording(recording bool) {
 	} else {
 		d.DnsGUI.Recording.Object.(*widget.Label).Text = "OFF"
 	}
+	fyne.Do(func() {
+		d.DnsGUI.Recording.Object.(*widget.Label).Refresh()
+	})
 
-	d.DnsGUI.Recording.Object.(*widget.Label).Refresh()
 }
 
 func (d *dnsObject) Initial(testSummary *SummaryData) {
@@ -298,7 +312,9 @@ func (d *dnsObject) Stop(p *ntPinger.Pinger) {
 
 	d.DnsGUI.Status.Object.(*canvas.Text).Text = "Stop"
 	d.DnsGUI.Status.Object.(*canvas.Text).Color = color.RGBA{165, 42, 42, 255}
-	d.DnsGUI.Status.Object.(*canvas.Text).Refresh()
+	fyne.Do(func() {
+		d.DnsGUI.Status.Object.(*canvas.Text).Refresh()
+	})
 
 	// Unregister test from test register
 	UnregisterTest(&testRegister, d.GetUUID())
@@ -346,20 +362,29 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	myPingIndex := strconv.Itoa(*indexPing)
 
 	myDnsPing.DnsGUI.Index.Object.(*widget.Label).Text = myPingIndex
-	myDnsPing.DnsGUI.Index.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myDnsPing.DnsGUI.Index.Object.(*widget.Label).Refresh()
+	})
+
 	*indexPing++
 
 	// Update Resolver
 	myDnsPing.DnsGUI.Resolver.Object.(*widget.Label).Text = TruncateString(inputVars.DestHost, 22)
-	myDnsPing.DnsGUI.Resolver.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myDnsPing.DnsGUI.Resolver.Object.(*widget.Label).Refresh()
+	})
 
 	// Update DNS Query
 	myDnsPing.DnsGUI.Query.Object.(*widget.Label).Text = TruncateString(inputVars.Dns_query, 25)
-	myDnsPing.DnsGUI.Query.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myDnsPing.DnsGUI.Query.Object.(*widget.Label).Refresh()
+	})
 
 	// Update StartTime
 	myDnsPing.DnsGUI.StartTime.Object.(*widget.Label).Text = mySumData.StartTime.Format("2006-01-02 15:04:05 MST")
-	myDnsPing.DnsGUI.StartTime.Object.(*widget.Label).Refresh()
+	fyne.Do(func() {
+		myDnsPing.DnsGUI.StartTime.Object.(*widget.Label).Refresh()
+	})
 
 	// update recording
 	if recording {
@@ -367,11 +392,16 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	} else {
 		myDnsPing.DnsGUI.Recording.Object.(*widget.Label).Text = "OFF"
 	}
-	myDnsPing.DnsGUI.Recording.Object.(*widget.Label).Refresh()
+
+	fyne.Do(func() {
+		myDnsPing.DnsGUI.Recording.Object.(*widget.Label).Refresh()
+	})
 
 	// update table body
 	dnsTableBody.Add(myDnsPing.DnsGUI.DnsTableRow)
-	dnsTableBody.Refresh()
+	fyne.Do(func() {
+		dnsTableBody.Refresh()
+	})
 
 	// ** start ntPinger Probe **
 
@@ -411,7 +441,10 @@ func DnsAddPingRow(a fyne.App, indexPing *int, inputVars *ntPinger.InputVars, dn
 	// OnTapped Func - close btn
 	myDnsPing.DnsGUI.CloseBtn.OnTapped = func() {
 		dnsTableBody.Remove(myDnsPing.DnsGUI.DnsTableRow)
-		dnsTableBody.Refresh()
+		fyne.Do(func() {
+			dnsTableBody.Refresh()
+		})
+
 	}
 
 	// start ping go routing

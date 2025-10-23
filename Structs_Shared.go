@@ -76,6 +76,7 @@ type SummaryData struct {
 	AvgRTT          time.Duration
 	ntCmd           string
 	uuid            string
+	AddInfo         string
 	//testEnded       bool
 }
 
@@ -100,6 +101,7 @@ func (sd *SummaryData) UpdateRunning(p *ntPinger.Packet) {
 		sd.MinRTT = myPacket.MinRtt
 		sd.MaxRTT = myPacket.MaxRtt
 		sd.AvgRTT = myPacket.AvgRtt
+		sd.AddInfo = myPacket.AdditionalInfo
 	case "http":
 		myPacket := (*p).(*ntPinger.PacketHTTP)
 		sd.PacketSent = myPacket.PacketsSent
@@ -108,6 +110,7 @@ func (sd *SummaryData) UpdateRunning(p *ntPinger.Packet) {
 		sd.MinRTT = myPacket.MinRtt
 		sd.MaxRTT = myPacket.MaxRtt
 		sd.AvgRTT = myPacket.AvgRtt
+		sd.AddInfo = myPacket.AdditionalInfo
 	case "tcp":
 		myPacket := (*p).(*ntPinger.PacketTCP)
 		sd.PacketSent = myPacket.PacketsSent
@@ -116,6 +119,7 @@ func (sd *SummaryData) UpdateRunning(p *ntPinger.Packet) {
 		sd.MinRTT = myPacket.MinRtt
 		sd.MaxRTT = myPacket.MaxRtt
 		sd.AvgRTT = myPacket.AvgRtt
+		sd.AddInfo = myPacket.AdditionalInfo
 	case "icmp":
 		myPacket := (*p).(*ntPinger.PacketICMP)
 		sd.PacketSent = myPacket.PacketsSent
@@ -124,7 +128,7 @@ func (sd *SummaryData) UpdateRunning(p *ntPinger.Packet) {
 		sd.MinRTT = myPacket.MinRtt
 		sd.MaxRTT = myPacket.MaxRtt
 		sd.AvgRTT = myPacket.AvgRtt
-
+		sd.AddInfo = myPacket.AdditionalInfo
 	}
 }
 
@@ -194,6 +198,9 @@ type SummaryUI struct {
 	avgRttLabel *widget.Label
 	avgRttEntry *widget.Entry
 
+	addInfoLabel *widget.Label
+	addInfoEntry *widget.Entry
+
 	ntCmdLabel *widget.Label
 	ntCmdEntry *widget.Entry
 	ntCmdBtn   *widget.Button
@@ -211,7 +218,7 @@ func (sui *SummaryUI) Initial() {
 	sui.startTimeLabel = widget.NewLabel("Start Time    ")
 	sui.startTimeEntry = widget.NewEntry()
 
-	sui.endTimeLabel = widget.NewLabel("End Time      ")
+	sui.endTimeLabel = widget.NewLabel("End Time         ")
 	sui.endTimeEntry = widget.NewEntry()
 
 	sui.packetSentLabel = widget.NewLabel("Packets Sent")
@@ -231,6 +238,9 @@ func (sui *SummaryUI) Initial() {
 
 	sui.avgRttLabel = widget.NewLabel("Avg RTT     ")
 	sui.avgRttEntry = widget.NewEntry()
+
+	sui.addInfoLabel = widget.NewLabel("Info            ")
+	sui.addInfoEntry = widget.NewEntry()
 
 	sui.ntCmdLabel = widget.NewLabel("nt CMD         ")
 	sui.ntCmdEntry = widget.NewEntry()
@@ -253,10 +263,11 @@ func (sui *SummaryUI) CreateCard() {
 	maxRttContainer := container.New(layout.NewBorderLayout(nil, nil, sui.maxRttLabel, nil), sui.maxRttLabel, sui.maxRttEntry)
 	avgRttContainer := container.New(layout.NewBorderLayout(nil, nil, sui.avgRttLabel, nil), sui.avgRttLabel, sui.avgRttEntry)
 	ntCmdContainer := container.New(layout.NewBorderLayout(nil, nil, sui.ntCmdLabel, nil), sui.ntCmdLabel, sui.ntCmdEntry)
+	addInfoContainer := container.New(layout.NewBorderLayout(nil, nil, sui.addInfoLabel, nil), sui.addInfoLabel, sui.addInfoEntry)
 
 	// rows
 	summaryRow1 := container.New(layout.NewGridLayoutWithColumns(2), typeContainer, destHostContainer)
-	summaryRow2 := container.New(layout.NewGridLayoutWithColumns(2), startTimeContainer, endTimeContainer)
+	summaryRow2 := container.New(layout.NewGridLayoutWithColumns(3), startTimeContainer, endTimeContainer, addInfoContainer)
 	summaryRow3 := container.New(layout.NewGridLayoutWithColumns(3), packetSentContainer, successRespContainer, failRateContainer)
 	summaryRow4 := container.New(layout.NewGridLayoutWithColumns(3), minRttContainer, maxRttContainer, avgRttContainer)
 	summaryRow5 := container.New(layout.NewBorderLayout(nil, nil, nil, sui.ntCmdBtn), sui.ntCmdBtn, ntCmdContainer)
@@ -314,6 +325,7 @@ func (sui *SummaryUI) UpdateUI_Running(sd *SummaryData) {
 	sui.minRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MinRTT.Milliseconds()))
 	sui.maxRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).MaxRTT.Milliseconds()))
 	sui.avgRttEntry.SetText(fmt.Sprintf("%d ms", (*sd).AvgRTT.Milliseconds()))
+	sui.addInfoEntry.SetText((*sd).AddInfo)
 }
 
 // Update Summary UI Initial - when the test is ended.

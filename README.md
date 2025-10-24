@@ -12,6 +12,12 @@
 - **TCP Ping**: Check the availability of specific TCP ports on target hosts.
 - **DNS Ping**: Resolve domain names and measure DNS query response times.
 - **HTTP Ping**: Send HTTP requests to endpoints and monitor response metrics.
+- **HTTP Proxy Option**:  
+  Configure HTTP/HTTPS proxy settings (server, port, username, and password).  
+  - Supports both **HTTP** and **HTTPS** proxies.  
+  - Automatically performs **DNS resolution checks** on proxy hosts.  
+  - Credentials are safely **URL-encoded** for secure proxy authentication.  
+  - Optional proxy authentication for enterprise networks. 
 - **Result Visualization**: View test results through interactive charts and graphs.
 - **History Management**: Access and analyze past test results.
 - **CSV Export**: Export test data for external analysis or record-keeping.

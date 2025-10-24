@@ -37,12 +37,10 @@ func NewRangeSlider(min, max, start, end float64) *RangeSlider {
 		Max:           max,
 		Start:         start,
 		End:           end,
-		barBackground: canvas.NewRectangle(color.Gray{Y: 200}), // Light grey
-		barRange:      canvas.NewRectangle(color.Gray{Y: 100}), // Dark grey
-		startHandle:   canvas.NewCircle(color.Gray{Y: 100}),    // Dark grey
-		endHandle:     canvas.NewCircle(color.Gray{Y: 100}),    // Dark grey
-		// startHandle:   canvas.NewCircle(color.NRGBA{R: 200, G: 50, B: 50, A: 255}),  // Red
-		// endHandle:     canvas.NewCircle(color.NRGBA{R: 50, G: 200, B: 50, A: 255}),  // Green
+		barBackground: canvas.NewRectangle(color.Gray{Y: 200}),                      // Light grey
+		barRange:      canvas.NewRectangle(color.Gray{Y: 100}),                      // Dark grey
+		startHandle:   canvas.NewCircle(color.NRGBA{R: 30, G: 144, B: 255, A: 255}), // Blue (DodgerBlue)
+		endHandle:     canvas.NewCircle(color.NRGBA{R: 30, G: 144, B: 255, A: 255}), // Blue (DodgerBlue)
 	}
 	rs.ExtendBaseWidget(rs)
 	return rs
@@ -59,7 +57,7 @@ func (rs *RangeSlider) UpdateValues(min, max, start, end float64) {
 // Layout positions/size the components, ensuring the handles are circular
 func (rs *RangeSlider) Layout(size fyne.Size) {
 	barHeight := float32(4)
-	rs.handleDiameter = 20 // Diameter of circular handle
+	rs.handleDiameter = 26 // larger circular handle (previously 20)
 
 	// Set full-width background bar (light grey)
 	rs.barBackground.Resize(fyne.NewSize(size.Width, barHeight))
@@ -73,11 +71,11 @@ func (rs *RangeSlider) Layout(size fyne.Size) {
 	rs.barRange.Resize(fyne.NewSize(endX-startX, barHeight))
 	rs.barRange.Move(fyne.NewPos(startX, size.Height/2-barHeight/2))
 
-	// Start handle size/position (circle)
+	// Start handle
 	rs.startHandle.Resize(fyne.NewSize(rs.handleDiameter, rs.handleDiameter))
 	rs.startHandle.Move(fyne.NewPos(startX-rs.handleDiameter/2, size.Height/2-rs.handleDiameter/2))
 
-	// End handle size/position (circle)
+	// End handle
 	rs.endHandle.Resize(fyne.NewSize(rs.handleDiameter, rs.handleDiameter))
 	rs.endHandle.Move(fyne.NewPos(endX-rs.handleDiameter/2, size.Height/2-rs.handleDiameter/2))
 }

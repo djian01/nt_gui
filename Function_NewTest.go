@@ -15,6 +15,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/djian01/nt/pkg/ntPinger"
 	"github.com/djian01/nt_gui/pkg/ntdb"
+	"github.com/djian01/nt_gui/pkg/ntwidget"
 )
 
 // func: New Test Input
@@ -95,15 +96,25 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 
 	// recording
 	recording := false
-	recordingLabel := widget.NewLabel("Result Recording:")
-	recordingCheck := widget.NewCheck("", func(b bool) {
+	recordingLabel := widget.NewLabel("Result Recording OFF")
+	recordingSwitch := ntwidget.NewToggleswitch(false, func(b bool) {
 		recording = b
+		if b {
+			fyne.Do(func() {
+				recordingLabel.SetText("Result Recording ON")
+			})
+		} else {
+			fyne.Do(func() {
+				recordingLabel.SetText("Result Recording OFF")
+			})
+		}
 	})
-	recordingCell := formCell(recordingLabel, 150, recordingCheck, 50)
+
+	recordingRow := ntwidget.ToggleRow(recordingSwitch, recordingLabel, 520) // set rowW to match your form width
 
 	// common Container
 	commonContainerSub := formCell(intervalCell, 250, timeoutCell, 250)
-	commonContainer := container.NewVBox(recordingCell, commonContainerSub)
+	commonContainer := container.NewVBox(recordingRow, commonContainerSub)
 
 	// Specific Vars
 	specificContainer := container.NewVBox()
@@ -204,14 +215,68 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 	case "http":
 
 		// update the New Test Window Size
-		newTestWindow.Resize(fyne.NewSize(710, 300))
+		newTestWindow.Resize(fyne.NewSize(710, 840))
 
-		// HTTP Method protocol
-		httpMethod := "GET"
-		httpMethodLabel := widget.NewLabel("HTTP Method:")
-		httpMethodSelect := widget.NewSelect([]string{"GET", "PUT", "POST"}, func(s string) { httpMethod = s })
-		httpMethodSelect.Selected = "GET"
-		httpMethodCell := formCell(httpMethodLabel, 100, httpMethodSelect, 150)
+		// HTTP Proxy
+		// recording
+		httpProxyFlag := false
+		httpProxyStr := "none"
+
+		//// HTTP Proxy Form
+		// create entries
+		proxyServerEntry := widget.NewEntry()
+		proxyServerEntry.SetPlaceHolder("Example: http://proxy.example.com")
+
+		proxyPortEntry := widget.NewEntry()
+		proxyPortEntry.SetPlaceHolder("Example: 8080")
+
+		proxyUserEntry := widget.NewEntry()
+		proxyUserEntry.SetPlaceHolder("Optional")
+
+		proxyPassEntry := widget.NewPasswordEntry()
+		proxyPassEntry.SetPlaceHolder("Optional")
+
+		// create labeled rows
+		proxyServerRow := formCell(widget.NewLabel("Proxy Server:"), 130, proxyServerEntry, 450)
+		proxyPortRow := formCell(widget.NewLabel("Proxy Port:"), 130, proxyPortEntry, 250)
+		proxyUserRow := formCell(widget.NewLabel("Proxy Username:"), 130, proxyUserEntry, 250)
+		proxyPassRow := formCell(widget.NewLabel("Proxy Password:"), 130, proxyPassEntry, 250)
+
+		// group them together
+		proxyForm := container.NewVBox(
+			proxyServerRow,
+			proxyPortRow,
+			//proxyServerPortRow,
+			proxyUserRow,
+			proxyPassRow,
+		)
+
+		proxyForm.Hidden = true
+
+		//// HTTP Proxy Switch
+
+		httpProxyLabel := widget.NewLabel("Use HTTP Proxy: OFF")
+		httpProxySwitch := ntwidget.NewToggleswitch(false, func(b bool) {
+			httpProxyFlag = b
+			if b {
+				fyne.Do(func() {
+					proxyForm.Hidden = false
+					httpProxyLabel.SetText("Use HTTP Proxy: ON")
+				})
+			} else {
+				fyne.Do(func() {
+					proxyForm.Hidden = true
+					httpProxyLabel.SetText("Use HTTP Proxy: OFF")
+				})
+			}
+		})
+
+		httpProxySwitchRow := ntwidget.ToggleRow(httpProxySwitch, httpProxyLabel, 520) // set rowW to match your form width
+
+		httpProxyContainer := container.NewVBox(httpProxySwitchRow, proxyForm)
+		httpProxyCard := widget.NewCard("", "", httpProxyContainer)
+
+		specificContainer.Add(httpProxyCard)
 
 		// HTTP Status Codes
 		httpStatusLabel := widget.NewLabel("Expected HTTP Status Codes:")
@@ -219,20 +284,20 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 		s2xxLabel := widget.NewLabel("2xx")
 		s2xxCheck := widget.NewCheck("", func(b bool) {})
 		s2xxCheck.SetChecked(true)
-		s2xxCell := formCell(s2xxLabel, 30, s2xxCheck, 60)
+		s2xxCell := formCell(s2xxLabel, 30, s2xxCheck, 80)
 
 		s3xxLabel := widget.NewLabel("3xx")
 		s3xxCheck := widget.NewCheck("", func(b bool) {})
 		s3xxCheck.SetChecked(true)
-		s3xxCell := formCell(s3xxLabel, 30, s3xxCheck, 60)
+		s3xxCell := formCell(s3xxLabel, 30, s3xxCheck, 80)
 
 		s4xxLabel := widget.NewLabel("4xx")
 		s4xxCheck := widget.NewCheck("", func(b bool) {})
-		s4xxCell := formCell(s4xxLabel, 30, s4xxCheck, 60)
+		s4xxCell := formCell(s4xxLabel, 30, s4xxCheck, 80)
 
 		s5xxLabel := widget.NewLabel("5xx")
 		s5xxCheck := widget.NewCheck("", func(b bool) {})
-		s5xxCell := formCell(s5xxLabel, 30, s5xxCheck, 60)
+		s5xxCell := formCell(s5xxLabel, 30, s5xxCheck, 80)
 
 		sCustomLabel := widget.NewLabel("Custom (Optional)")
 		sCustomCheck := true
@@ -268,6 +333,13 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 		httpStatusCard := widget.NewCard("", "", httpStatusOutContainer)
 
 		specificContainer.Add(httpStatusCard)
+
+		// HTTP Method protocol
+		httpMethod := "GET"
+		httpMethodLabel := widget.NewLabel("HTTP Method:")
+		httpMethodSelect := widget.NewSelect([]string{"GET", "PUT", "POST"}, func(s string) { httpMethod = s })
+		httpMethodSelect.Selected = "GET"
+		httpMethodCell := formCell(httpMethodLabel, 100, httpMethodSelect, 150)
 
 		// URL
 		httpURLCheck := false
@@ -333,6 +405,26 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 				}
 			}
 
+			// HTTP Proxy Check and httpProxyStr creation
+			httpProxycheck := false
+
+			if httpProxyFlag {
+				httpProxyStr, err = BuildProxyURL(proxyServerEntry.Text, proxyPortEntry.Text, proxyUserEntry.Text, proxyPassEntry.Text)
+				if err != nil {
+					errMsg.Text = err.Error()
+					fyne.Do(func() {
+						errMsg.Refresh()
+					})
+					return
+				} else {
+					httpProxycheck = true
+				}
+
+			} else {
+				httpProxycheck = true
+				httpProxyStr = "none"
+			}
+
 			// Status Code Check
 			if s2xxCheck.Checked {
 				httpStatusCodes = append(httpStatusCodes, ntPinger.HttpStatusCode{LowerCode: 200, UpperCode: 299})
@@ -353,11 +445,13 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 
 			if !statusCodeCheck {
 				errMsg.Text = "Please Select at least one HTTP Status Code!"
-				errMsg.Refresh()
+				fyne.Do(func() {
+					errMsg.Refresh()
+				})
 				return
 			}
 			// validation check
-			if intervalCheck && timeoutCheck && httpURLCheck && sCustomCheck && statusCodeCheck {
+			if intervalCheck && timeoutCheck && httpURLCheck && sCustomCheck && statusCodeCheck && httpProxycheck {
 
 				// construct iput var
 				iv := ntPinger.InputVars{}
@@ -371,6 +465,7 @@ func NewTest(a fyne.App, testType string, db *sql.DB, entryChan chan ntdb.DbEntr
 				iv.Http_path = httpInputVars.Path
 				iv.Http_scheme = httpInputVars.Scheme
 				iv.DestPort = httpInputVars.Port
+				iv.Http_proxy = httpProxyStr
 
 				// start test
 				go HttpAddPingRow(a, &ntGlobal.httpIndex, &iv, ntGlobal.httpTable, recording, db, entryChan, errChan)

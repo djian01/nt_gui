@@ -118,11 +118,21 @@ func Iv2NtCmd(recording bool, iv ntPinger.InputVars) string {
 			}
 		}
 
+		// Http Proxy
+		CmdHttpProxy := ""
+		if iv.Http_proxy != "none" {
+			CmdHttpProxy = fmt.Sprintf(" -x %s", iv.Http_proxy)
+		}
+
 		// Http URL
 		httpUrl := ntPinger.ConstructURL(iv.Http_scheme, iv.DestHost, iv.Http_path, iv.DestPort)
 
 		// ntCmd
-		ntCmd = fmt.Sprintf("nt%s http%s%s%s%s %s", CmdRecording, CmdHttpMethod, CmdHttpStatusCode, CmdInterval, CmdTimeout, httpUrl)
+		if iv.Http_proxy != "none" {
+			ntCmd = fmt.Sprintf("nt%s http%s%s%s%s%s %s", CmdRecording, CmdHttpMethod, CmdHttpStatusCode, CmdInterval, CmdTimeout, CmdHttpProxy, httpUrl)
+		} else {
+			ntCmd = fmt.Sprintf("nt%s http%s%s%s%s %s", CmdRecording, CmdHttpMethod, CmdHttpStatusCode, CmdInterval, CmdTimeout, httpUrl)
+		}
 
 	case "tcp":
 		// Interval
@@ -297,18 +307,32 @@ func parseURL(urlStr string) *url.URL {
 	return link
 }
 
-// func: create a 2 x Column form cell
-func formCell(obj1 fyne.CanvasObject, length1 float32, obj2 fyne.CanvasObject, length2 float32) *fyne.Container {
-	// object 1
-	obj1Container := container.New(layout.NewGridWrapLayout(fyne.NewSize(length1, 40)), obj1)
+// create a 2-column form cell (fixed widths), vertically centered in the same row
+func formCell(obj1 fyne.CanvasObject, width1 float32, obj2 fyne.CanvasObject, width2 float32) *fyne.Container {
+	// the default row hight is 28
+	h := float32(28)
 
-	// object 2
-	obj2Container := container.New(layout.NewGridWrapLayout(fyne.NewSize(length2, 40)), obj2)
+	if s := obj1.MinSize().Height; s > h {
+		h = s
+	}
+	if s := obj2.MinSize().Height; s > h {
+		h = s
+	}
 
-	// form Cell Container
+	// Left column: fixed size, center contents (good for labels/switches)
+	col1 := container.New(
+		layout.NewGridWrapLayout(fyne.NewSize(width1, h)),
+		//container.NewCenter(obj1),
+		container.NewBorder(nil, nil, nil, nil, obj1), // left align instead of center
+	)
 
-	formCellContainer := container.New(layout.NewHBoxLayout(), obj1Container, obj2Container)
-	return formCellContainer
+	// Right column: fixed size, make contents fill the cell (good for Entry)
+	col2 := container.New(
+		layout.NewGridWrapLayout(fyne.NewSize(width2, h)),
+		container.NewStack(obj2), // replaces NewMax
+	)
+
+	return container.New(layout.NewHBoxLayout(), col1, col2)
 }
 
 // func: ValidateAndResolve checks if the input string is a valid IP or a resolvable DNS name

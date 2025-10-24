@@ -4,7 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"image/color"
+	"net"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -531,4 +534,61 @@ func ConstructURL(Http_scheme, DestHost, Http_path string, DestPort int) string 
 		}
 	}
 	return url
+}
+
+// BuildProxyURL builds a proxy URL string like:
+//
+//	http(s)://username:password@proxyserver:port
+//
+// Automatically encodes credentials, verifies DNS, and
+// defaults to port 80 (http) or 443 (https) if port is empty.
+func BuildProxyURL(rawHost, port, username, password string) (string, error) {
+	// --- 0. Sanitize input: trim whitespace ---
+	rawHost = strings.TrimSpace(rawHost)
+	port = strings.TrimSpace(port)
+	username = strings.TrimSpace(username)
+	password = strings.TrimSpace(password)
+
+	// --- 1. Parse and normalize scheme ---
+	if !strings.HasPrefix(rawHost, "http://") && !strings.HasPrefix(rawHost, "https://") {
+		rawHost = "http://" + rawHost // default scheme
+	}
+
+	u, err := url.Parse(rawHost)
+	if err != nil {
+		return "", fmt.Errorf("invalid proxy host: %w", err)
+	}
+
+	scheme := u.Scheme
+	host := u.Hostname()
+
+	// --- 2. Default port logic ---
+	if port == "" {
+		if scheme == "https" {
+			port = "443"
+		} else {
+			port = "80"
+		}
+	}
+
+	// --- 3. DNS resolution check ---
+	if _, err := net.LookupHost(host); err != nil {
+		return "", fmt.Errorf("cannot resolve proxy host %q: %w", host, err)
+	}
+
+	// --- 4. Construct encoded proxy URL ---
+	proxyURL := &url.URL{
+		Scheme: scheme,
+		Host:   net.JoinHostPort(host, port),
+	}
+
+	if username != "" {
+		if password != "" {
+			proxyURL.User = url.UserPassword(username, password)
+		} else {
+			proxyURL.User = url.User(username)
+		}
+	}
+
+	return proxyURL.String(), nil
 }

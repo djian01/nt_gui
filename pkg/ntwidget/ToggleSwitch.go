@@ -91,7 +91,9 @@ func (s *Switch) TypedKey(ev *fyne.KeyEvent) {
 	}
 }
 
-// --- Rendering ---------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Rendering
+// -----------------------------------------------------------------------------
 
 type switchRenderer struct {
 	s     *Switch
@@ -102,7 +104,7 @@ type switchRenderer struct {
 	objs        []fyne.CanvasObject
 	lastSize    fyne.Size
 	prevChecked bool
-	anim        *fyne.Animation // <- NOTE: fyne.Animation, not canvas.Animation
+	anim        *fyne.Animation
 }
 
 func (s *Switch) CreateRenderer() fyne.WidgetRenderer {
@@ -145,7 +147,6 @@ func (r *switchRenderer) Layout(sz fyne.Size) {
 func (r *switchRenderer) MinSize() fyne.Size {
 	h := theme.IconInlineSize()*0.8 + theme.Padding()*2
 	w := h * 2
-
 	return fyne.NewSize(w, h)
 }
 
@@ -157,19 +158,45 @@ func (r *switchRenderer) Refresh() {
 	disabledCol := theme.Color(theme.ColorNameDisabled)
 	focusCol := theme.Color(theme.ColorNameFocus)
 
+	// OFF-state tuning (adjust if desired)
+	offFillAlpha := uint8(150) // brightness of OFF track in dark mode
+
 	if isDisabled(r.s) {
 		r.track.FillColor = disabledCol
+		r.track.StrokeWidth = 0
+		r.track.StrokeColor = color.Transparent
+
 	} else if r.s.Checked {
 		r.track.FillColor = primary
+		r.track.StrokeWidth = 0
+		r.track.StrokeColor = color.Transparent
+
 	} else {
-		r.track.FillColor = blendNRGBA(toNRGBA(bg), color.NRGBA{0, 0, 0, 32})
+		base := toNRGBA(bg)
+
+		if isDarkBackground(bg) {
+			// VERY visible OFF state in dark mode
+			r.track.FillColor = blendNRGBA(
+				base,
+				color.NRGBA{255, 255, 255, offFillAlpha}, // bright enough without border
+			)
+			r.track.StrokeWidth = 0
+			r.track.StrokeColor = color.Transparent
+		} else {
+			// subtle OFF in light mode
+			r.track.FillColor = blendNRGBA(base, color.NRGBA{0, 0, 0, 32})
+			r.track.StrokeWidth = 0
+			r.track.StrokeColor = color.Transparent
+		}
 	}
 	r.track.Refresh()
 
+	// Knob
 	r.knob.FillColor = bg
 	r.knob.StrokeWidth = 0
 	r.knob.Refresh()
 
+	// Focus ring
 	if r.s.hasFocus && !isDisabled(r.s) {
 		r.focus.FillColor = withAlpha(focusCol, 48)
 	} else {
@@ -177,7 +204,7 @@ func (r *switchRenderer) Refresh() {
 	}
 	r.focus.Refresh()
 
-	// Animate knob if state changed
+	// Animate knob movement
 	if r.prevChecked != r.s.Checked && r.lastSize.Width > 0 {
 		if r.anim != nil {
 			r.anim.Stop()
@@ -186,12 +213,11 @@ func (r *switchRenderer) Refresh() {
 		start := r.knob.Position()
 		end := r.knobPosForState(r.s.Checked)
 
-		// control the duration of the Position Animation
 		r.anim = canvas.NewPositionAnimation(start, end, 40*time.Millisecond, func(p fyne.Position) {
 			r.knob.Move(p)
 			r.knob.Refresh()
 		})
-		r.anim.Curve = fyne.AnimationEaseInOut // <- NOTE: from fyne package
+		r.anim.Curve = fyne.AnimationEaseInOut
 		r.anim.Start()
 	}
 	r.prevChecked = r.s.Checked
@@ -208,7 +234,9 @@ func (r *switchRenderer) knobPosForState(on bool) fyne.Position {
 	return fyne.NewPos(pad, y)
 }
 
-// --- Color helpers -----------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
 
 func withAlpha(c color.Color, a uint8) color.Color {
 	r, g, b, _ := c.RGBA()
@@ -230,29 +258,26 @@ func toNRGBA(c color.Color) color.NRGBA {
 	return color.NRGBA{uint8(r >> 8), uint8(g >> 8), uint8(b >> 8), uint8(a >> 8)}
 }
 
-// compact, aligned toggle row: switch + label on one line
+// compact toggle row: switch + label
 func ToggleRow(sw fyne.CanvasObject, lbl *widget.Label, rowW float32) *fyne.Container {
-	// left-align label text
 	lbl.Alignment = fyne.TextAlignLeading
 
 	swSize := sw.MinSize()
 	lblSize := lbl.MinSize()
 	h := maxF(swSize.Height, lblSize.Height)
 
-	// left: keep the switch at its natural size, centered vertically
 	left := container.New(
 		layout.NewGridWrapLayout(fyne.NewSize(swSize.Width, h)),
 		container.NewCenter(sw),
 	)
 
-	// right: fixed width so text changes don't jiggle the layout
 	rightW := rowW - swSize.Width
 	if rightW < 0 {
 		rightW = 0
 	}
 	right := container.New(
 		layout.NewGridWrapLayout(fyne.NewSize(rightW, h)),
-		container.NewBorder(nil, nil, nil, nil, lbl), // left-aligned label
+		container.NewBorder(nil, nil, nil, nil, lbl),
 	)
 
 	return container.New(layout.NewHBoxLayout(), left, right)

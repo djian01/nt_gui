@@ -7,149 +7,148 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
-// RangeSlider defines a custom slider with two draggable circular handles
+// RangeSlider defines a custom slider with two draggable circular handles.
 type RangeSlider struct {
 	widget.BaseWidget
+
 	Min, Max   float64
 	Start, End float64
-	changed    bool
-	OnChanged  func()
 
-	barBackground  *canvas.Rectangle // Light grey full bar
-	barRange       *canvas.Rectangle // Dark grey range bar
-	handleDiameter float32           // Diameter of circular handle
+	changed   bool
+	OnChanged func()
+
+	barBackground  *canvas.Rectangle
+	barRange       *canvas.Rectangle
+	handleDiameter float32
 	startHandle    *canvas.Circle
 	endHandle      *canvas.Circle
-	dragging       string // "start" or "end"
+
+	dragging string // "start" or "end"
 }
 
-// Ensure RangeSlider implements fyne.Draggable and desktop.Mouseable
 var _ fyne.Draggable = (*RangeSlider)(nil)
 var _ desktop.Mouseable = (*RangeSlider)(nil)
 
-// NewRangeSlider creates a new range slider with circular handles
 func NewRangeSlider(min, max, start, end float64) *RangeSlider {
 	rs := &RangeSlider{
-		Min:           min,
-		Max:           max,
-		Start:         start,
-		End:           end,
-		barBackground: canvas.NewRectangle(color.Gray{Y: 200}),                      // Light grey
-		barRange:      canvas.NewRectangle(color.Gray{Y: 100}),                      // Dark grey
-		startHandle:   canvas.NewCircle(color.NRGBA{R: 30, G: 144, B: 255, A: 255}), // Blue (DodgerBlue)
-		endHandle:     canvas.NewCircle(color.NRGBA{R: 30, G: 144, B: 255, A: 255}), // Blue (DodgerBlue)
+		Min:   min,
+		Max:   max,
+		Start: start,
+		End:   end,
+
+		// IMPORTANT: non-transparent defaults so it renders immediately
+		barBackground: canvas.NewRectangle(color.NRGBA{0, 0, 0, 25}),
+		barRange:      canvas.NewRectangle(color.NRGBA{0, 0, 0, 60}),
+		startHandle:   canvas.NewCircle(theme.Color(theme.ColorNamePrimary)),
+		endHandle:     canvas.NewCircle(theme.Color(theme.ColorNamePrimary)),
 	}
+
 	rs.ExtendBaseWidget(rs)
+
+	// Optional: force one initial refresh (safe)
+	rs.Refresh()
+
 	return rs
 }
 
-// update range slider values: Min, Max, Start, End
 func (rs *RangeSlider) UpdateValues(min, max, start, end float64) {
 	rs.Min = min
 	rs.Max = max
 	rs.Start = start
 	rs.End = end
+	rs.Refresh()
 }
 
-// Layout positions/size the components, ensuring the handles are circular
-func (rs *RangeSlider) Layout(size fyne.Size) {
-	barHeight := float32(4)
-	rs.handleDiameter = 26 // larger circular handle (previously 20)
-
-	// Set full-width background bar (light grey)
-	rs.barBackground.Resize(fyne.NewSize(size.Width, barHeight))
-	rs.barBackground.Move(fyne.NewPos(0, size.Height/2-barHeight/2))
-
-	// Compute handle positions
-	startX := rs.valueToPosition(rs.Start, size.Width)
-	endX := rs.valueToPosition(rs.End, size.Width)
-
-	// Set range bar (dark grey) between the handles
-	rs.barRange.Resize(fyne.NewSize(endX-startX, barHeight))
-	rs.barRange.Move(fyne.NewPos(startX, size.Height/2-barHeight/2))
-
-	// Start handle
-	rs.startHandle.Resize(fyne.NewSize(rs.handleDiameter, rs.handleDiameter))
-	rs.startHandle.Move(fyne.NewPos(startX-rs.handleDiameter/2, size.Height/2-rs.handleDiameter/2))
-
-	// End handle
-	rs.endHandle.Resize(fyne.NewSize(rs.handleDiameter, rs.handleDiameter))
-	rs.endHandle.Move(fyne.NewPos(endX-rs.handleDiameter/2, size.Height/2-rs.handleDiameter/2))
-}
-
-// Implements fyne.Widget interface
 func (rs *RangeSlider) CreateRenderer() fyne.WidgetRenderer {
 	return &rangeSliderRenderer{slider: rs}
 }
 
-// Implements desktop.Mouseable interface
-// MouseDown: Detect which handle is clicked and start dragging
+func (rs *RangeSlider) Layout(size fyne.Size) {
+	barHeight := float32(4)
+	rs.handleDiameter = 26
+
+	// background bar
+	rs.barBackground.Resize(fyne.NewSize(size.Width, barHeight))
+	rs.barBackground.Move(fyne.NewPos(0, size.Height/2-barHeight/2))
+
+	// positions
+	startX := rs.valueToPosition(rs.Start, size.Width)
+	endX := rs.valueToPosition(rs.End, size.Width)
+	if endX < startX {
+		endX = startX
+	}
+
+	// range bar
+	rs.barRange.Resize(fyne.NewSize(endX-startX, barHeight))
+	rs.barRange.Move(fyne.NewPos(startX, size.Height/2-barHeight/2))
+
+	// handles
+	rs.startHandle.Resize(fyne.NewSize(rs.handleDiameter, rs.handleDiameter))
+	rs.startHandle.Move(fyne.NewPos(startX-rs.handleDiameter/2, size.Height/2-rs.handleDiameter/2))
+
+	rs.endHandle.Resize(fyne.NewSize(rs.handleDiameter, rs.handleDiameter))
+	rs.endHandle.Move(fyne.NewPos(endX-rs.handleDiameter/2, size.Height/2-rs.handleDiameter/2))
+}
+
 func (rs *RangeSlider) MouseDown(e *desktop.MouseEvent) {
 	if e.Button == desktop.MouseButtonPrimary {
-		rs.detectHandle(e.Position.X) // => update the rs.dragging to be "start" handler or "end" handler
+		rs.detectHandle(e.Position.X)
 	}
 }
 
-// Implements desktop.Mouseable interface
-// MouseUp: Stop dragging when mouse is released
-func (rs *RangeSlider) MouseUp(e *desktop.MouseEvent) {
-	rs.dragging = "" // => reset the rs.dragging to be ""
+func (rs *RangeSlider) MouseUp(*desktop.MouseEvent) {
+	rs.dragging = ""
 }
 
-// Imlements fyne.Draggable interface
-// Dragged: Move the selected handle based on mouse movement and refresh UI
 func (rs *RangeSlider) Dragged(e *fyne.DragEvent) {
 	width := rs.Size().Width
+	if width <= 0 || rs.Max <= rs.Min {
+		return
+	}
 
 	if rs.dragging == "start" {
 		newStart := rs.positionToValue(e.Position.X, width)
 		if newStart > rs.End {
 			newStart = rs.End
 		}
-		if newStart != rs.Start { //Only update if the value changed
+		if newStart != rs.Start {
 			rs.Start = newStart
 			rs.changed = true
 		}
-
 	} else if rs.dragging == "end" {
 		newEnd := rs.positionToValue(e.Position.X, width)
 		if newEnd < rs.Start {
 			newEnd = rs.Start
 		}
-		if newEnd != rs.Start { //Only update if the value changed
+		if newEnd != rs.End {
 			rs.End = newEnd
 			rs.changed = true
 		}
 	}
 
-	if rs.changed { // Prevent unnecessary UI updates
-		// update the barRange, startHandler or endHandler based on the rs.Start / rs.End changes
+	if rs.changed {
 		rs.updateGraphics()
 		if rs.OnChanged != nil {
 			rs.OnChanged()
-			rs.changed = false
 		}
+		rs.changed = false
 	}
 }
 
-// Imlements fyne.Draggable interface
-// DragEnd: Stop dragging
 func (rs *RangeSlider) DragEnd() {
-	//fmt.Println("DragEnd called")
-	rs.dragging = "" // => reset the rs.dragging to be ""
+	rs.dragging = ""
 }
 
-// Detects if the user clicked on a handle
 func (rs *RangeSlider) detectHandle(mouseX float32) {
 	width := rs.Size().Width
 	startX := rs.valueToPosition(rs.Start, width)
 	endX := rs.valueToPosition(rs.End, width)
 
-	// Click detection with threshold for circular handles
-	handleRadius := float64(rs.handleDiameter / 2) // Half of the handle size
+	handleRadius := float64(rs.handleDiameter / 2)
 	if math.Abs(float64(mouseX-startX)) < handleRadius {
 		rs.dragging = "start"
 	} else if math.Abs(float64(mouseX-endX)) < handleRadius {
@@ -157,13 +156,17 @@ func (rs *RangeSlider) detectHandle(mouseX float32) {
 	}
 }
 
-// Converts value to position (px)
 func (rs *RangeSlider) valueToPosition(value float64, width float32) float32 {
+	if rs.Max <= rs.Min || width <= 0 {
+		return 0
+	}
 	return float32((value - rs.Min) / (rs.Max - rs.Min) * float64(width))
 }
 
-// Converts position (px) to value
 func (rs *RangeSlider) positionToValue(pos float32, width float32) float64 {
+	if rs.Max <= rs.Min || width <= 0 {
+		return rs.Min
+	}
 	val := rs.Min + float64(pos)/float64(width)*(rs.Max-rs.Min)
 	if val < rs.Min {
 		val = rs.Min
@@ -173,33 +176,46 @@ func (rs *RangeSlider) positionToValue(pos float32, width float32) float64 {
 	return val
 }
 
-// Updates the graphical components on screen when dragging
 func (rs *RangeSlider) updateGraphics() {
-	rs.Layout(rs.Size()) // Update positions by calling the layout method again and redraw bar, handlers
+	rs.Layout(rs.Size())
+	canvas.Refresh(rs.barBackground)
 	canvas.Refresh(rs.barRange)
 	canvas.Refresh(rs.startHandle)
 	canvas.Refresh(rs.endHandle)
 }
 
-// Custom Renderer for RangeSlider
+// -----------------------------------------------------------------------------
+// Renderer
+// -----------------------------------------------------------------------------
+
 type rangeSliderRenderer struct {
 	slider *RangeSlider
 }
 
-// func: Refresh()
 func (r *rangeSliderRenderer) Refresh() {
+	primary := theme.Color(theme.ColorNamePrimary)
+	bg := theme.Color(theme.ColorNameBackground)
+
+	// theme-aware bars
+	if isDarkBackground(bg) {
+		r.slider.barBackground.FillColor = color.NRGBA{255, 255, 255, 35}
+		r.slider.barRange.FillColor = color.NRGBA{255, 255, 255, 70}
+	} else {
+		r.slider.barBackground.FillColor = color.NRGBA{0, 0, 0, 25}
+		r.slider.barRange.FillColor = color.NRGBA{0, 0, 0, 60}
+	}
+
+	// handles match toggle switch
+	r.slider.startHandle.FillColor = primary
+	r.slider.endHandle.FillColor = primary
+
 	r.slider.updateGraphics()
-	canvas.Refresh(r.slider.barBackground)
-	canvas.Refresh(r.slider.barRange)
-	canvas.Refresh(r.slider.startHandle)
-	canvas.Refresh(r.slider.endHandle)
 }
 
 func (r *rangeSliderRenderer) Layout(size fyne.Size) {
 	r.slider.Layout(size)
 }
 
-// Fix: Set a static MinSize to avoid infinite recursion
 func (r *rangeSliderRenderer) MinSize() fyne.Size {
 	return fyne.NewSize(200, 40)
 }
@@ -209,7 +225,12 @@ func (r *rangeSliderRenderer) BackgroundColor() color.Color {
 }
 
 func (r *rangeSliderRenderer) Objects() []fyne.CanvasObject {
-	return []fyne.CanvasObject{r.slider.barBackground, r.slider.barRange, r.slider.startHandle, r.slider.endHandle}
+	return []fyne.CanvasObject{
+		r.slider.barBackground,
+		r.slider.barRange,
+		r.slider.startHandle,
+		r.slider.endHandle,
+	}
 }
 
 func (r *rangeSliderRenderer) Destroy() {}

@@ -20,28 +20,30 @@ var ntGlobal ntGUIGlboal
 // func makeUI: make the UI body
 func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry, errChan chan error) {
 
-	// set theme variable
-	currentTheme := "light"
-	if fyne.CurrentApp().Settings().ThemeVariant() == theme.VariantLight {
-		currentTheme = "light"
-	} else {
-		currentTheme = "dark"
-	}
-
 	// ToolbarContainer
 	infoIcon := theme.NewThemedResource(resourceInfoIconSvg)
+	appSettings := fyne.CurrentApp().Settings()
+
+	// Track whether we are forcing a theme or following system
+	forced := false // force=true means aganisting the default system theme. false=false means following the default system theme.
 
 	ToolbarWidget := widget.NewToolbar(
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.RadioButtonCheckedIcon(), func() {
-			// Toggle between light and dark theme
-			if currentTheme == "light" {
-				currentTheme = "dark"
-				fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme())
-			} else {
-				currentTheme = "light"
-				fyne.CurrentApp().Settings().SetTheme(theme.LightTheme())
+			if !forced {
+				// Force the opposite of CURRENT system variant, falsed => true
+				if appSettings.ThemeVariant() == theme.VariantDark {
+					appSettings.SetTheme(&customTheme{base: theme.DefaultTheme(), variant: theme.VariantLight})
+				} else {
+					appSettings.SetTheme(&customTheme{base: theme.DefaultTheme(), variant: theme.VariantDark})
+				}
+				forced = true
+				return
 			}
+
+			// Go back to system-following theme, false => false
+			appSettings.SetTheme(theme.DefaultTheme())
+			forced = false
 		}),
 		widget.NewToolbarAction(infoIcon, func() {
 

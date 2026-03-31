@@ -1,15 +1,13 @@
 module github.com/djian01/nt_gui
 
-go 1.24.0
-
-toolchain go1.24.1
+go 1.25.0
 
 require (
 	fyne.io/fyne/v2 v2.7.0
 	github.com/djian01/nt v1.3.1
 	github.com/kbinani/screenshot v0.0.0-20250118074034-a3924b7bbc8c
 	github.com/wcharczuk/go-chart/v2 v2.1.2
-	golang.org/x/image v0.24.0
+	golang.org/x/image v0.38.0
 	modernc.org/sqlite v1.35.0
 )
 
@@ -59,7 +57,7 @@ require (
 	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/term v0.36.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.61.13 // indirect
 	modernc.org/mathutil v1.7.1 // indirect

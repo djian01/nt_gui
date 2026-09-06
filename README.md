@@ -8,6 +8,11 @@
 
 ## Features
 
+An independent **HTTP Ping Wails desktop prototype** is available in `wails-http/`.
+See [build instructions and architecture](docs/architecture/http-wails-prototype.md)
+and [desktop API flows](docs/api_reference/http-wails-prototype.md). The existing
+Fyne app remains the main application.
+
 - **ICMP Ping**: Test network reachability using standard ICMP echo requests.
 - **TCP Ping**: Check the availability of specific TCP ports on target hosts.
 - **DNS Ping**: Resolve domain names and measure DNS query response times.

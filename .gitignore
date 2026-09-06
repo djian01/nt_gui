@@ -27,3 +27,12 @@ nt_gui
 
 # .DS_Store
 .DS_Store
+
+# Local notes and prototype build outputs
+/.local/
+/.ai-temp/
+/tmp/
+/docs/memory/
+/wails-http/frontend/node_modules/
+/wails-http/frontend/dist/
+/wails-http/bin/

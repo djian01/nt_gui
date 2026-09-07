@@ -41,10 +41,11 @@ If an existing `GOROOT` variable points at a different Go installation, correct 
 
 ## Features
 
-- Multiple HTTP/HTTPS GET or HEAD tests, with URL validation and configurable interval/timeout.
+- Dark navy interface with blue accents, shared CSS colour tokens for controls and charts, and dark macOS/Windows window chrome.
+- Multiple HTTP/HTTPS GET, PUT, or PATCH tests, with a separate scheme selector, URL validation, configurable interval/timeout, expected status groups or exact codes, and optional authenticated HTTP/HTTPS proxy routing.
 - Live status, response code, time to response headers, successful-response min/max/average, and failure rate.
 - Start, immediate stop/cancellation, run again, remove stopped sessions, search, and running/stopped filters.
-- Responsive vector latency chart, hover details, and 30/120/600-probe viewing ranges.
+- Responsive vector latency chart with a smooth blue line, gradient area, average guide, live-point pulse, hover details, and 30/120/600-probe viewing ranges.
 - Separate native chart windows sharing the same Go session and events. Reopening focuses the existing window; removing its stopped session closes it. Running again from a chart creates a new session and opens its own chart, keeping the original window attached to the original test.
 - Closing the main window quits the application and cancels all requests. Closing a chart does not stop its test.
 
@@ -69,9 +70,9 @@ Each completed probe emits only the session summary and latest sample. `List()` 
 
 ## HTTP semantics and resource limits
 
-- Probes connect directly, without system/explicit proxy configuration. TLS verification uses the system trust store.
-- GET and HEAD only. No request body, user headers, embedded URL credentials, or URL fragments.
-- HTTP 200–399 is successful. Redirect responses are measured as-is; redirects are not followed.
+- Probes connect directly by default or through a per-test HTTP/HTTPS proxy. Optional proxy basic credentials stay in the Go runner and proxy passwords are redacted from every returned session. TLS verification uses the system trust store for targets and HTTPS proxies.
+- GET, PUT, and PATCH only. PUT and PATCH send no request body. No user headers, embedded URL credentials, or URL fragments.
+- Success matches the configured status groups (`2xx`–`5xx`) and/or exact codes (200–599). The default is `2xx` and `3xx`. Redirect responses are measured as-is; redirects are not followed.
 - RTT measures from request creation to response headers, including connection/TLS setup. Bodies are closed without buffering. It is not full-page download timing.
 - Each probe uses a fresh connection. Each session has one worker and never overlaps requests. Interval is start-to-start, with the next probe immediate if the previous probe already exceeded the interval.
 - Requests time out after 1–30 seconds; intervals are 1–60 seconds. Stop cancels the active request, and user cancellation is not counted as failure.
@@ -82,7 +83,7 @@ Each completed probe emits only the session summary and latest sample. `List()` 
 
 The existing `github.com/djian01/nt` HTTP runner was not reused in this first prototype. Its current API does not accept a request context and its transport sets `InsecureSkipVerify: true`. The independent standard-library adapter provides cancellation and normal certificate validation without modifying the existing dependency or Fyne behaviour. Consolidation into a shared, context-aware protocol service should be a deliberate follow-up.
 
-Results are in memory only. This prototype does not implement SQLite history/recording, CSV export, proxy/authentication controls, arbitrary HTTP methods, certificate overrides, ICMP/TCP/DNS pages, or dark mode. New windows share the same data; the frontend is not a standalone network-testing website.
+Results are in memory only. This prototype does not implement SQLite history/recording, CSV export, arbitrary HTTP methods, custom headers, certificate overrides, ICMP/TCP/DNS pages, or a theme switcher. The dark blue theme is the default. Proxy support uses the standard HTTP proxy mechanism and optional basic credentials; SOCKS, PAC, system proxy discovery, and other authentication schemes are not included. New windows share the same data; the frontend is not a standalone network-testing website.
 
 ## Validation
 
@@ -93,7 +94,7 @@ npm --prefix frontend run build
 go build -tags production -o bin/nt-http .
 ```
 
-The Go tests exercise status classification, HEAD requests, redirects, cancellation of in-flight requests, certificate rejection, timeout, validation, removal, and ring-buffer ordering/snapshot isolation.
+The Go tests exercise default and custom status classification, GET/PUT/PATCH requests, redirects, authenticated proxy routing and secret redaction across restart, cancellation of in-flight requests, certificate rejection, timeout, validation, removal, and ring-buffer ordering/snapshot isolation.
 
 Verified on the development Mac: race-enabled tests, frontend type checking/build, native app build and launch, live HTTP 200/503 results, invalid URL errors, chart hover/ranges, stopped filtering, separate chart windows, shared stop state, replay into a new chart, and main-window shutdown. A Windows amd64 executable also cross-compiled successfully. Windows and Linux runtime behaviour must be verified on those operating systems before distribution. The local macOS linker emits SDK deployment-target warnings (objects built for macOS 26 against a macOS 11 link target); the local working build does not establish compatibility with older macOS releases.
 
@@ -101,5 +102,5 @@ Verified on the development Mac: race-enabled tests, frontend type checking/buil
 
 1. Validate appearance, keyboard behaviour, scaling, and WebView packaging on Windows and Linux.
 2. Agree on HTTP semantics and consolidate the runner behind a shared Go service.
-3. Add recording/export and explicit proxy configuration if this design is selected.
+3. Add recording/export if this design is selected.
 4. Reassess the Wails release before migrating additional protocols.

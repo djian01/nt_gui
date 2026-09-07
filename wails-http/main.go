@@ -21,6 +21,7 @@ type PingService struct {
 }
 
 func (s *PingService) Start(config ping.Config) (ping.Session, error) { return s.runner.Start(config) }
+func (s *PingService) Restart(id string) (ping.Session, error)        { return s.runner.Restart(id) }
 func (s *PingService) List() []ping.Session                           { return s.runner.List() }
 func (s *PingService) Get(id string) (ping.Detail, error)             { return s.runner.Get(id) }
 func (s *PingService) Stop(id string) (ping.Session, error)           { return s.runner.Stop(id) }
@@ -51,7 +52,9 @@ func (s *PingService) OpenChart(id string) error {
 	s.app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name: "chart-" + id, Title: "HTTP Ping · Latency", URL: "/?chart=" + id,
 		Width: 1100, Height: 760, MinWidth: 780, MinHeight: 600,
-		BackgroundColour: application.NewRGB(246, 248, 250),
+		BackgroundColour: application.NewRGB(11, 18, 32),
+		Mac:              application.MacWindow{Appearance: application.NSAppearanceNameDarkAqua},
+		Windows:          application.WindowsWindow{Theme: application.Dark},
 	})
 	return nil
 }
@@ -71,7 +74,9 @@ func main() {
 	service.app = app
 	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name: "main", Title: "NT · HTTP Ping", URL: "/", Width: 1420, Height: 960,
-		MinWidth: 980, MinHeight: 720, BackgroundColour: application.NewRGB(246, 248, 250),
+		MinWidth: 980, MinHeight: 720, BackgroundColour: application.NewRGB(11, 18, 32),
+		Mac:     application.MacWindow{Appearance: application.NSAppearanceNameDarkAqua},
+		Windows: application.WindowsWindow{Theme: application.Dark},
 	})
 	window.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) { app.Quit() })
 	if err := app.Run(); err != nil {

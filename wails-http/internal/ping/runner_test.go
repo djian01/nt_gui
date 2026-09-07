@@ -2,6 +2,7 @@ package ping
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,7 +11,72 @@ import (
 )
 
 func config(url string) Config {
-	return Config{URL: url, Method: "GET", IntervalMS: 1000, TimeoutMS: 1000}
+	return Config{URL: url, Method: "GET", IntervalMS: 1000, TimeoutMS: 1000, AcceptedStatuses: []string{"2xx", "3xx"}}
+}
+
+func TestCustomExpectedStatuses(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+	updates := make(chan Session, 10)
+	r := New(func(s Session) { updates <- s })
+	defer r.Close()
+	c := config(server.URL)
+	c.AcceptedStatuses = []string{"404"}
+	s, err := r.Start(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := await(t, updates, func(update Session) bool { return update.ID == s.ID && update.Sent == 1 })
+	if got.ID != s.ID || !got.Last.Success || got.Succeeded != 1 {
+		t.Fatalf("custom expected status was not accepted: %+v", got)
+	}
+}
+
+func TestProxyAndSecretRedaction(t *testing.T) {
+	requests := make(chan *http.Request, 2)
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		requests <- req.Clone(req.Context())
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer proxy.Close()
+	updates := make(chan Session, 20)
+	r := New(func(s Session) { updates <- s })
+	defer r.Close()
+	c := config("http://target.invalid/health")
+	c.Proxy = ProxyConfig{Enabled: true, URL: proxy.URL, Username: "monitor", Password: "secret"}
+	s, err := r.Start(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Config.Proxy.Password != "" {
+		t.Fatal("proxy password exposed in start response")
+	}
+	got := await(t, updates, func(update Session) bool { return update.ID == s.ID && update.Sent == 1 })
+	if !got.Last.Success || got.Last.StatusCode != http.StatusNoContent {
+		t.Fatalf("proxy response was not accepted: %+v", got.Last)
+	}
+	req := <-requests
+	wantAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte("monitor:secret"))
+	if req.Header.Get("Proxy-Authorization") != wantAuth {
+		t.Fatalf("proxy authorization = %q", req.Header.Get("Proxy-Authorization"))
+	}
+	if _, err := r.Stop(s.ID); err != nil {
+		t.Fatal(err)
+	}
+	restarted, err := r.Restart(s.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restarted.ID == s.ID || restarted.Config.Proxy.Password != "" {
+		t.Fatalf("unexpected restart response: %+v", restarted)
+	}
+	await(t, updates, func(update Session) bool { return update.ID == restarted.ID && update.Sent == 1 })
+	req = <-requests
+	if req.Header.Get("Proxy-Authorization") != wantAuth {
+		t.Fatal("restart did not retain the private proxy credential")
+	}
 }
 
 func await(t *testing.T, updates <-chan Session, accept func(Session) bool) Session {
@@ -30,31 +96,34 @@ func await(t *testing.T, updates <-chan Session, accept func(Session) bool) Sess
 	}
 }
 
-func TestHTTPResults(t *testing.T) {
-	for _, code := range []int{200, 302, 404, 503} {
-		t.Run(fmt.Sprint(code), func(t *testing.T) {
+func TestHTTPResultsAndMethods(t *testing.T) {
+	for _, test := range []struct {
+		code   int
+		method string
+	}{{200, "GET"}, {302, "PUT"}, {404, "PATCH"}, {503, "GET"}} {
+		t.Run(fmt.Sprintf("%s_%d", test.method, test.code), func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				if req.Method != "HEAD" {
+				if req.Method != test.method {
 					t.Errorf("method = %s", req.Method)
 				}
 				w.Header().Set("Location", "/should-not-follow")
-				w.WriteHeader(code)
+				w.WriteHeader(test.code)
 			}))
 			defer server.Close()
 			updates := make(chan Session, 10)
 			r := New(func(s Session) { updates <- s })
 			defer r.Close()
 			c := config(server.URL)
-			c.Method = "HEAD"
+			c.Method = test.method
 			s, err := r.Start(c)
 			if err != nil {
 				t.Fatal(err)
 			}
 			got := await(t, updates, func(s Session) bool { return s.Sent == 1 })
-			if got.Last.StatusCode != code || got.Last.Success != (code < 400) {
+			if got.Last.StatusCode != test.code || got.Last.Success != (test.code < 400) {
 				t.Fatalf("unexpected result: %+v", got.Last)
 			}
-			if got.Succeeded != map[bool]int{true: 1, false: 0}[code < 400] {
+			if got.Succeeded != map[bool]int{true: 1, false: 0}[test.code < 400] {
 				t.Fatalf("unexpected statistics: %+v", got)
 			}
 			r.Stop(s.ID)
@@ -132,7 +201,11 @@ func TestCertificateVerificationAndTimeout(t *testing.T) {
 }
 
 func TestValidationAndRemoval(t *testing.T) {
-	for _, c := range []Config{config("file:///tmp/test"), config("http://"), config("https://user:pass@example.com"), config("http://example.com:70000"), {URL: "https://example.com", Method: "POST", IntervalMS: 1000, TimeoutMS: 1000}, {URL: "https://example.com", Method: "GET", IntervalMS: 0, TimeoutMS: 1000}} {
+	invalidStatus := config("https://example.com")
+	invalidStatus.AcceptedStatuses = []string{"199"}
+	invalidProxy := config("https://example.com")
+	invalidProxy.Proxy = ProxyConfig{Enabled: true, URL: "socks5://proxy.example:1080"}
+	for _, c := range []Config{config("file:///tmp/test"), config("http://"), config("https://user:pass@example.com"), config("http://example.com:70000"), {URL: "https://example.com", Method: "POST", IntervalMS: 1000, TimeoutMS: 1000, AcceptedStatuses: []string{"2xx"}}, {URL: "https://example.com", Method: "GET", IntervalMS: 0, TimeoutMS: 1000, AcceptedStatuses: []string{"2xx"}}, invalidStatus, invalidProxy} {
 		if _, err := validate(c); err == nil {
 			t.Errorf("accepted invalid config: %+v", c)
 		}

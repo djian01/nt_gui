@@ -5,6 +5,13 @@ export type Config = {
   method: string;
   intervalMs: number;
   timeoutMs: number;
+  acceptedStatuses: string[];
+  proxy: {
+    enabled: boolean;
+    url: string;
+    username: string;
+    password: string;
+  };
 };
 export type Sample = {
   sequence: number;
@@ -35,6 +42,7 @@ const call = <T>(method: string, ...args: unknown[]): Promise<T> =>
 export const api = {
   list: () => call<Session[]>("List"),
   start: (config: Config) => call<Session>("Start", config),
+  restart: (id: string) => call<Session>("Restart", id),
   stop: (id: string) => call<Session>("Stop", id),
   get: (id: string) => call<Detail>("Get", id),
   remove: (id: string) => call<void>("Remove", id),

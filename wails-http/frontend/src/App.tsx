@@ -5,6 +5,7 @@ import {
   ArrowDownUp,
   ArrowUpRight,
   Check,
+  ChevronDown,
   ChevronRight,
   CircleHelp,
   Clock3,
@@ -16,7 +17,9 @@ import {
   Radio,
   RotateCcw,
   Search,
+  Server,
   ShieldCheck,
+  SlidersHorizontal,
   Square,
   Timer,
   Trash2,
@@ -59,7 +62,12 @@ export default function App() {
     method: "GET",
     intervalMs: 1000,
     timeoutMs: 4000,
+    acceptedStatuses: ["2xx", "3xx"],
+    proxy: { enabled: false, url: "", username: "", password: "" },
   });
+  const [scheme, setScheme] = useState<"https" | "http">("https");
+  const [advanced, setAdvanced] = useState(false);
+  const [customStatuses, setCustomStatuses] = useState("");
   const [busy, setBusy] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
@@ -85,16 +93,33 @@ export default function App() {
   function start(e: FormEvent) {
     e.preventDefault();
     void action("start", async () => {
-      const s = await api.start(config);
+      const custom = customStatuses.split(/[\s,]+/).filter(Boolean);
+      const s = await api.start({
+        ...config,
+        url: `${scheme}://${config.url.trim()}`,
+        acceptedStatuses: [
+          ...config.acceptedStatuses.filter((value) => value.endsWith("xx")),
+          ...custom,
+        ],
+      });
       merge(s);
       setSelected(s.id);
     });
+  }
+  function setTarget(value: string) {
+    const withScheme = value.match(/^\s*(https?):\/\/(.*)$/i);
+    if (withScheme) {
+      setScheme(withScheme[1].toLowerCase() as "https" | "http");
+      setConfig({ ...config, url: withScheme[2] });
+      return;
+    }
+    setConfig({ ...config, url: value.trimStart() });
   }
   const stop = (s: Session) =>
     action(s.id, async () => merge(await api.stop(s.id)));
   const restart = (s: Session) =>
     action(s.id, async () => {
-      const next = await api.start(s.config);
+      const next = await api.restart(s.id);
       merge(next);
       // A chart window keeps its original session identity for focus/removal.
       if (chartID) await api.chart(next.id);
@@ -141,7 +166,7 @@ export default function App() {
         note={
           session?.sent
             ? `${session.sent - session.succeeded} failed of ${session.sent} probes`
-            : "HTTP 200–399 is successful"
+            : "Matches your expected statuses"
         }
         icon={<ArrowDownUp size={18} />}
         warning={!!session && loss(session) > 0}
@@ -172,7 +197,7 @@ export default function App() {
           <div className="heading-actions">
             {session?.running && (
               <span className="live-label">
-                <i className="dot teal" />
+                <i className="dot accent" />
                 LIVE
               </span>
             )}
@@ -273,7 +298,7 @@ export default function App() {
               <ArrowUpRight size={15} />
             </button>
             <div className="version">
-              <i className="dot teal" />
+              <i className="dot accent" />
               Wails desktop<span>0.1</span>
             </div>
           </div>
@@ -328,7 +353,7 @@ export default function App() {
                 </>
               ) : (
                 <span className="running-count">
-                  <i className={`dot ${active ? "teal" : ""}`} />
+                  <i className={`dot ${active ? "accent" : ""}`} />
                   {active} active {active === 1 ? "test" : "tests"}
                 </span>
               )}
@@ -340,13 +365,13 @@ export default function App() {
               <div>
                 <strong>About this HTTP preview</strong>
                 <p>
-                  GET and HEAD probes use a fresh, direct connection with system
+                  GET, PUT, and PATCH probes use a fresh connection with system
                   TLS verification. Latency measures time to response headers.
-                  HTTP 200–399 is successful; redirects are not followed. Up to
+                  Expected statuses are configurable, redirects are not
+                  followed, and each test can use an HTTP or HTTPS proxy. Up to
                   8 tests can run at once. The latest 600 probes per test stay
-                  in memory until you remove the test or quit. Database history,
-                  proxy settings, and other protocols are available in the
-                  existing Fyne app.
+                  in memory until you remove the test or quit. Database history
+                  and other protocols are available in the existing Fyne app.
                 </p>
               </div>
               <button
@@ -377,22 +402,40 @@ export default function App() {
                   <Plus size={16} />
                 </span>
                 <h2>New HTTP test</h2>
-                <span>Start with an endpoint</span>
+                <button
+                  type="button"
+                  className={`advanced-trigger ${advanced ? "open" : ""}`}
+                  aria-expanded={advanced}
+                  onClick={() => setAdvanced((value) => !value)}
+                >
+                  <SlidersHorizontal size={13} />
+                  Advanced
+                  <ChevronDown size={13} />
+                </button>
               </div>
               <div className="form-fields">
                 <label className="url-field">
-                  Target URL
-                  <div className="input-icon">
-                    <Globe2 size={17} />
-                    <input
-                      type="url"
-                      required
-                      maxLength={4096}
-                      placeholder="https://example.com"
-                      value={config.url}
-                      onChange={(e) =>
-                        setConfig({ ...config, url: e.target.value })
+                  Target
+                  <div className="url-composer">
+                    <select
+                      className="scheme-select"
+                      aria-label="URL protocol"
+                      value={scheme}
+                      onChange={(event) =>
+                        setScheme(event.target.value as "https" | "http")
                       }
+                    >
+                      <option value="https">HTTPS</option>
+                      <option value="http">HTTP</option>
+                    </select>
+                    <span aria-hidden="true">://</span>
+                    <input
+                      type="text"
+                      required
+                      maxLength={4088}
+                      placeholder="example.com/path"
+                      value={config.url}
+                      onChange={(event) => setTarget(event.target.value)}
                       spellCheck={false}
                       autoCapitalize="none"
                     />
@@ -407,7 +450,8 @@ export default function App() {
                     }
                   >
                     <option>GET</option>
-                    <option>HEAD</option>
+                    <option>PUT</option>
+                    <option>PATCH</option>
                   </select>
                 </label>
                 <label>
@@ -455,6 +499,154 @@ export default function App() {
                   {busy === "start" ? "Starting…" : "Start test"}
                 </button>
               </div>
+              {advanced && (
+                <motion.div
+                  className="advanced-panel"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="advanced-section status-options">
+                    <div className="advanced-copy">
+                      <span className="advanced-icon">
+                        <ShieldCheck size={16} />
+                      </span>
+                      <div>
+                        <strong>Expected HTTP statuses</strong>
+                        <p>Only selected responses count as successful.</p>
+                      </div>
+                    </div>
+                    <div className="status-controls">
+                      <div className="status-groups">
+                        {["2xx", "3xx", "4xx", "5xx"].map((group) => (
+                          <label className="check-pill" key={group}>
+                            <input
+                              type="checkbox"
+                              checked={config.acceptedStatuses.includes(group)}
+                              onChange={(event) =>
+                                setConfig({
+                                  ...config,
+                                  acceptedStatuses: event.target.checked
+                                    ? [...config.acceptedStatuses, group]
+                                    : config.acceptedStatuses.filter(
+                                        (value) => value !== group,
+                                      ),
+                                })
+                              }
+                            />
+                            <span>{group}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <label className="custom-status">
+                        Custom codes
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="e.g. 404, 429"
+                          value={customStatuses}
+                          onChange={(event) =>
+                            setCustomStatuses(event.target.value)
+                          }
+                        />
+                      </label>
+                    </div>
+                  </div>
+                  <div className="advanced-divider" />
+                  <div className="advanced-section proxy-options">
+                    <div className="advanced-copy">
+                      <span className="advanced-icon">
+                        <Server size={16} />
+                      </span>
+                      <div>
+                        <strong>HTTP proxy</strong>
+                        <p>Route this test through an HTTP or HTTPS proxy.</p>
+                      </div>
+                    </div>
+                    <label className="switch-control">
+                      <input
+                        type="checkbox"
+                        role="switch"
+                        checked={config.proxy.enabled}
+                        onChange={(event) =>
+                          setConfig({
+                            ...config,
+                            proxy: {
+                              ...config.proxy,
+                              enabled: event.target.checked,
+                            },
+                          })
+                        }
+                      />
+                      <span className="switch-track">
+                        <i />
+                      </span>
+                      {config.proxy.enabled ? "Enabled" : "Off"}
+                    </label>
+                  </div>
+                  {config.proxy.enabled && (
+                    <div className="proxy-fields">
+                      <label className="proxy-url">
+                        Proxy URL
+                        <input
+                          type="url"
+                          required
+                          placeholder="http://proxy.example:8080"
+                          value={config.proxy.url}
+                          onChange={(event) =>
+                            setConfig({
+                              ...config,
+                              proxy: {
+                                ...config.proxy,
+                                url: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Username
+                        <input
+                          autoComplete="off"
+                          placeholder="Optional"
+                          value={config.proxy.username}
+                          onChange={(event) =>
+                            setConfig({
+                              ...config,
+                              proxy: {
+                                ...config.proxy,
+                                username: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Password
+                        <input
+                          type="password"
+                          autoComplete="new-password"
+                          placeholder="Optional"
+                          value={config.proxy.password}
+                          onChange={(event) =>
+                            setConfig({
+                              ...config,
+                              proxy: {
+                                ...config.proxy,
+                                password: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                  )}
+                  <div className="advanced-note">
+                    <ShieldCheck size={13} /> Proxy passwords are used by the Go
+                    runner and are not returned to the interface.
+                  </div>
+                </motion.div>
+              )}
             </form>
           )}
           {metrics}

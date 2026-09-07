@@ -22,10 +22,27 @@ const (
 )
 
 type Config struct {
-	URL        string `json:"url"`
-	Method     string `json:"method"`
-	IntervalMS int    `json:"intervalMs"`
-	TimeoutMS  int    `json:"timeoutMs"`
+	URL              string      `json:"url"`
+	Method           string      `json:"method"`
+	IntervalMS       int         `json:"intervalMs"`
+	TimeoutMS        int         `json:"timeoutMs"`
+	AcceptedStatuses []string    `json:"acceptedStatuses"`
+	Proxy            ProxyConfig `json:"proxy"`
+
+	accepted []statusRange
+	proxyURL *url.URL
+}
+
+type ProxyConfig struct {
+	Enabled  bool   `json:"enabled"`
+	URL      string `json:"url"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type statusRange struct {
+	min int
+	max int
 }
 
 type Sample struct {
@@ -59,9 +76,10 @@ type Detail struct {
 
 type state struct {
 	Session
-	samples []Sample
-	next    int
-	cancel  context.CancelFunc
+	requestConfig Config
+	samples       []Sample
+	next          int
+	cancel        context.CancelFunc
 }
 
 type Runner struct {
@@ -93,8 +111,8 @@ func validate(c Config) (Config, error) {
 		}
 	}
 	c.Method = strings.ToUpper(strings.TrimSpace(c.Method))
-	if c.Method != http.MethodGet && c.Method != http.MethodHead {
-		return c, errors.New("Choose GET or HEAD")
+	if c.Method != http.MethodGet && c.Method != http.MethodPut && c.Method != http.MethodPatch {
+		return c, errors.New("Choose GET, PUT, or PATCH")
 	}
 	if c.IntervalMS < 1000 || c.IntervalMS > 60000 {
 		return c, errors.New("Interval must be between 1 and 60 seconds")
@@ -102,7 +120,71 @@ func validate(c Config) (Config, error) {
 	if c.TimeoutMS < 1000 || c.TimeoutMS > 30000 {
 		return c, errors.New("Timeout must be between 1 and 30 seconds")
 	}
+	c.AcceptedStatuses, c.accepted, err = validateStatuses(c.AcceptedStatuses)
+	if err != nil {
+		return c, err
+	}
+	c.Proxy.URL = strings.TrimSpace(c.Proxy.URL)
+	c.Proxy.Username = strings.TrimSpace(c.Proxy.Username)
+	if c.Proxy.Enabled {
+		if len(c.Proxy.URL) > 2048 || len(c.Proxy.Username) > 256 || len(c.Proxy.Password) > 1024 {
+			return c, errors.New("Proxy details are too long")
+		}
+		proxyURL, parseErr := url.Parse(c.Proxy.URL)
+		if parseErr != nil || proxyURL.Hostname() == "" || (proxyURL.Scheme != "http" && proxyURL.Scheme != "https") {
+			return c, errors.New("Enter a complete http:// or https:// proxy URL")
+		}
+		if proxyURL.User != nil || proxyURL.Path != "" || proxyURL.RawQuery != "" || proxyURL.Fragment != "" {
+			return c, errors.New("Proxy URL cannot include credentials, a path, query, or fragment")
+		}
+		if port := proxyURL.Port(); port != "" {
+			n, portErr := strconv.Atoi(port)
+			if portErr != nil || n < 1 || n > 65535 {
+				return c, errors.New("Proxy port must be between 1 and 65535")
+			}
+		}
+		if c.Proxy.Username == "" && c.Proxy.Password != "" {
+			return c, errors.New("Enter a proxy username when a password is provided")
+		}
+		if c.Proxy.Username != "" {
+			proxyURL.User = url.UserPassword(c.Proxy.Username, c.Proxy.Password)
+		}
+		c.proxyURL = proxyURL
+	} else {
+		c.Proxy = ProxyConfig{}
+	}
 	return c, nil
+}
+
+func validateStatuses(values []string) ([]string, []statusRange, error) {
+	if len(values) == 0 || len(values) > 20 {
+		return nil, nil, errors.New("Choose at least one expected HTTP status, up to 20")
+	}
+	normalized := make([]string, 0, len(values))
+	ranges := make([]statusRange, 0, len(values))
+	seen := make(map[string]bool)
+	for _, value := range values {
+		value = strings.ToLower(strings.TrimSpace(value))
+		if seen[value] {
+			continue
+		}
+		var current statusRange
+		if len(value) == 3 && value[1:] == "xx" && value[0] >= '2' && value[0] <= '5' {
+			current.min = int(value[0]-'0') * 100
+			current.max = current.min + 99
+		} else {
+			code, parseErr := strconv.Atoi(value)
+			if parseErr != nil || code < 200 || code > 599 {
+				return nil, nil, fmt.Errorf("Expected HTTP status %q must be 2xx–5xx or a code from 200 to 599", value)
+			}
+			current = statusRange{min: code, max: code}
+			value = strconv.Itoa(code)
+		}
+		seen[value] = true
+		normalized = append(normalized, value)
+		ranges = append(ranges, current)
+	}
+	return normalized, ranges, nil
 }
 
 func (r *Runner) Start(config Config) (Session, error) {
@@ -112,6 +194,10 @@ func (r *Runner) Start(config Config) (Session, error) {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	return r.startLocked(c)
+}
+
+func (r *Runner) startLocked(c Config) (Session, error) {
 	if r.closed {
 		return Session{}, errors.New("Application is closing")
 	}
@@ -128,12 +214,29 @@ func (r *Runner) Start(config Config) (Session, error) {
 		return Session{}, errors.New("Stop a test before starting another (8 active tests maximum)")
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	s := &state{Session: Session{ID: rand.Text(), Config: c, Running: true, StartedAt: time.Now(), Revision: 1}, cancel: cancel, samples: make([]Sample, 0, MaxSamples)}
+	publicConfig := c
+	publicConfig.Proxy.Password = ""
+	publicConfig.accepted = nil
+	publicConfig.proxyURL = nil
+	s := &state{Session: Session{ID: rand.Text(), Config: publicConfig, Running: true, StartedAt: time.Now(), Revision: 1}, requestConfig: c, cancel: cancel, samples: make([]Sample, 0, MaxSamples)}
 	r.sessions[s.ID] = s
 	r.order = append(r.order, s.ID)
 	r.wg.Add(1)
 	go r.run(ctx, s)
 	return s.Session, nil
+}
+
+func (r *Runner) Restart(id string) (Session, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	s, ok := r.sessions[id]
+	if !ok {
+		return Session{}, errors.New("Test not found")
+	}
+	if s.Running {
+		return Session{}, errors.New("Stop the test before running it again")
+	}
+	return r.startLocked(s.requestConfig)
 }
 
 // emitLocked preserves revision order; callbacks must not call back into Runner.
@@ -146,8 +249,12 @@ func (r *Runner) emitLocked(s *state) {
 func (r *Runner) run(ctx context.Context, s *state) {
 	defer r.wg.Done()
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	// Direct probes, fresh connections, normal system certificate verification.
-	transport.Proxy = nil
+	// Fresh connections and normal system certificate verification.
+	if s.requestConfig.proxyURL == nil {
+		transport.Proxy = nil
+	} else {
+		transport.Proxy = http.ProxyURL(s.requestConfig.proxyURL)
+	}
 	transport.DisableKeepAlives = true
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
@@ -157,7 +264,7 @@ func (r *Runner) run(ctx context.Context, s *state) {
 	for {
 		started := time.Now()
 		requestCtx, cancel := context.WithTimeout(ctx, time.Duration(s.Config.TimeoutMS)*time.Millisecond)
-		sample := probe(requestCtx, client, s.Config)
+		sample := probe(requestCtx, client, s.requestConfig)
 		cancel()
 		r.mu.Lock()
 		if ctx.Err() != nil || !s.Running {
@@ -218,7 +325,12 @@ func probe(ctx context.Context, client *http.Client, c Config) Sample {
 	}
 	resp.Body.Close()
 	s.StatusCode = resp.StatusCode
-	s.Success = resp.StatusCode >= 200 && resp.StatusCode < 400
+	for _, accepted := range c.accepted {
+		if resp.StatusCode >= accepted.min && resp.StatusCode <= accepted.max {
+			s.Success = true
+			break
+		}
+	}
 	if !s.Success {
 		s.Error = fmt.Sprintf("HTTP %d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 	}

@@ -44,7 +44,7 @@ If an existing `GOROOT` variable points at a different Go installation, correct 
 - Dark navy interface with blue accents, shared CSS colour tokens for controls and charts, and dark macOS/Windows window chrome.
 - Multiple HTTP/HTTPS GET, PUT, or PATCH tests, with a separate scheme selector, URL validation, configurable interval/timeout, expected status groups or exact codes, and optional authenticated HTTP/HTTPS proxy routing.
 - Live status, response code, time to response headers, successful-response min/max/average, and failure rate.
-- Start, immediate stop/cancellation, run again, remove stopped sessions, search, and running/stopped filters.
+- Start, immediate stop/cancellation, run again, remove stopped sessions, search, and running/stopped filters. Selecting anywhere on a test row updates the metrics and live graph; rows also support Enter and Space keyboard selection while their action buttons remain independent.
 - Responsive vector latency chart with a smooth blue line, gradient area, average guide, live-point pulse, hover details, and 30/120/600-probe viewing ranges.
 - Separate native chart windows sharing the same Go session and events. Reopening focuses the existing window; removing its stopped session closes it. Running again from a chart creates a new session and opens its own chart, keeping the original window attached to the original test.
 - Closing the main window quits the application and cancels all requests. Closing a chart does not stop its test.

@@ -707,13 +707,22 @@ export default function App() {
                       <tr
                         key={s.id}
                         className={s.id === selected ? "selected" : ""}
+                        tabIndex={0}
+                        aria-label={`Select ${s.config.url} for the live graph`}
+                        aria-selected={s.id === selected}
+                        onClick={() => setSelected(s.id)}
+                        onKeyDown={(event) => {
+                          if (
+                            event.target === event.currentTarget &&
+                            (event.key === "Enter" || event.key === " ")
+                          ) {
+                            event.preventDefault();
+                            setSelected(s.id);
+                          }
+                        }}
                       >
                         <td>
-                          <button
-                            className="endpoint-button"
-                            onClick={() => setSelected(s.id)}
-                            aria-pressed={s.id === selected}
-                          >
+                          <div className="endpoint-button">
                             <span className="endpoint-icon">
                               <Globe2 size={17} />
                             </span>
@@ -726,7 +735,7 @@ export default function App() {
                                 {clock(s.startedAt)}
                               </small>
                             </span>
-                          </button>
+                          </div>
                         </td>
                         <td>
                           <Badge session={s} />
@@ -744,7 +753,10 @@ export default function App() {
                         </td>
                         <td className="numeric">{s.sent}</td>
                         <td>
-                          <div className="row-actions">
+                          <div
+                            className="row-actions"
+                            onClick={(event) => event.stopPropagation()}
+                          >
                             <button
                               className="icon-button"
                               title="Open chart"

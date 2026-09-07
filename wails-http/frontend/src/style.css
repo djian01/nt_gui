@@ -818,14 +818,18 @@ tr.selected td:first-child {
 tbody tr:hover {
   background: var(--accent-soft);
 }
+.sessions-panel tbody tr {
+  cursor: pointer;
+}
+.sessions-panel tbody tr:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 .endpoint-button {
   display: flex;
   align-items: center;
   gap: 10px;
   text-align: left;
-  background: none;
-  padding: 0;
-  border: 0;
   min-width: 170px;
   max-width: 350px;
 }

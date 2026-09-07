@@ -8,7 +8,7 @@
 
 ## Features
 
-An independent **HTTP Ping Wails desktop prototype** is available in `wails-http/`.
+An independent **HTTP Ping Wails desktop application** is available in `wails-http/`.
 See [build instructions and architecture](docs/architecture/http-wails-prototype.md)
 and [desktop API flows](docs/api_reference/http-wails-prototype.md). The existing
 Fyne app remains the main application.
@@ -43,9 +43,75 @@ Precompiled executables for **Windows**, **Linux**, and **macOS** are available 
 
 ## Installation (from source)
 
+### Build the Wails HTTP application
+
+The Wails application uses a React frontend embedded in the Go executable. Build
+the frontend before compiling the Go application. Run these commands from the
+repository root after a fresh checkout:
+
+```bash
+cd wails-http
+make setup
+make build
+```
+
+`make setup` installs the frontend packages and downloads the Go modules.
+`make build` runs the frontend type check and production build, then creates:
+
+```text
+wails-http/bin/nt-http
+```
+
+After the frontend has already been built, changes limited to Go code can be
+compiled directly:
+
+```bash
+go build -tags production -o bin/nt-http .
+```
+
+A plain `go build .` may compile when `frontend/dist` already exists, but it
+does not apply the Wails production build tag and should not be used for a
+distributable executable.
+
+On macOS, create the application bundle with:
+
+```bash
+make mac-app
+```
+
+This creates the unsigned application at:
+
+```text
+wails-http/bin/NT HTTP Prototype.app
+```
+
+On Windows, build a GUI executable from PowerShell in `wails-http`:
+
+```powershell
+npm --prefix frontend ci
+npm --prefix frontend run build
+go build -tags production -ldflags "-H windowsgui" -o bin/nt-http.exe .
+```
+
+On Linux, use `make setup` and `make build` after installing the GTK4 and
+WebKitGTK 6.0 development packages for your distribution.
+
+Wails prerequisites:
+
+- Go 1.25 or later
+- Node.js 24 LTS and npm
+- Xcode Command Line Tools on macOS
+- WebView2 on Windows
+- GTK4 and WebKitGTK 6.0 development packages on Linux
+
+The Wails application uses a fresh SQLite database in its own per-user data
+directory. It does not open or migrate the existing Fyne database.
+
+### Build the existing Fyne application
+
 ### Prerequisites
 
-- [Go](https://golang.org/dl/) 1.16 or later
+- [Go](https://golang.org/dl/) 1.25 or later
 - [Fyne CLI](https://developer.fyne.io/started/packaging) (optional, for packaging)
 
 ### Option 1: Build using Go

@@ -24,6 +24,8 @@ nt_gui
 
 # db files
 *.db
+*.db-wal
+*.db-shm
 
 # .DS_Store
 .DS_Store

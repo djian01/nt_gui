@@ -1,106 +1,90 @@
-# HTTP Ping desktop prototype
+# Wails HTTP desktop foundation
 
-The `wails-http/` directory is an independent Wails v3 desktop application with a Vite, React, TypeScript, Tailwind CSS, and Framer Motion frontend. The existing Fyne executable, Go dependencies, SQLite data, and protocol implementations are unchanged.
+The independent `wails-http/` module is the first production migration milestone: HTTP testing, automatic persistence, saved History, full-timeline graphs, and CSV export. The root Fyne application and its database are unchanged. Wails starts with a fresh database; no legacy import or schema compatibility is intended.
 
-## Run
+## Run and build
 
-Prerequisites: Go 1.25 or later, Node.js 22.12+ (or a newer supported LTS), npm, and the platform dependencies for the pinned Wails **v3.0.0-beta.16** release. Go and frontend runtime versions are pinned together; this is a beta-based prototype, not a replacement production release.
+Requirements: Go 1.25+, Node 24 LTS (or another version supported by the locked Vite release), npm, and the native dependencies for Wails v3.0.0-beta.17. The Go and JavaScript Wails versions are pinned together. This remains a preview on a beta framework.
 
-From the repository root, on macOS/Linux:
+From `wails-http/`:
 
 ```sh
-cd wails-http
 make setup
 make run
+# macOS application bundle:
+make mac-app
 ```
 
-Equivalent commands without Make (also usable in PowerShell):
+The frontend must be built before Go because `main.go` embeds `frontend/dist`. The source `frontend/index.html` cannot run the desktop backend when opened as a file. `npm --prefix frontend run dev` starts only the frontend.
 
-```sh
-cd wails-http
-npm --prefix frontend ci
-npm --prefix frontend run build
-go build -tags production -o bin/nt-http .
-```
+`Makefile` matches macOS C compiler and linker deployment targets at 11.0. This is a build setting, not a claim that older macOS versions have been runtime tested. The unsigned bundle has its own identifier, `net.packetstreams.ntgui.wails`.
 
-Launch `./bin/nt-http` on macOS/Linux. On Windows, use:
+`.github/workflows/wails-http.yml` defines native builds and race tests on macOS, Windows, and Ubuntu 24.04. Linux uses GTK4/WebKitGTK 6.0. Windows needs WebView2 at runtime. CI execution and interactive Windows/Linux tests require those environments; adding the workflow does not establish that they have passed. Signing and installers are a later milestone.
 
-```powershell
-go build -tags production -ldflags "-H windowsgui" -o bin/nt-http.exe .
-.\bin\nt-http.exe
-```
+## Storage and lifecycle
 
-For a double-clickable macOS app bundle, run `make mac-app` and open
-`wails-http/bin/NT HTTP Prototype.app`. This local bundle is unsigned.
+`internal/ping/store.go: DefaultStorePath` resolves `os.UserConfigDir()/nt-wails/results.db` on each OS. A development-only `NT_WAILS_DATA_DIR` environment override can isolate smoke tests. This never discovers or opens Fyne's `ntdata.db`.
 
-Build on each target OS with its native toolchain. macOS requires Xcode Command Line Tools. Windows requires the WebView2 runtime. Linux requires the GTK/WebKit libraries documented for this Wails release (GTK4/WebKitGTK 6.0 by default; the legacy GTK3/WebKit2GTK 4.1 path uses `-tags "production gtk3"`). No signing, installer generation, or cross-compilation setup is included yet. See the [Wails installation guide](https://v3.wails.io/quick-start/installation/).
+`application.New` acquires the Wails single-instance identity before opening storage. A second launch focuses the main window. `OpenStore` creates schema version 1 and rejects newer versions. SQLite uses WAL, foreign keys, a one-second busy timeout, FULL synchronous commits, and one connection. Newly created database files have mode 0600 and new directories mode 0700 where supported by the OS.
 
-The frontend build must run before the Go build because `main.go` embeds `frontend/dist`. Opening `frontend/index.html` as a file is not supported: it is Vite source, and the Go bridge is supplied by Wails. `npm --prefix frontend run dev` is only a frontend development server and does not supply a backend by itself.
+- `tests`: configuration, lifecycle, and statistics in sanitized JSON, with indexed running state.
+- `samples`: original sample JSON, sequence primary key `(test_id, seq)`, and indexed `(test_id, time, seq)` access.
+- `buckets`: incrementally maintained radix-4 summaries, indexed by test, level, and bucket. These retain first/last, successful min/max, a failure representative, and exact counts/sums. Twenty levels cover practical long-duration runs; the raw sample table has no retention cutoff.
 
-If an existing `GOROOT` variable points at a different Go installation, correct that local environment setting. On macOS/Linux, `env -u GOROOT go build -tags production -o bin/nt-http .` uses Go's detected installation without changing shell configuration.
+Every completed probe commits its sample, statistics, and summaries in one transaction before emitting a UI event. There is no asynchronous unsaved queue. The worker stops and reports an explicit saving error if a transaction fails; it does not report that sample as saved. The current save error also stays in runtime state if the database cannot record it. Persisted results remain until explicit deletion.
 
-## Features
+Normal shutdown cancels all workers, records stopped states, waits for workers, and closes storage. Reopening restores history without sending requests. Any previously running records are marked interrupted with their last saved probe as the interruption boundary. No claim is made about an uncommitted, in-flight request surviving a crash.
 
-- Dark navy interface with blue accents, shared CSS colour tokens for controls and charts, and dark macOS/Windows window chrome.
-- Multiple HTTP/HTTPS GET, PUT, or PATCH tests, with a separate scheme selector, URL validation, configurable interval/timeout, expected status groups or exact codes, and optional authenticated HTTP/HTTPS proxy routing.
-- Live status, response code, time to response headers, successful-response min/max/average, and failure rate.
-- Start, immediate stop/cancellation, run again, remove stopped sessions, search, and running/stopped filters. Selecting anywhere on a test row updates the metrics and live graph; rows also support Enter and Space keyboard selection while their action buttons remain independent.
-- Responsive vector latency chart with a smooth blue line, gradient area, average guide, live-point pulse, hover details, test protocol/method/timing/status metadata, and a two-handle timeline zoom with full-range reset.
-- Separate native chart windows sharing the same Go session and events. Reopening focuses the existing window; removing its stopped session closes it. Running again from a chart creates a new session and opens its own chart, keeping the original window attached to the original test.
-- Closing the main window quits the application and cancels all requests. Closing a chart does not stop its test.
+Active tests are capped at 8. Historical tests are not capped at 24: history uses pages of 50 and a row-ID cursor. Go retains active/current session metadata, not every probe in memory. React holds one page, selected metadata, six recent probes, and the displayed timeline summary.
+
+## HTTP semantics
+
+- HTTPS is the default scheme. The form accepts a host/path without a scheme and also handles pasted complete URLs.
+- GET, PUT, PATCH; PUT/PATCH send no body. Requests use fresh connections and measure time to response headers. Redirects are not followed.
+- Configurable interval (1–60 seconds), timeout (1–30 seconds), expected status groups/exact codes, and optional authenticated HTTP/HTTPS proxy.
+- Default accepted statuses are 2xx and 3xx. Latency min/max/average include successful probes only. Explicit stop cancellation is not a failed probe.
+- Normal system certificate verification remains enabled for targets and proxies. The independent adapter remains necessary because the existing nt dependency's HTTP implementation lacks caller context cancellation and disables TLS verification.
+- Proxy passwords are never returned in session snapshots or saved in SQLite. A saved password-required flag makes Run again request the credential. No OS credential store is introduced.
+
+## Interface and timeline
+
+The dark blue form, Advanced options, whole-row selection, metrics, recent probes, and detached chart windows are retained. History offers URL search, status filters, page navigation, replay, and confirmed permanent deletion. Deletion cascades to raw samples and summaries and closes a matching chart window.
+
+`LatencyChart` requests a timestamp range from `PingService.Timeline`. Full mode follows the test start through now (or its stopped boundary). Moving a handle fixes a historical range; Reset restores the full range and resumes live following. Pause freezes the chart's time boundary while probes and saving continue. The zoom controls remain available for empty periods. Obsolete asynchronous responses are ignored when ranges change.
+
+`Store.Timeline` finds range bounds through the time index, decomposes the corresponding sequence interval into aligned summary buckets and exact edge samples, and returns exact visible counts/average/max with representative points. It does not transfer or scan the entire history for every update. Dense views are labelled as overviews; zoom reveals individual probes. Hover describes an actual displayed raw representative, not a synthetic averaged probe. Timestamps are expected to follow collection order; abrupt backward system-clock changes need additional handling before a general production release.
+
+`Store.ExportCSV` reads original samples in pages of 256 to a fixed sequence watermark. Exports include all saved probes through that watermark, regardless of chart zoom or pause. `PingService.ExportCSV` uses a native save dialog, writes/syncs a temporary file in the destination directory, and renames it only after success. Failed exports clean up their temporary file. Export of a running test is a snapshot and does not include later probes.
 
 ## Architecture
 
 ```mermaid
-flowchart LR
-    UI["frontend/src/App.tsx: App"] --> Bridge["frontend/src/api.ts: api"]
-    Bridge --> Desktop["main.go: PingService"]
-    Desktop --> Runner["internal/ping/runner.go: Runner"]
-    Runner --> HTTP["internal/ping/runner.go: probe → net/http.Client.Do"]
-    Runner --> Events["main.go: main callback → App.Event.Emit"]
-    Events --> State["frontend/src/useSessions.ts: useSessions / merge"]
-    State --> UI
-    State --> Chart["frontend/src/LatencyChart.tsx: LatencyChart"]
-    Desktop --> Window["main.go: PingService.OpenChart → Window.NewWithOptions"]
+flowchart TD
+    UI["App.tsx: App / useSessions.ts: useSessions"] --> API["api.ts: api"]
+    API --> Service["main.go: PingService"]
+    Service --> Runner["runner.go: Runner.Start / Stop / Restart"]
+    Runner --> Probe["runner.go: run → probe → http.Client.Do"]
+    Probe --> Save["store.go: Store.Save transaction"]
+    Save --> Event["runner.go: emitLocked → main.go: App.Event.Emit"]
+    Event --> UI
+    Service --> History["store.go: List / Get / Recent"]
+    Service --> Timeline["store.go: Timeline"]
+    Timeline --> Chart["LatencyChart.tsx: LatencyChart"]
+    Service --> Export["main.go: ExportCSV → store.go: ExportCSV"]
 ```
 
-The UI-independent runner owns lifecycle, validation, statistics, and complete in-memory session history. The desktop service only exposes methods and manages windows. The React bridge uses the pinned runtime's `Call.ByName` API; no HTTP control server or hand-maintained generated binding directory is introduced. The type names and JSON contract are documented in [the API reference](../api_reference/http-wails-prototype.md).
+The desktop bridge uses typed local `Call.ByName` wrappers. Generated bindings and a shared multi-protocol session abstraction can follow when other protocols are added. No REST control server or new frontend framework is introduced.
 
-Each completed probe emits only the session summary and latest sample. `List()` retrieves summaries at startup; `Get()` retrieves the selected session's retained samples when selection changes. Revision checks reconcile initial snapshots with concurrent events. There is no periodic full-history polling.
-
-## HTTP semantics and resource limits
-
-- Probes connect directly by default or through a per-test HTTP/HTTPS proxy. Optional proxy basic credentials stay in the Go runner and proxy passwords are redacted from every returned session. TLS verification uses the system trust store for targets and HTTPS proxies.
-- GET, PUT, and PATCH only. PUT and PATCH send no request body. No user headers, embedded URL credentials, or URL fragments.
-- Success matches the configured status groups (`2xx`–`5xx`) and/or exact codes (200–599). The default is `2xx` and `3xx`. Redirect responses are measured as-is; redirects are not followed.
-- RTT measures from request creation to response headers, including connection/TLS setup. Bodies are closed without buffering. It is not full-page download timing.
-- Each probe uses a fresh connection. Each session has one worker and never overlaps requests. Interval is start-to-start, with the next probe immediate if the previous probe already exceeded the interval.
-- Requests time out after 1–30 seconds; intervals are 1–60 seconds. Stop cancels the active request, and user cancellation is not counted as failure.
-- At most 8 active and 24 retained sessions. Each session keeps every sample collected until it is removed or the app quits; memory use therefore grows with session duration.
-- Window updates append one sample without a fixed history cap. The chart defaults to the complete timeline, renders at most 700 representative SVG points for dense ranges, preserves a failure or latency peak per visual bucket, and uses binary nearest-time lookup for hover inspection. Zooming does not delete underlying samples.
-
-## Implementation decisions and limitations
-
-The existing `github.com/djian01/nt` HTTP runner was not reused in this first prototype. Its current API does not accept a request context and its transport sets `InsecureSkipVerify: true`. The independent standard-library adapter provides cancellation and normal certificate validation without modifying the existing dependency or Fyne behaviour. Consolidation into a shared, context-aware protocol service should be a deliberate follow-up.
-
-Results are in memory only. This prototype does not implement SQLite history/recording, CSV export, arbitrary HTTP methods, custom headers, certificate overrides, ICMP/TCP/DNS pages, or a theme switcher. The dark blue theme is the default. Proxy support uses the standard HTTP proxy mechanism and optional basic credentials; SOCKS, PAC, system proxy discovery, and other authentication schemes are not included. New windows share the same data; the frontend is not a standalone network-testing website.
-
-## Validation
+## Validation and remaining work
 
 ```sh
-cd wails-http
 go test -race ./internal/ping
 npm --prefix frontend run build
-go build -tags production -o bin/nt-http .
+make mac-app
 ```
 
-The Go tests exercise default and custom status classification, GET/PUT/PATCH requests, redirects, authenticated proxy routing and secret redaction across restart, cancellation of in-flight requests, certificate rejection, timeout, validation, removal, and complete-history ordering/snapshot isolation beyond the former 600-sample boundary.
+Tests cover HTTP methods/statuses/proxy redaction, cancellation, TLS rejection, saving failure and atomic rollback, recovery of 4,200 probes, exact range statistics and preserved latency peaks, uncapped historical sessions/pagination, complete CSV ordering, export errors, cascade deletion, normal shutdown, and unsupported schema versions.
 
-Verified on the development Mac: race-enabled tests, frontend type checking/build, native app build and launch, live HTTP 200/503 results, invalid URL errors, chart hover/ranges, stopped filtering, separate chart windows, shared stop state, replay into a new chart, and main-window shutdown. A Windows amd64 executable also cross-compiled successfully. Windows and Linux runtime behaviour must be verified on those operating systems before distribution. The local macOS linker emits SDK deployment-target warnings (objects built for macOS 26 against a macOS 11 link target); the local working build does not establish compatibility with older macOS releases.
+Verified locally: frontend build, race tests (4,200 saved probes and 125 historical sessions), macOS build without deployment-target warnings, and Windows amd64 cross-compilation. The native macOS smoke test confirmed pause with continued saving, CSV export, both zoom handles/reset, separate replay, quit/reopen with two restored stopped sessions, selection from a non-URL cell, visible metric cards, and deletion confirmation/cancellation. The workflow has not been run remotely.
 
-## Follow-up
-
-1. Validate appearance, keyboard behaviour, scaling, and WebView packaging on Windows and Linux.
-2. Agree on HTTP semantics and consolidate the runner behind a shared Go service.
-3. Add recording/export if this design is selected.
-4. Reassess the Wails release before migrating additional protocols.
+Remaining phases: native Windows/Linux interactive verification; long soak and million-sample performance testing; TCP/DNS/ICMP adapters; CSV import/Result Analysis; settings; signing/installers and release QA. No Fyne history migration is planned. There is no automatic disk cleanup: storage errors stop the affected test visibly. Large exports stream but do not yet have an application-level progress/cancel control.

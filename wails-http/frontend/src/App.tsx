@@ -1,7 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
+  Download,
+  History,
   ArrowDownUp,
   ArrowUpRight,
   Check,
@@ -35,7 +37,7 @@ const loss = (s: Session) =>
 const host = (s: Session) => new URL(s.config.url).host;
 const stateLabel = (s: Session) =>
   !s.running
-    ? "Stopped"
+    ? s.endReason === "interrupted" ? "Interrupted" : s.endReason === "storage_error" ? "Saving failed" : "Stopped"
     : !s.last
       ? "Connecting"
       : s.last.success
@@ -55,8 +57,12 @@ function Badge({ session }: { session: Session }) {
 
 export default function App() {
   const [selected, setSelected] = useState<string | null>(chartID);
-  const { sessions, detail, connected, error, setError, merge } =
-    useSessions(selected);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [cursors, setCursors] = useState<number[]>([0]);
+  const [view, setView] = useState<"http" | "history">("http");
+  const { sessions, detail, connected, error, setError, merge, refresh, next, active, loading } =
+    useSessions(selected, search, filter, cursors.at(-1) ?? 0);
   const [config, setConfig] = useState<Config>({
     url: "",
     method: "GET",
@@ -69,19 +75,22 @@ export default function App() {
   const [advanced, setAdvanced] = useState(false);
   const [customStatuses, setCustomStatuses] = useState("");
   const [busy, setBusy] = useState("");
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
   const [help, setHelp] = useState(false);
   const selectedSession = sessions.find((s) => s.id === selected) ?? null;
-  const active = sessions.filter((s) => s.running).length;
+  const [notice, setNotice] = useState("");
+  const [deleting, setDeleting] = useState<Session | null>(null);
+  const [replaying, setReplaying] = useState<Session | null>(null);
+  const [password, setPassword] = useState("");
+  useEffect(() => setCursors([0]), [search, filter, view]);
   useEffect(() => {
-    if (!chartID && (!selected || !sessions.some((s) => s.id === selected)))
+    if (!chartID && !selected)
       setSelected(sessions[0]?.id ?? null);
   }, [selected, sessions]);
 
   async function action(key: string, fn: () => Promise<unknown>) {
     setBusy(key);
     setError("");
+    setNotice("");
     try {
       await fn();
     } catch (err) {
@@ -104,6 +113,7 @@ export default function App() {
       });
       merge(s);
       setSelected(s.id);
+      setCursors([0]); refresh();
     });
   }
   function setTarget(value: string) {
@@ -117,19 +127,20 @@ export default function App() {
   }
   const stop = (s: Session) =>
     action(s.id, async () => merge(await api.stop(s.id)));
-  const restart = (s: Session) =>
+  const runAgain = (s: Session, secret = "") =>
     action(s.id, async () => {
-      const next = await api.restart(s.id);
+      const next = await api.restart(s.id, secret);
       merge(next);
       // A chart window keeps its original session identity for focus/removal.
       if (chartID) await api.chart(next.id);
       else setSelected(next.id);
+      setReplaying(null); setPassword(""); setCursors([0]); refresh();
     });
-  const filtered = sessions.filter(
-    (s) =>
-      s.config.url.toLowerCase().includes(search.toLowerCase()) &&
-      (filter === "all" || (filter === "running" ? s.running : !s.running)),
-  );
+  const restart = (s: Session) => {
+    if (s.passwordRequired) { setPassword(""); setReplaying(s); return Promise.resolve(); }
+    return runAgain(s);
+  };
+  const filtered = sessions;
   const session =
     detail?.session.id === selected ? detail.session : selectedSession;
   const protocol = session
@@ -208,6 +219,7 @@ export default function App() {
             </p>
             {session && (
               <div className="chart-test-meta">
+                <span>Started {new Date(session.startedAt).toLocaleString()}</span>
                 <span>Every {session.config.intervalMs / 1000}s</span>
                 <span>{session.config.timeoutMs / 1000}s timeout</span>
                 <span>
@@ -218,6 +230,10 @@ export default function App() {
             )}
           </div>
           <div className="heading-actions">
+            {session && <button className="reset-zoom" disabled={!!busy} onClick={() => void action("export", async () => {
+              const path = await api.exportCSV(session.id);
+              if (path) setNotice(`Exported all saved probes to ${path}`);
+            })}><Download size={14} /> Export CSV</button>}
             {session?.running && (
               <span className="live-label">
                 <i className="dot accent" />
@@ -240,7 +256,7 @@ export default function App() {
         </div>
         <LatencyChart
           key={session?.id ?? "empty"}
-          samples={detail?.session.id === selected ? detail.samples : []}
+          session={session}
         />
       </section>
       <section className="panel probes-panel">
@@ -291,6 +307,30 @@ export default function App() {
 
   return (
     <div className={`app ${chartID ? "chart-app" : ""}`}>
+      {deleting && <ActionDialog title="Delete saved test?" onClose={() => setDeleting(null)}>
+        <p>{deleting.config.url}</p>
+        <p>This permanently deletes the test and all its saved probes.</p>
+        {error && <p role="alert">{error}</p>}
+        <div className="dialog-actions">
+          <button className="button secondary" onClick={() => setDeleting(null)}>Cancel</button>
+          <button className="button danger" disabled={!!busy} onClick={() => void action(deleting.id, async () => {
+            await api.remove(deleting.id);
+            if (selected === deleting.id) setSelected(null);
+            setDeleting(null); refresh();
+          })}>Delete test</button>
+        </div>
+      </ActionDialog>}
+      {replaying && <ActionDialog title="Proxy password" onClose={() => { setReplaying(null); setPassword(""); }}>
+        <p>Enter the proxy password to run {replaying.config.url} again. Passwords are not saved.</p>
+        {error && <p role="alert">{error}</p>}
+        <form onSubmit={e => { e.preventDefault(); void runAgain(replaying, password); }}>
+          <label>Password<input type="password" autoComplete="off" autoFocus required value={password} onChange={e => setPassword(e.target.value)} /></label>
+          <div className="dialog-actions">
+            <button type="button" className="button secondary" onClick={() => { setReplaying(null); setPassword(""); }}>Cancel</button>
+            <button className="button primary" disabled={!!busy}>Run again</button>
+          </div>
+        </form>
+      </ActionDialog>}
       {!chartID && (
         <aside className="sidebar">
           <div className="brand">
@@ -303,16 +343,17 @@ export default function App() {
             </div>
           </div>
           <div className="workspace-label">WORKSPACE</div>
-          <div className="sidebar-current">
-            <Globe2 size={18} />
-            <span>HTTP Ping</span>
-            <ChevronRight size={15} />
-          </div>
+          <button className={`sidebar-nav ${view === "http" ? "sidebar-current" : ""}`} onClick={() => { setView("http"); setFilter("all"); }}>
+            <Globe2 size={18} /><span>HTTP Ping</span><ChevronRight size={15} />
+          </button>
+          <button className={`sidebar-nav ${view === "history" ? "sidebar-current" : ""}`} onClick={() => { setView("history"); setFilter("stopped"); }}>
+            <History size={18} /><span>History</span><ChevronRight size={15} />
+          </button>
           <div className="sidebar-note">
             <Layers3 size={17} />
             <div>
-              <strong>One protocol. A new view.</strong>
-              <p>A focused desktop preview of the next Net Test interface.</p>
+              <strong>Your results, saved.</strong>
+              <p>Every probe is saved automatically. Return to any test and explore its full timeline.</p>
             </div>
           </div>
           <div className="sidebar-bottom">
@@ -323,7 +364,7 @@ export default function App() {
             </button>
             <div className="version">
               <i className="dot accent" />
-              Wails desktop<span>0.1</span>
+              Wails desktop<span>0.2</span>
             </div>
           </div>
         </aside>
@@ -333,7 +374,7 @@ export default function App() {
           <div className="breadcrumb">
             Network tools
             <ChevronRight size={13} />
-            <strong>{chartID ? "Latency detail" : "HTTP Ping"}</strong>
+            <strong>{chartID ? "Latency detail" : view === "history" ? "Saved history" : "HTTP Ping"}</strong>
           </div>
           <span className={`connection ${connected ? "" : "disconnected"}`}>
             <i className="dot" />
@@ -347,7 +388,7 @@ export default function App() {
                 {chartID ? "TEST INSIGHTS" : "OBSERVE YOUR ENDPOINTS"}
               </div>
               <h1>
-                {chartID ? "Latency detail" : "HTTP Ping"}
+                {chartID ? "Latency detail" : view === "history" ? "Saved history" : "HTTP Ping"}
                 <span className="preview-tag">Preview</span>
               </h1>
               <p>
@@ -389,13 +430,9 @@ export default function App() {
               <div>
                 <strong>About this HTTP preview</strong>
                 <p>
-                  GET, PUT, and PATCH probes use a fresh connection with system
-                  TLS verification. Latency measures time to response headers.
-                  Expected statuses are configurable, redirects are not
-                  followed, and each test can use an HTTP or HTTPS proxy. Up to
-                  8 tests can run at once. Every probe stays in memory until
-                  you remove the test or quit. Database history and other
-                  protocols are available in the existing Fyne app.
+                  GET, PUT, and PATCH use fresh connections and system certificate verification.
+                  Every completed probe is saved locally. Reopening restores your results without restarting requests.
+                  Chart pause only freezes the display. Proxy passwords are not saved; enter them again when replaying a saved test.
                 </p>
               </div>
               <button
@@ -407,6 +444,7 @@ export default function App() {
               </button>
             </div>
           )}
+          {notice && <div className="notice-banner" role="status">{notice}</div>}
           {error && (
             <div className="error-banner" role="alert">
               <span>{error}</span>
@@ -419,7 +457,7 @@ export default function App() {
               </button>
             </div>
           )}
-          {!chartID && (
+          {!chartID && view === "http" && (
             <form className="test-form panel" onSubmit={start}>
               <div className="form-heading">
                 <span className="section-icon">
@@ -678,7 +716,7 @@ export default function App() {
             <section className="panel sessions-panel">
               <div className="panel-heading">
                 <div className="title-with-count">
-                  <h2>Your tests</h2>
+                  <h2>{view === "history" ? "Saved tests" : "Your tests"}</h2>
                   <span className="count-pill">{sessions.length}</span>
                 </div>
                 <div className="table-tools">
@@ -756,7 +794,7 @@ export default function App() {
                               </strong>
                               <small>
                                 {s.config.method} <span>·</span> Started{" "}
-                                {clock(s.startedAt)}
+                                {new Date(s.startedAt).toLocaleString()}
                               </small>
                             </span>
                           </div>
@@ -811,13 +849,13 @@ export default function App() {
                               className="icon-button"
                               title={
                                 s.running
-                                  ? "Stop before removing"
-                                  : "Remove test"
+                                  ? "Stop before deleting"
+                                  : "Delete saved test"
                               }
-                              aria-label={`Remove ${s.config.url}`}
+                              aria-label={`Delete saved test ${s.config.url}`}
                               disabled={s.running || !!busy}
                               onClick={() =>
-                                void action(s.id, () => api.remove(s.id))
+                                setDeleting(s)
                               }
                             >
                               <Trash2 size={15} />
@@ -858,7 +896,11 @@ export default function App() {
                     "Select an endpoint to inspect its response times"
                   )}
                 </span>
-                <span>{sessions.length} / 24 sessions</span>
+                <div className="pagination">
+                  <button className="reset-zoom" disabled={loading || cursors.length === 1} onClick={() => setCursors(v => v.slice(0, -1))}>Previous</button>
+                  <span>{loading ? "Loading…" : `Page ${cursors.length} · ${sessions.length} tests`}</span>
+                  <button className="reset-zoom" disabled={loading || !next} onClick={() => setCursors(v => [...v, next])}>Next</button>
+                </div>
               </div>
             </section>
           )}
@@ -871,7 +913,7 @@ export default function App() {
                 : "Runs locally on your desktop"}
             </span>
             <span>
-              Complete session timelines stay in memory until removal or quit
+              All probes saved automatically · available after reopening
             </span>
           </footer>
         </div>
@@ -898,7 +940,7 @@ function Metric({
   return (
     <motion.div
       className={`metric ${warning ? "warning" : ""}`}
-      initial={{ opacity: 0, y: 5 }}
+      initial={false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22 }}
     >
@@ -913,4 +955,12 @@ function Metric({
       <div className="metric-note">{note}</div>
     </motion.div>
   );
+}
+
+function ActionDialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => { ref.current?.showModal(); }, []);
+  return <dialog ref={ref} className="action-dialog" aria-label={title} onCancel={e => { e.preventDefault(); onClose(); }}>
+    <h2>{title}</h2>{children}
+  </dialog>;
 }

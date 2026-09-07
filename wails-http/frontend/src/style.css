@@ -1558,3 +1558,15 @@ tbody tr:hover {
     animation: none !important;
   }
 }
+
+.sidebar-nav { display:flex; align-items:center; gap:12px; width:100%; padding:15px; margin-bottom:8px; border:1px solid transparent; border-radius:9px; color:var(--text-muted); text-align:left; background:transparent; cursor:pointer; }
+.sidebar-nav span { flex:1; }
+.sidebar-nav.sidebar-current { color:var(--accent-text); background:var(--accent-soft); border-color:var(--border); }
+.pagination, .dialog-actions { display:flex; align-items:center; gap:12px; }
+.notice-banner { padding:14px 18px; margin-bottom:18px; border:1px solid var(--border); border-radius:8px; color:var(--accent-text); background:var(--surface); overflow-wrap:anywhere; }
+.action-dialog { width:min(480px,90vw); padding:26px; border:1px solid var(--border); border-radius:12px; background:var(--surface); color:var(--text); box-shadow:0 20px 80px #0008; }
+.action-dialog::backdrop { background:#030916b8; backdrop-filter:blur(4px); }
+.action-dialog p { color:var(--text-muted); margin:16px 0; overflow-wrap:anywhere; line-height:1.6; }
+.action-dialog input { width:100%; margin-top:8px; }
+.dialog-actions { justify-content:flex-end; margin-top:24px; }
+.button.danger { background:var(--danger); color:#101522; }

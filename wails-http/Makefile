@@ -1,5 +1,11 @@
 .PHONY: setup frontend build run test mac-app
 
+# Match the minimum used by Wails' linker when compiling native objects.
+ifeq ($(shell go env GOOS),darwin)
+export CGO_CFLAGS := $(CGO_CFLAGS) -mmacosx-version-min=11.0
+export CGO_LDFLAGS := $(CGO_LDFLAGS) -mmacosx-version-min=11.0
+endif
+
 setup:
 	npm --prefix frontend ci
 	go mod download

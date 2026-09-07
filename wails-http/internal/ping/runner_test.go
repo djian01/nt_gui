@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -20,7 +21,7 @@ func TestCustomExpectedStatuses(t *testing.T) {
 	}))
 	defer server.Close()
 	updates := make(chan Session, 10)
-	r := New(func(s Session) { updates <- s })
+	r := newTestRunner(t, func(s Session) { updates <- s })
 	defer r.Close()
 	c := config(server.URL)
 	c.AcceptedStatuses = []string{"404"}
@@ -42,7 +43,7 @@ func TestProxyAndSecretRedaction(t *testing.T) {
 	}))
 	defer proxy.Close()
 	updates := make(chan Session, 20)
-	r := New(func(s Session) { updates <- s })
+	r := newTestRunner(t, func(s Session) { updates <- s })
 	defer r.Close()
 	c := config("http://target.invalid/health")
 	c.Proxy = ProxyConfig{Enabled: true, URL: proxy.URL, Username: "monitor", Password: "secret"}
@@ -65,7 +66,7 @@ func TestProxyAndSecretRedaction(t *testing.T) {
 	if _, err := r.Stop(s.ID); err != nil {
 		t.Fatal(err)
 	}
-	restarted, err := r.Restart(s.ID)
+	restarted, err := r.Restart(s.ID, "secret")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +112,7 @@ func TestHTTPResultsAndMethods(t *testing.T) {
 			}))
 			defer server.Close()
 			updates := make(chan Session, 10)
-			r := New(func(s Session) { updates <- s })
+			r := newTestRunner(t, func(s Session) { updates <- s })
 			defer r.Close()
 			c := config(server.URL)
 			c.Method = test.method
@@ -143,7 +144,7 @@ func TestStopCancelsInflightRequest(t *testing.T) {
 		close(cancelled)
 	}))
 	defer server.Close()
-	r := New(nil)
+	r := newTestRunner(t, nil)
 	defer r.Close()
 	c := config(server.URL)
 	c.TimeoutMS = 30000
@@ -179,7 +180,7 @@ func TestCertificateVerificationAndTimeout(t *testing.T) {
 	tlsServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) }))
 	defer tlsServer.Close()
 	updates := make(chan Session, 10)
-	r := New(func(s Session) { updates <- s })
+	r := newTestRunner(t, func(s Session) { updates <- s })
 	defer r.Close()
 	s, err := r.Start(config(tlsServer.URL))
 	if err != nil {
@@ -210,7 +211,7 @@ func TestValidationAndRemoval(t *testing.T) {
 			t.Errorf("accepted invalid config: %+v", c)
 		}
 	}
-	r := New(nil)
+	r := newTestRunner(t, nil)
 	defer r.Close()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) { w.WriteHeader(200) }))
 	defer server.Close()
@@ -225,27 +226,21 @@ func TestValidationAndRemoval(t *testing.T) {
 	if err := r.Remove(s.ID); err != nil {
 		t.Fatal(err)
 	}
-	if len(r.List()) != 0 {
+	page, err := r.List("", "all", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Sessions) != 0 {
 		t.Fatal("removed test remains in list")
 	}
 }
 
-func TestFullHistoryOrderingAndIsolation(t *testing.T) {
-	r := New(nil)
-	s := &state{Session: Session{ID: "test"}, samples: make([]Sample, 750)}
-	for i := range s.samples {
-		s.samples[i] = Sample{Sequence: i + 1}
-	}
-	r.sessions[s.ID] = s
-	detail, err := r.Get(s.ID)
+func newTestRunner(t *testing.T, callback func(Session)) *Runner {
+	t.Helper()
+	store, err := OpenStore(filepath.Join(t.TempDir(), "results.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(detail.Samples) != 750 || detail.Samples[0].Sequence != 1 || detail.Samples[749].Sequence != 750 {
-		t.Fatal("full history was truncated or returned out of order")
-	}
-	detail.Samples[0].Sequence = -1
-	if s.samples[0].Sequence == -1 {
-		t.Fatal("snapshot aliases mutable history")
-	}
+	t.Cleanup(func() { store.Close() })
+	return New(store, callback)
 }

@@ -1,101 +1,76 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  api,
-  errorText,
-  onRemove,
-  onUpdate,
-  type Detail,
-  type Session,
-} from "./api";
+import { api, errorText, onUpdate, onRemove, type Detail, type Session } from "./api";
 
-export function useSessions(selected: string | null) {
+function append(detail: Detail, s: Session): Detail {
+  const samples = [...detail.samples];
+  if (s.last && samples.at(-1)?.sequence !== s.last.sequence) samples.push(s.last);
+  return { session: s, samples: samples.slice(-6) };
+}
+
+export function useSessions(selected: string | null, search: string, filter: string, before: number) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [error, setError] = useState("");
   const [connected, setConnected] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [next, setNext] = useState(0);
+  const [active, setActive] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const removed = useRef(new Set<string>());
+  const refresh = useCallback(() => setRefreshKey(v => v + 1), []);
   const merge = useCallback((s: Session) => {
     if (removed.current.has(s.id)) return;
-    setSessions((current) => {
-      const found = current.find((item) => item.id === s.id);
-      if (found && found.revision >= s.revision) return current;
-      return found
-        ? current.map((item) => (item.id === s.id ? s : item))
-        : [...current, s];
-    });
-    setDetail((current) => {
-      if (
-        !current ||
-        current.session.id !== s.id ||
-        current.session.revision >= s.revision
-      )
-        return current;
-      if (
-        s.last &&
-        current.samples.at(-1)?.sequence !== s.last.sequence
-      )
-        current.samples.push(s.last);
-      return { session: s, samples: current.samples };
-    });
+    setSessions(current => current.map(item => item.id === s.id && item.revision < s.revision ? s : item));
+    setDetail(current => current?.session.id === s.id && current.session.revision < s.revision ? append(current, s) : current);
+    if (s.saveError) setError(s.saveError);
   }, []);
+
   useEffect(() => {
     let mounted = true;
-    const offUpdate = onUpdate(merge);
-    const offRemove = onRemove((id) => {
-      removed.current.add(id);
-      setSessions((current) => current.filter((s) => s.id !== id));
-      setDetail((current) => (current?.session.id === id ? null : current));
+    const pending = new Map<string, Session>();
+    const off = onUpdate(s => { pending.set(s.id, s); });
+    setLoading(true);
+    const timer = setTimeout(() => {
+      api.list(search, filter, before).then(page => {
+        if (!mounted) return;
+        setSessions(page.sessions.filter(s => !removed.current.has(s.id)).map(s => {
+          const recent = pending.get(s.id);
+          return recent && recent.revision > s.revision ? recent : s;
+        }));
+        setNext(page.next); setActive(page.active); setConnected(true);
+      }).catch(err => { if (mounted) setError(errorText(err)); })
+        .finally(() => { off(); if (mounted) setLoading(false); });
+    }, 150);
+    return () => { mounted = false; clearTimeout(timer); off(); };
+  }, [search, filter, before, refreshKey]);
+
+  useEffect(() => {
+    const offUpdate = onUpdate(s => {
+      merge(s);
+      if (s.revision === 1 || !s.running) refresh();
     });
-    api
-      .list()
-      .then((items) => {
-        if (mounted) {
-          items.forEach(merge);
-          setConnected(true);
-        }
-      })
-      .catch((err) => {
-        if (mounted)
-          setError(
-            `Desktop connection unavailable. Open the compiled Wails app. ${errorText(err)}`,
-          );
-      });
-    return () => {
-      mounted = false;
-      offUpdate();
-      offRemove();
-    };
-  }, [merge]);
+    const offRemove = onRemove(id => {
+      removed.current.add(id);
+      setSessions(current => current.filter(s => s.id !== id));
+      setDetail(current => current?.session.id === id ? null : current);
+      refresh();
+    });
+    return () => { offUpdate(); offRemove(); };
+  }, [merge, refresh]);
+
   useEffect(() => {
     let mounted = true;
     setDetail(null);
     if (!selected) return;
-    // Reconcile events arriving while the initial detail snapshot is in flight.
-    const pending: Session[] = [];
-    const off = onUpdate((s) => {
-      if (s.id === selected) pending.push(s);
-    });
-    api
-      .get(selected)
-      .then((value) => {
-        if (!mounted || removed.current.has(selected)) return;
-        for (const s of pending) {
-          if (s.revision <= value.session.revision) continue;
-          if (s.last && value.samples.at(-1)?.sequence !== s.last.sequence)
-            value.samples.push(s.last);
-          value.session = s;
-        }
-        setDetail(value);
-        merge(value.session);
-      })
-      .catch((err) => {
-        if (mounted) setError(errorText(err));
-      })
-      .finally(off);
-    return () => {
-      mounted = false;
-      off();
-    };
-  }, [selected, merge]);
-  return { sessions, detail, connected, error, setError, merge };
+    let pending: Session[] = [];
+    const off = onUpdate(s => { if (s.id === selected) pending = [...pending, s].slice(-6); });
+    api.get(selected).then(value => {
+      if (!mounted || removed.current.has(selected)) return;
+      for (const s of pending) if (s.revision > value.session.revision) value = append(value, s);
+      setDetail(current => current?.session.id === selected && current.session.revision > value.session.revision ? current : value);
+      if (value.session.saveError) setError(value.session.saveError);
+    }).catch(err => { if (mounted) setError(errorText(err)); }).finally(off);
+    return () => { mounted = false; off(); };
+  }, [selected]);
+  return { sessions, detail, connected, error, setError, merge, refresh, next, active, loading };
 }

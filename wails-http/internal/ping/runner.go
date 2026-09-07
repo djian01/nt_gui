@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,8 +15,7 @@ import (
 )
 
 const (
-	MaxSessions = 24
-	MaxActive   = 8
+	MaxActive = 8
 )
 
 type Config struct {
@@ -54,18 +52,21 @@ type Sample struct {
 }
 
 type Session struct {
-	ID        string     `json:"id"`
-	Config    Config     `json:"config"`
-	Running   bool       `json:"running"`
-	StartedAt time.Time  `json:"startedAt"`
-	EndedAt   *time.Time `json:"endedAt"`
-	Revision  int        `json:"revision"`
-	Sent      int        `json:"sent"`
-	Succeeded int        `json:"succeeded"`
-	MinRTT    float64    `json:"minRtt"`
-	MaxRTT    float64    `json:"maxRtt"`
-	AvgRTT    float64    `json:"avgRtt"`
-	Last      *Sample    `json:"last"`
+	ID               string     `json:"id"`
+	Config           Config     `json:"config"`
+	Running          bool       `json:"running"`
+	StartedAt        time.Time  `json:"startedAt"`
+	EndedAt          *time.Time `json:"endedAt"`
+	Revision         int        `json:"revision"`
+	EndReason        string     `json:"endReason"`
+	SaveError        string     `json:"saveError"`
+	PasswordRequired bool       `json:"passwordRequired"`
+	Sent             int        `json:"sent"`
+	Succeeded        int        `json:"succeeded"`
+	MinRTT           float64    `json:"minRtt"`
+	MaxRTT           float64    `json:"maxRtt"`
+	AvgRTT           float64    `json:"avgRtt"`
+	Last             *Sample    `json:"last"`
 }
 
 type Detail struct {
@@ -76,21 +77,20 @@ type Detail struct {
 type state struct {
 	Session
 	requestConfig Config
-	samples       []Sample
 	cancel        context.CancelFunc
 }
 
 type Runner struct {
 	mu       sync.Mutex
 	sessions map[string]*state
-	order    []string
+	store    *Store
 	closed   bool
 	wg       sync.WaitGroup
 	onUpdate func(Session)
 }
 
-func New(onUpdate func(Session)) *Runner {
-	return &Runner{sessions: make(map[string]*state), onUpdate: onUpdate}
+func New(store *Store, onUpdate func(Session)) *Runner {
+	return &Runner{sessions: make(map[string]*state), store: store, onUpdate: onUpdate}
 }
 
 func validate(c Config) (Config, error) {
@@ -199,11 +199,12 @@ func (r *Runner) startLocked(c Config) (Session, error) {
 	if r.closed {
 		return Session{}, errors.New("Application is closing")
 	}
-	if len(r.sessions) >= MaxSessions {
-		return Session{}, errors.New("Session limit reached; remove a stopped test first")
-	}
 	active := 0
-	for _, s := range r.sessions {
+	for id, s := range r.sessions {
+		if !s.Running {
+			delete(r.sessions, id)
+			continue
+		}
 		if s.Running {
 			active++
 		}
@@ -216,25 +217,36 @@ func (r *Runner) startLocked(c Config) (Session, error) {
 	publicConfig.Proxy.Password = ""
 	publicConfig.accepted = nil
 	publicConfig.proxyURL = nil
-	s := &state{Session: Session{ID: rand.Text(), Config: publicConfig, Running: true, StartedAt: time.Now(), Revision: 1}, requestConfig: c, cancel: cancel, samples: make([]Sample, 0, 256)}
+	s := &state{Session: Session{ID: rand.Text(), Config: publicConfig, Running: true, StartedAt: time.Now(), Revision: 1, PasswordRequired: c.Proxy.Password != ""}, requestConfig: c, cancel: cancel}
+	if err := r.store.Save(s.Session, nil); err != nil {
+		cancel()
+		return Session{}, fmt.Errorf("Could not save the new test: %w", err)
+	}
 	r.sessions[s.ID] = s
-	r.order = append(r.order, s.ID)
 	r.wg.Add(1)
 	go r.run(ctx, s)
 	return s.Session, nil
 }
 
-func (r *Runner) Restart(id string) (Session, error) {
+func (r *Runner) Restart(id, password string) (Session, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	s, ok := r.sessions[id]
-	if !ok {
-		return Session{}, errors.New("Test not found")
+	old, err := r.store.Get(id)
+	if err != nil {
+		return Session{}, err
 	}
-	if s.Running {
+	if old.Running {
 		return Session{}, errors.New("Stop the test before running it again")
 	}
-	return r.startLocked(s.requestConfig)
+	if old.PasswordRequired && password == "" {
+		return Session{}, errors.New("Enter the proxy password to run this saved test again")
+	}
+	old.Config.Proxy.Password = password
+	c, err := validate(old.Config)
+	if err != nil {
+		return Session{}, err
+	}
+	return r.startLocked(c)
 }
 
 // emitLocked preserves revision order; callbacks must not call back into Runner.
@@ -269,21 +281,33 @@ func (r *Runner) run(ctx context.Context, s *state) {
 			r.mu.Unlock()
 			return
 		}
-		s.Sent++
-		sample.Sequence = s.Sent
-		s.Last = &sample
+		next := s.Session
+		next.Sent++
+		sample.Sequence = next.Sent
+		next.Last = &sample
 		if sample.Success {
-			s.Succeeded++
-			if s.Succeeded == 1 || sample.RTT < s.MinRTT {
-				s.MinRTT = sample.RTT
+			next.Succeeded++
+			if next.Succeeded == 1 || sample.RTT < next.MinRTT {
+				next.MinRTT = sample.RTT
 			}
-			if sample.RTT > s.MaxRTT {
-				s.MaxRTT = sample.RTT
-			}
-			s.AvgRTT += (sample.RTT - s.AvgRTT) / float64(s.Succeeded)
+			next.MaxRTT = max(next.MaxRTT, sample.RTT)
+			next.AvgRTT += (sample.RTT - next.AvgRTT) / float64(next.Succeeded)
 		}
-		s.samples = append(s.samples, sample)
-		s.Revision++
+		next.Revision++
+		if err := r.store.Save(next, &sample); err != nil {
+			s.cancel()
+			s.Running = false
+			now := time.Now()
+			s.EndedAt = &now
+			s.EndReason = "storage_error"
+			s.SaveError = "Saving failed; this test has stopped. " + err.Error()
+			s.Revision++
+			_ = r.store.Save(s.Session, nil)
+			r.emitLocked(s)
+			r.mu.Unlock()
+			return
+		}
+		s.Session = next
 		r.emitLocked(s)
 		r.mu.Unlock()
 		// Start-to-start interval; never overlap requests for the same session.
@@ -330,25 +354,35 @@ func probe(ctx context.Context, client *http.Client, c Config) Sample {
 	return s
 }
 
-func (r *Runner) List() []Session {
+func (r *Runner) List(search, filter string, before int64) (Page, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	result := make([]Session, 0, len(r.order))
-	for _, id := range r.order {
-		result = append(result, r.sessions[id].Session)
+	page, err := r.store.List(search, filter, before)
+	for _, s := range r.sessions {
+		if s.Running {
+			page.Active++
+		}
 	}
-	return result
+	for i, s := range page.Sessions {
+		if current := r.sessions[s.ID]; current != nil {
+			page.Sessions[i] = current.Session
+		}
+	}
+	return page, err
 }
 
 func (r *Runner) Get(id string) (Detail, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	s, ok := r.sessions[id]
-	if !ok {
-		return Detail{}, errors.New("Test not found")
+	session, err := r.store.Get(id)
+	if err != nil {
+		return Detail{}, err
 	}
-	points := append([]Sample(nil), s.samples...)
-	return Detail{Session: s.Session, Samples: points}, nil
+	if current := r.sessions[id]; current != nil {
+		session = current.Session
+	}
+	samples, err := r.store.Recent(id)
+	return Detail{Session: session, Samples: samples}, err
 }
 
 func (r *Runner) Stop(id string) (Session, error) {
@@ -356,40 +390,61 @@ func (r *Runner) Stop(id string) (Session, error) {
 	defer r.mu.Unlock()
 	s, ok := r.sessions[id]
 	if !ok {
-		return Session{}, errors.New("Test not found")
+		return r.store.Get(id)
 	}
+	s.cancel()
 	if s.Running {
-		s.cancel()
 		s.Running = false
 		now := time.Now()
 		s.EndedAt = &now
+		s.EndReason = "stopped"
 		s.Revision++
-		r.emitLocked(s)
 	}
-	return s.Session, nil
+	err := r.store.Save(s.Session, nil)
+	if err != nil {
+		s.SaveError = "Could not save the stopped state: " + err.Error()
+	}
+	r.emitLocked(s)
+	return s.Session, err
 }
 
 func (r *Runner) Remove(id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	s, ok := r.sessions[id]
-	if !ok {
-		return errors.New("Test not found")
+	if s := r.sessions[id]; s != nil && s.Running {
+		return errors.New("Stop the test before deleting its history")
 	}
-	if s.Running {
-		return errors.New("Stop the test before removing it")
+	if err := r.store.Remove(id); err != nil {
+		return err
 	}
 	delete(r.sessions, id)
-	r.order = slices.DeleteFunc(r.order, func(value string) bool { return value == id })
 	return nil
 }
 
-func (r *Runner) Close() {
+func (r *Runner) Close() error {
 	r.mu.Lock()
+	if r.closed {
+		r.mu.Unlock()
+		return nil
+	}
 	r.closed = true
 	for _, s := range r.sessions {
 		s.cancel()
 	}
+	var saveErrors []error
+	for _, s := range r.sessions {
+		if s.Running {
+			s.Running = false
+			now := time.Now()
+			s.EndedAt = &now
+			s.EndReason = "stopped"
+			s.Revision++
+		}
+		if err := r.store.Save(s.Session, nil); err != nil {
+			saveErrors = append(saveErrors, err)
+		}
+	}
 	r.mu.Unlock()
 	r.wg.Wait()
+	return errors.Join(saveErrors...)
 }

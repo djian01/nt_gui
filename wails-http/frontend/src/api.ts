@@ -28,6 +28,9 @@ export type Session = {
   startedAt: string;
   endedAt: string | null;
   revision: number;
+  endReason: string;
+  saveError: string;
+  passwordRequired: boolean;
   sent: number;
   succeeded: number;
   minRtt: number;
@@ -37,12 +40,20 @@ export type Session = {
 };
 export type Detail = { session: Session; samples: Sample[] };
 
+export type Page = { sessions: Session[]; next: number; active: number };
+export type Timeline = {
+  samples: Sample[]; count: number; succeeded: number; average: number;
+  maximum: number; from: number; to: number; revision: number; aggregated: boolean;
+};
+
 const call = <T>(method: string, ...args: unknown[]): Promise<T> =>
   Call.ByName(`main.PingService.${method}`, ...args);
 export const api = {
-  list: () => call<Session[]>("List"),
+  list: (search: string, filter: string, before: number) => call<Page>("List", search, filter, before),
   start: (config: Config) => call<Session>("Start", config),
-  restart: (id: string) => call<Session>("Restart", id),
+  restart: (id: string, password = "") => call<Session>("Restart", id, password),
+  timeline: (id: string, from: number, to: number) => call<Timeline>("Timeline", id, from, to),
+  exportCSV: (id: string) => call<string>("ExportCSV", id),
   stop: (id: string) => call<Session>("Stop", id),
   get: (id: string) => call<Detail>("Get", id),
   remove: (id: string) => call<void>("Remove", id),

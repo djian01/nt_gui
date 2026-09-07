@@ -1,6 +1,6 @@
-import { useState, type CSSProperties } from "react";
-import { Activity, RotateCcw } from "lucide-react";
-import type { Sample } from "./api";
+import { useEffect, useState, type CSSProperties } from "react";
+import { Activity, RotateCcw, Pause, Play } from "lucide-react";
+import { api, errorText, type Sample, type Session, type Timeline } from "./api";
 
 export const ms = (value: number) =>
   value.toLocaleString(undefined, {
@@ -11,7 +11,7 @@ export const clock = (value: string) =>
   new Date(value).toLocaleTimeString(undefined, { hour12: false });
 
 type PlotPoint = Sample & { plotX: number; plotY: number };
-type TimelineWindow = { start: number; end: number | null };
+type TimelineWindow = { start: number | null; end: number | null };
 
 function smoothPath(points: PlotPoint[]) {
   if (!points.length) return "";
@@ -21,35 +21,6 @@ function smoothPath(points: PlotPoint[]) {
     const midpoint = (previous.plotX + point.plotX) / 2;
     return `${path} C ${midpoint} ${previous.plotY}, ${midpoint} ${point.plotY}, ${point.plotX} ${point.plotY}`;
   }, `M ${points[0].plotX} ${points[0].plotY}`);
-}
-
-// Bound SVG work without deleting samples. Each bucket retains a failure when
-// present, otherwise its highest-latency point.
-function downsample(samples: Sample[], limit = 700) {
-  if (samples.length <= limit) return samples;
-  const result = [samples[0]];
-  const buckets = limit - 2;
-  for (let bucket = 0; bucket < buckets; bucket++) {
-    const from = 1 + Math.floor((bucket * (samples.length - 2)) / buckets);
-    const to =
-      1 + Math.floor(((bucket + 1) * (samples.length - 2)) / buckets);
-    let representative = samples[from];
-    for (let index = from; index < Math.max(from + 1, to); index++) {
-      const point = samples[index];
-      if (!point) continue;
-      if (!point.success) {
-        representative = point;
-        break;
-      }
-      if (!representative || point.rtt > representative.rtt)
-        representative = point;
-    }
-    if (representative?.sequence !== result.at(-1)?.sequence)
-      result.push(representative);
-  }
-  const last = samples.at(-1)!;
-  if (last.sequence !== result.at(-1)?.sequence) result.push(last);
-  return result;
 }
 
 function nearestByTime(samples: Sample[], target: number) {
@@ -69,35 +40,42 @@ function nearestByTime(samples: Sample[], target: number) {
   return low;
 }
 
-export default function LatencyChart({ samples }: { samples: Sample[] }) {
-  const [window, setWindow] = useState<TimelineWindow>({ start: 0, end: null });
+export default function LatencyChart({ session }: { session: Session | null }) {
+  const [window, setWindow] = useState<TimelineWindow>({ start: null, end: null });
   const [hover, setHover] = useState<number | null>(null);
-  const lastIndex = Math.max(0, samples.length - 1);
-  const selectedStart = Math.min(window.start, lastIndex);
-  const selectedEnd = Math.max(
-    selectedStart,
-    Math.min(window.end ?? lastIndex, lastIndex),
-  );
-  const points =
-    selectedStart === 0 && selectedEnd === lastIndex
-      ? samples
-      : samples.slice(selectedStart, selectedEnd + 1);
-  const plotted = downsample(points);
-  let maxSuccessfulRTT = 10;
-  let successfulTotal = 0;
-  let successfulCount = 0;
-  for (const point of points) {
-    if (!point.success) continue;
-    maxSuccessfulRTT = Math.max(maxSuccessfulRTT, point.rtt);
-    successfulTotal += point.rtt;
-    successfulCount++;
-  }
-  const maxRTT = maxSuccessfulRTT * 1.15;
-  const start = points.length ? Date.parse(points[0].time) : 0;
-  const end =
-    points.length > 1
-      ? Date.parse(points[points.length - 1].time)
-      : start + 1000;
+  const [now, setNow] = useState(Date.now());
+  const [pausedAt, setPausedAt] = useState<number | null>(null);
+  const [timeline, setTimeline] = useState<Timeline | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const origin = session ? Date.parse(session.startedAt) : now;
+  const domainEnd = Math.max(origin + 1, pausedAt ?? (session?.endedAt ? Date.parse(session.endedAt) : now));
+  const selectedStart = Math.max(origin, Math.min(window.start ?? origin, domainEnd - 1));
+  const selectedEnd = Math.max(selectedStart + 1, Math.min(window.end ?? domainEnd, domainEnd));
+  const revision = pausedAt === null ? session?.revision : 0;
+  const id = session?.id;
+  useEffect(() => {
+    if (!session?.running || pausedAt !== null) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [session?.running, pausedAt]);
+  useEffect(() => {
+    if (!id) return;
+    let current = true;
+    const timer = setTimeout(() => {
+      setLoading(true);
+      api.timeline(id, selectedStart, selectedEnd).then(value => {
+        if (current) { setTimeline(value); setError(""); }
+      }).catch(err => { if (current) setError(errorText(err)); })
+        .finally(() => { if (current) setLoading(false); });
+    }, 100);
+    return () => { current = false; clearTimeout(timer); };
+  }, [id, selectedStart, selectedEnd, revision]);
+  const points = timeline?.samples ?? [];
+  const plotted = points;
+  const maxRTT = Math.max(10, timeline?.maximum ?? 0) * 1.15;
+  const start = timeline?.from ?? selectedStart;
+  const end = Math.max(start + 1, timeline?.to ?? selectedEnd);
   const x = (point: Sample) =>
     8 + ((Date.parse(point.time) - start) / Math.max(1, end - start)) * 884;
   const y = (point: Sample) =>
@@ -119,39 +97,45 @@ export default function LatencyChart({ samples }: { samples: Sample[] }) {
         `${smoothPath(segment)} L ${segment.at(-1)!.plotX} 207 L ${segment[0].plotX} 207 Z`,
     )
     .join(" ");
-  const average = successfulCount ? successfulTotal / successfulCount : 0;
+  const average = timeline?.average ?? 0;
   const latest = points.at(-1);
   const hovered = hover == null ? null : points[Math.min(hover, points.length - 1)];
-  const zoomed = selectedStart > 0 || window.end !== null;
+  const zoomed = window.start !== null || window.end !== null;
   const rangeStyle = {
-    "--range-start": `${lastIndex ? (selectedStart / lastIndex) * 100 : 0}%`,
-    "--range-end": `${lastIndex ? (selectedEnd / lastIndex) * 100 : 100}%`,
+    "--range-start": `${((selectedStart - origin) / (domainEnd - origin)) * 100}%`,
+    "--range-end": `${((selectedEnd - origin) / (domainEnd - origin)) * 100}%`,
   } as CSSProperties;
 
   function resetZoom() {
-    setWindow({ start: 0, end: null });
+    setWindow({ start: null, end: null });
+    setPausedAt(null); setNow(Date.now());
     setHover(null);
   }
 
   return (
     <>
+      {error && <div className="error-banner" role="alert">{error}</div>}
       <div className="chart-toolbar">
         <span>
           <i className="legend-line" /> Response time <small>milliseconds</small>
         </span>
         <span className="visible-window">
           {points.length
-            ? `${clock(points[0].time)} – ${clock(points.at(-1)!.time)}`
+            ? `${clock(new Date(start).toISOString())} – ${clock(new Date(end).toISOString())}`
             : "Complete timeline"}
         </span>
+        <button className="reset-zoom" disabled={!session} onClick={() => { setPausedAt(pausedAt === null ? domainEnd : null); setNow(Date.now()); }}>
+          {pausedAt === null ? <Pause size={12} /> : <Play size={12} />}
+          {pausedAt === null ? "Pause chart" : "Resume chart"}
+        </button>
       </div>
       {!points.length ? (
         <div className="chart-empty">
           <div className="empty-pulse">
             <Activity size={28} />
           </div>
-          <strong>Your next signal starts here</strong>
-          <p>Start an HTTP test to see response times as they arrive.</p>
+          <strong>{loading ? "Loading saved results…" : "No probes in this period"}</strong>
+          <p>{session ? "Choose a wider time range or wait for a completed probe." : "Start an HTTP test to see response times as they arrive."}</p>
           <div className="empty-grid" />
         </div>
       ) : (
@@ -316,12 +300,16 @@ export default function LatencyChart({ samples }: { samples: Sample[] }) {
                 </div>
               )}
               <div className="x-labels">
-                <span>{clock(points[0].time)}</span>
-                <span>{clock(points[Math.floor((points.length - 1) / 2)].time)}</span>
-                <span>{clock(points.at(-1)!.time)}</span>
+                <span>{clock(new Date(start).toISOString())}</span>
+                <span>{clock(new Date((start + end) / 2).toISOString())}</span>
+                <span>{clock(new Date(end).toISOString())}</span>
               </div>
             </div>
           </div>
+
+        </>
+      )}
+      {session && (
           <div className="timeline-navigator">
             <div className="timeline-heading">
               <div>
@@ -331,7 +319,7 @@ export default function LatencyChart({ samples }: { samples: Sample[] }) {
               <button
                 type="button"
                 className="reset-zoom"
-                disabled={!zoomed}
+                disabled={!zoomed && pausedAt === null}
                 onClick={resetZoom}
               >
                 <RotateCcw size={12} /> Reset zoom
@@ -344,15 +332,16 @@ export default function LatencyChart({ samples }: { samples: Sample[] }) {
               <input
                 className="range-start"
                 type="range"
-                min={0}
-                max={lastIndex}
+                min={origin}
+                max={domainEnd}
+                step={1}
                 value={selectedStart}
-                disabled={samples.length < 2}
+                disabled={!session || session.sent < 2}
                 aria-label="Visible timeline start"
                 onChange={(event) => {
                   setWindow({
                     start: Math.min(Number(event.target.value), selectedEnd - 1),
-                    end: window.end,
+                    end: selectedEnd,
                   });
                   setHover(null);
                 }}
@@ -360,30 +349,30 @@ export default function LatencyChart({ samples }: { samples: Sample[] }) {
               <input
                 className="range-end"
                 type="range"
-                min={0}
-                max={lastIndex}
+                min={origin}
+                max={domainEnd}
+                step={1}
                 value={selectedEnd}
-                disabled={samples.length < 2}
+                disabled={!session || session.sent < 2}
                 aria-label="Visible timeline end"
                 onChange={(event) => {
                   const next = Math.max(Number(event.target.value), selectedStart + 1);
                   setWindow({
                     start: selectedStart,
-                    end: next === lastIndex ? null : next,
+                    end: next,
                   });
                   setHover(null);
                 }}
               />
             </div>
             <div className="timeline-labels">
-              <span>Start · {clock(samples[0].time)}</span>
+              <span>Start · {clock(new Date(origin).toISOString())}</span>
               <strong>
-                {points.length.toLocaleString()} of {samples.length.toLocaleString()} probes
+                {(timeline?.count ?? 0).toLocaleString()} of {(session?.sent ?? 0).toLocaleString()} probes
               </strong>
-              <span>Latest · {clock(samples.at(-1)!.time)}</span>
+              <span>Latest · {clock(new Date(domainEnd).toISOString())}</span>
             </div>
           </div>
-        </>
       )}
       <div className="chart-footnote">
         <span>
@@ -392,7 +381,7 @@ export default function LatencyChart({ samples }: { samples: Sample[] }) {
           Failed probe
         </span>
         <span>
-          {points.length.toLocaleString()} visible · {samples.length.toLocaleString()} total
+          {pausedAt !== null ? "Chart paused · saving continues" : timeline?.aggregated ? "Overview · zoom in for individual probes" : "Individual probes"}
         </span>
       </div>
     </>

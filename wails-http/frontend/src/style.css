@@ -971,12 +971,59 @@ tbody tr:hover {
   font-size: 8px;
   letter-spacing: 1px;
 }
+.chart-heading-copy {
+  min-width: 0;
+}
+.chart-title-line,
+.chart-test-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.chart-title-line {
+  gap: 7px;
+}
+.chart-heading-copy > p {
+  max-width: 560px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.test-chip {
+  padding: 2px 6px;
+  border: 1px solid var(--border-active);
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.45px;
+}
+.method-chip {
+  border-color: #3e526c;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+}
+.chart-test-meta {
+  gap: 0;
+  margin-top: 7px;
+  color: var(--text-muted);
+  font-size: 8px;
+}
+.chart-test-meta span + span::before {
+  content: "·";
+  margin: 0 7px;
+  color: var(--inactive);
+}
 .chart-toolbar {
   display: flex;
   justify-content: space-between;
   gap: 10px;
   align-items: center;
   padding: 0 20px 11px;
+}
+.visible-window {
+  font-variant-numeric: tabular-nums;
 }
 .chart-toolbar > span {
   display: flex;
@@ -1102,6 +1149,134 @@ tbody tr:hover {
     transform: scale(1.45);
     opacity: 0;
   }
+}
+.timeline-navigator {
+  margin: 2px 20px 13px 47px;
+  padding: 11px 12px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-inset);
+}
+.timeline-heading,
+.timeline-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.timeline-heading > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.timeline-heading strong {
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 600;
+}
+.timeline-heading span,
+.timeline-labels {
+  color: var(--text-muted);
+  font-size: 8px;
+}
+.reset-zoom {
+  height: 25px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border: 1px solid var(--border-active);
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 8px;
+  font-weight: 600;
+}
+.reset-zoom:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: #21416c;
+}
+.dual-range {
+  position: relative;
+  height: 27px;
+  margin: 6px 3px 1px;
+}
+.range-track {
+  position: absolute;
+  top: 11px;
+  right: 0;
+  left: 0;
+  height: 5px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #081322;
+}
+.range-track span {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: var(--range-start);
+  right: calc(100% - var(--range-end));
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2f72e8, #5ca0ff);
+  box-shadow: 0 0 9px rgba(76, 145, 255, 0.55);
+}
+.dual-range input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 27px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  appearance: none;
+  pointer-events: none;
+}
+.dual-range .range-start {
+  z-index: 3;
+}
+.dual-range .range-end {
+  z-index: 4;
+}
+.dual-range input[type="range"]::-webkit-slider-runnable-track {
+  height: 5px;
+  background: transparent;
+}
+.dual-range input[type="range"]::-webkit-slider-thumb {
+  width: 15px;
+  height: 19px;
+  margin-top: -7px;
+  border: 2px solid #9dc2ff;
+  border-radius: 4px;
+  background: #2f79ef;
+  box-shadow: 0 2px 8px #0008;
+  appearance: none;
+  pointer-events: auto;
+  cursor: ew-resize;
+}
+.dual-range input[type="range"]::-moz-range-track {
+  height: 5px;
+  background: transparent;
+}
+.dual-range input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 16px;
+  border: 2px solid #9dc2ff;
+  border-radius: 4px;
+  background: #2f79ef;
+  box-shadow: 0 2px 8px #0008;
+  pointer-events: auto;
+  cursor: ew-resize;
+}
+.dual-range input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(76, 145, 255, 0.3);
+}
+.timeline-labels strong {
+  color: var(--accent-text);
+  font-weight: 550;
 }
 .chart-footnote {
   display: flex;

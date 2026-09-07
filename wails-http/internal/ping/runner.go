@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	MaxSamples  = 600
 	MaxSessions = 24
 	MaxActive   = 8
 )
@@ -78,7 +77,6 @@ type state struct {
 	Session
 	requestConfig Config
 	samples       []Sample
-	next          int
 	cancel        context.CancelFunc
 }
 
@@ -218,7 +216,7 @@ func (r *Runner) startLocked(c Config) (Session, error) {
 	publicConfig.Proxy.Password = ""
 	publicConfig.accepted = nil
 	publicConfig.proxyURL = nil
-	s := &state{Session: Session{ID: rand.Text(), Config: publicConfig, Running: true, StartedAt: time.Now(), Revision: 1}, requestConfig: c, cancel: cancel, samples: make([]Sample, 0, MaxSamples)}
+	s := &state{Session: Session{ID: rand.Text(), Config: publicConfig, Running: true, StartedAt: time.Now(), Revision: 1}, requestConfig: c, cancel: cancel, samples: make([]Sample, 0, 256)}
 	r.sessions[s.ID] = s
 	r.order = append(r.order, s.ID)
 	r.wg.Add(1)
@@ -284,12 +282,7 @@ func (r *Runner) run(ctx context.Context, s *state) {
 			}
 			s.AvgRTT += (sample.RTT - s.AvgRTT) / float64(s.Succeeded)
 		}
-		if len(s.samples) < MaxSamples {
-			s.samples = append(s.samples, sample)
-		} else {
-			s.samples[s.next] = sample
-			s.next = (s.next + 1) % MaxSamples
-		}
+		s.samples = append(s.samples, sample)
 		s.Revision++
 		r.emitLocked(s)
 		r.mu.Unlock()
@@ -354,9 +347,7 @@ func (r *Runner) Get(id string) (Detail, error) {
 	if !ok {
 		return Detail{}, errors.New("Test not found")
 	}
-	points := make([]Sample, 0, len(s.samples))
-	points = append(points, s.samples[s.next:]...)
-	points = append(points, s.samples[:s.next]...)
+	points := append([]Sample(nil), s.samples...)
 	return Detail{Session: s.Session, Samples: points}, nil
 }
 

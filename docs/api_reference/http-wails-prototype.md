@@ -18,7 +18,7 @@ These APIs are Wails bound Go methods, **not HTTP endpoints**. Calls are local t
 
 `Session` contains `id`, `config`, `running`, `startedAt`, nullable `endedAt`, monotonic `revision`, `sent`, `succeeded`, `minRtt`, `maxRtt`, `avgRtt`, and nullable `last`. Timestamps are RFC3339 strings; RTT fields are milliseconds. RTT aggregates include successful probes only. Empty aggregates are zero, rendered as a dash until there is a successful response. `sent` counts completed probes; explicit cancellation is excluded.
 
-`Sample` contains `sequence` (one-based), `time`, `rtt`, `statusCode` (zero if no HTTP response), `success`, and `error` (empty on success). A received response is successful when it matches any configured status group or exact code; redirects are not followed. `Detail` contains `session` and `samples` (chronological, latest 600 at most).
+`Sample` contains `sequence` (one-based), `time`, `rtt`, `statusCode` (zero if no HTTP response), `success`, and `error` (empty on success). A received response is successful when it matches any configured status group or exact code; redirects are not followed. `Detail` contains `session` and every sample collected by that session in chronological order. History is held in memory until the session is removed or the app quits.
 
 Returned session configuration never contains a proxy password. The runner retains the credential privately for the session lifetime so `Restart` can create a new session with the same configuration. Restarting does not mutate or remove the stopped source session.
 
@@ -45,7 +45,7 @@ flowchart TD
     D --> E["internal/ping/runner.go: Runner.run"]
     E --> F["internal/ping/runner.go: probe → http.Client.Do"]
     F --> G["internal/ping/runner.go: probe matches configured status ranges"]
-    G --> V["internal/ping/runner.go: Runner.run updates counters and ring buffer"]
+    G --> V["internal/ping/runner.go: Runner.run updates counters and appends history"]
     V --> H["internal/ping/runner.go: Runner.emitLocked"]
     H --> I["main.go: main callback → App.Event.Emit http:updated"]
     I --> J["frontend/src/api.ts: onUpdate"]
@@ -62,7 +62,7 @@ flowchart TD
     C --> D["internal/ping/runner.go: Runner.List"]
     E["frontend/src/useSessions.ts: selection effect"] --> F["frontend/src/api.ts: api.get"]
     F --> G["main.go: PingService.Get"]
-    G --> H["internal/ping/runner.go: Runner.Get copies bounded ring history"]
+    G --> H["internal/ping/runner.go: Runner.Get copies complete session history"]
     D --> I["frontend/src/useSessions.ts: merge"]
     H --> J["frontend/src/useSessions.ts: reconcile pending events / setDetail"]
 ```

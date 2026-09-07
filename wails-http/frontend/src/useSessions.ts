@@ -30,11 +30,12 @@ export function useSessions(selected: string | null) {
         current.session.revision >= s.revision
       )
         return current;
-      const samples =
-        s.last && !current.samples.some((p) => p.sequence === s.last!.sequence)
-          ? [...current.samples, s.last].slice(-600)
-          : current.samples;
-      return { session: s, samples };
+      if (
+        s.last &&
+        current.samples.at(-1)?.sequence !== s.last.sequence
+      )
+        current.samples.push(s.last);
+      return { session: s, samples: current.samples };
     });
   }, []);
   useEffect(() => {
@@ -80,14 +81,10 @@ export function useSessions(selected: string | null) {
         if (!mounted || removed.current.has(selected)) return;
         for (const s of pending) {
           if (s.revision <= value.session.revision) continue;
-          if (
-            s.last &&
-            !value.samples.some((p) => p.sequence === s.last!.sequence)
-          )
+          if (s.last && value.samples.at(-1)?.sequence !== s.last.sequence)
             value.samples.push(s.last);
           value.session = s;
         }
-        value.samples = value.samples.slice(-600);
         setDetail(value);
         merge(value.session);
       })

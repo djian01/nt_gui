@@ -45,7 +45,7 @@ If an existing `GOROOT` variable points at a different Go installation, correct 
 - Multiple HTTP/HTTPS GET, PUT, or PATCH tests, with a separate scheme selector, URL validation, configurable interval/timeout, expected status groups or exact codes, and optional authenticated HTTP/HTTPS proxy routing.
 - Live status, response code, time to response headers, successful-response min/max/average, and failure rate.
 - Start, immediate stop/cancellation, run again, remove stopped sessions, search, and running/stopped filters. Selecting anywhere on a test row updates the metrics and live graph; rows also support Enter and Space keyboard selection while their action buttons remain independent.
-- Responsive vector latency chart with a smooth blue line, gradient area, average guide, live-point pulse, hover details, and 30/120/600-probe viewing ranges.
+- Responsive vector latency chart with a smooth blue line, gradient area, average guide, live-point pulse, hover details, test protocol/method/timing/status metadata, and a two-handle timeline zoom with full-range reset.
 - Separate native chart windows sharing the same Go session and events. Reopening focuses the existing window; removing its stopped session closes it. Running again from a chart creates a new session and opens its own chart, keeping the original window attached to the original test.
 - Closing the main window quits the application and cancels all requests. Closing a chart does not stop its test.
 
@@ -64,7 +64,7 @@ flowchart LR
     Desktop --> Window["main.go: PingService.OpenChart → Window.NewWithOptions"]
 ```
 
-The UI-independent runner owns lifecycle, validation, statistics, and bounded data. The desktop service only exposes methods and manages windows. The React bridge uses the pinned runtime's `Call.ByName` API; no HTTP control server or hand-maintained generated binding directory is introduced. The type names and JSON contract are documented in [the API reference](../api_reference/http-wails-prototype.md).
+The UI-independent runner owns lifecycle, validation, statistics, and complete in-memory session history. The desktop service only exposes methods and manages windows. The React bridge uses the pinned runtime's `Call.ByName` API; no HTTP control server or hand-maintained generated binding directory is introduced. The type names and JSON contract are documented in [the API reference](../api_reference/http-wails-prototype.md).
 
 Each completed probe emits only the session summary and latest sample. `List()` retrieves summaries at startup; `Get()` retrieves the selected session's retained samples when selection changes. Revision checks reconcile initial snapshots with concurrent events. There is no periodic full-history polling.
 
@@ -76,8 +76,8 @@ Each completed probe emits only the session summary and latest sample. `List()` 
 - RTT measures from request creation to response headers, including connection/TLS setup. Bodies are closed without buffering. It is not full-page download timing.
 - Each probe uses a fresh connection. Each session has one worker and never overlaps requests. Interval is start-to-start, with the next probe immediate if the previous probe already exceeded the interval.
 - Requests time out after 1–30 seconds; intervals are 1–60 seconds. Stop cancels the active request, and user cancellation is not counted as failure.
-- At most 8 active and 24 retained sessions. Each session keeps its latest 600 samples in a ring buffer; lifetime counters and successful RTT aggregates continue beyond that bound.
-- Window updates append one sample, capped at 600. Chart rendering and nearest-point inspection have bounded work.
+- At most 8 active and 24 retained sessions. Each session keeps every sample collected until it is removed or the app quits; memory use therefore grows with session duration.
+- Window updates append one sample without a fixed history cap. The chart defaults to the complete timeline, renders at most 700 representative SVG points for dense ranges, preserves a failure or latency peak per visual bucket, and uses binary nearest-time lookup for hover inspection. Zooming does not delete underlying samples.
 
 ## Implementation decisions and limitations
 
@@ -94,7 +94,7 @@ npm --prefix frontend run build
 go build -tags production -o bin/nt-http .
 ```
 
-The Go tests exercise default and custom status classification, GET/PUT/PATCH requests, redirects, authenticated proxy routing and secret redaction across restart, cancellation of in-flight requests, certificate rejection, timeout, validation, removal, and ring-buffer ordering/snapshot isolation.
+The Go tests exercise default and custom status classification, GET/PUT/PATCH requests, redirects, authenticated proxy routing and secret redaction across restart, cancellation of in-flight requests, certificate rejection, timeout, validation, removal, and complete-history ordering/snapshot isolation beyond the former 600-sample boundary.
 
 Verified on the development Mac: race-enabled tests, frontend type checking/build, native app build and launch, live HTTP 200/503 results, invalid URL errors, chart hover/ranges, stopped filtering, separate chart windows, shared stop state, replay into a new chart, and main-window shutdown. A Windows amd64 executable also cross-compiled successfully. Windows and Linux runtime behaviour must be verified on those operating systems before distribution. The local macOS linker emits SDK deployment-target warnings (objects built for macOS 26 against a macOS 11 link target); the local working build does not establish compatibility with older macOS releases.
 

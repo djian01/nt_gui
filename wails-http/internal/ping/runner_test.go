@@ -230,22 +230,22 @@ func TestValidationAndRemoval(t *testing.T) {
 	}
 }
 
-func TestBoundedHistoryOrderingAndIsolation(t *testing.T) {
+func TestFullHistoryOrderingAndIsolation(t *testing.T) {
 	r := New(nil)
-	s := &state{Session: Session{ID: "test"}, samples: make([]Sample, MaxSamples), next: 3}
-	for i := 0; i < MaxSamples; i++ {
-		s.samples[(i+3)%MaxSamples] = Sample{Sequence: i + 4}
+	s := &state{Session: Session{ID: "test"}, samples: make([]Sample, 750)}
+	for i := range s.samples {
+		s.samples[i] = Sample{Sequence: i + 1}
 	}
 	r.sessions[s.ID] = s
 	detail, err := r.Get(s.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(detail.Samples) != MaxSamples || detail.Samples[0].Sequence != 4 || detail.Samples[MaxSamples-1].Sequence != MaxSamples+3 {
-		t.Fatal("ring buffer returned out-of-order data")
+	if len(detail.Samples) != 750 || detail.Samples[0].Sequence != 1 || detail.Samples[749].Sequence != 750 {
+		t.Fatal("full history was truncated or returned out of order")
 	}
 	detail.Samples[0].Sequence = -1
-	if s.samples[3].Sequence == -1 {
+	if s.samples[0].Sequence == -1 {
 		t.Fatal("snapshot aliases mutable history")
 	}
 }

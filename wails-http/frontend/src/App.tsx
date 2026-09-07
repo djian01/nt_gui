@@ -132,6 +132,9 @@ export default function App() {
   );
   const session =
     detail?.session.id === selected ? detail.session : selectedSession;
+  const protocol = session
+    ? new URL(session.config.url).protocol.slice(0, -1).toUpperCase()
+    : "";
 
   const metrics = (
     <div className="metrics">
@@ -188,11 +191,31 @@ export default function App() {
     <div className={`analysis-grid ${chartID ? "detached" : ""}`}>
       <section className="panel chart-panel">
         <div className="panel-heading">
-          <div>
-            <h2>Response time</h2>
-            <p>
-              {session ? host(session) : "A clearer view of your connection"}
+          <div className="chart-heading-copy">
+            <div className="chart-title-line">
+              <h2>Response time</h2>
+              {session && (
+                <>
+                  <span className="test-chip protocol-chip">{protocol}</span>
+                  <span className="test-chip method-chip">
+                    {session.config.method}
+                  </span>
+                </>
+              )}
+            </div>
+            <p title={session?.config.url}>
+              {session?.config.url ?? "A clearer view of your connection"}
             </p>
+            {session && (
+              <div className="chart-test-meta">
+                <span>Every {session.config.intervalMs / 1000}s</span>
+                <span>{session.config.timeoutMs / 1000}s timeout</span>
+                <span>
+                  Expect {session.config.acceptedStatuses.join(", ")}
+                </span>
+                {session.config.proxy.enabled && <span>Via proxy</span>}
+              </div>
+            )}
           </div>
           <div className="heading-actions">
             {session?.running && (
@@ -216,6 +239,7 @@ export default function App() {
           </div>
         </div>
         <LatencyChart
+          key={session?.id ?? "empty"}
           samples={detail?.session.id === selected ? detail.samples : []}
         />
       </section>
@@ -369,9 +393,9 @@ export default function App() {
                   TLS verification. Latency measures time to response headers.
                   Expected statuses are configurable, redirects are not
                   followed, and each test can use an HTTP or HTTPS proxy. Up to
-                  8 tests can run at once. The latest 600 probes per test stay
-                  in memory until you remove the test or quit. Database history
-                  and other protocols are available in the existing Fyne app.
+                  8 tests can run at once. Every probe stays in memory until
+                  you remove the test or quit. Database history and other
+                  protocols are available in the existing Fyne app.
                 </p>
               </div>
               <button
@@ -847,7 +871,7 @@ export default function App() {
                 : "Runs locally on your desktop"}
             </span>
             <span>
-              Session results stay in memory · Last 600 probes retained
+              Complete session timelines stay in memory until removal or quit
             </span>
           </footer>
         </div>

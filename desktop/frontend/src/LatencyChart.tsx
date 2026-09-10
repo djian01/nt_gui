@@ -403,7 +403,7 @@ export default function LatencyChart({
                       ? `${ms(hovered.rtt)} ms`
                       : hovered.error || "Failed"}
                   </strong>
-                  <span>
+                  <span className={session?.config.type === "dns" ? "chart-tooltip-dns-response" : undefined}>
                     {session?.config.type === "icmp" ? `ICMP · ${hovered.success ? "Echo reply" : hovered.error || "No reply"}` : session?.config.type === "tcp" ? `TCP · ${hovered.success ? "Connected" : hovered.error || "Connection failed"}` : session?.config.type === "dns" ? `${hovered.dnsRecord || "DNS"} · ${hovered.dnsResponse || hovered.error || "No response"}` : hovered.statusCode
                       ? `HTTP ${hovered.statusCode}${hovered.responsePhase ? ` · ${hovered.responsePhase}` : ""}`
                       : "No response"}

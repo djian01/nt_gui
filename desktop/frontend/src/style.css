@@ -1224,6 +1224,11 @@ tbody tr:not(.selected):hover {
   letter-spacing: 0.55px;
   color: var(--accent-text);
 }
+.chart-tooltip-dns-response {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .chart-tooltip strong {
   display: block;
   font-size: 15px;

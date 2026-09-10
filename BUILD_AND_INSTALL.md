@@ -26,10 +26,10 @@ Scripts and packaging configuration live in `scripts/` and are versioned.
 Temporary packaging files are removed automatically. An existing package with
 the same version and architecture is replaced only after packaging succeeds.
 
-Before running a script, install the Git, Go, Node.js, and native build prerequisites
-listed in [Section 2](#2-use-commands-to-build-and-install-the-executable):
-[macOS](#macos), [Windows](#windows), or [Linux](#linux). Then return here
-and run the packaging commands from the repository root. Use native builds:
+Install the prerequisites using your OS's commands below, then run the packaging
+commands from the repository root. If you do not have the source yet, run
+`git clone https://github.com/djian01/nt_gui.git` and `cd nt_gui` after installing
+Git. Run each command only after the previous command succeeds. Use native builds:
 do not override `GOOS` or `GOARCH`.
 The default version comes from `desktop/build/darwin/Info.plist` (currently 2.0.0).
 An optional version must use `major.minor.patch`; it labels the package, and on
@@ -39,17 +39,48 @@ macOS also updates the packaged bundle's version without editing the source plis
 
 Requires macOS, Xcode Command Line Tools (including Swift), Go, Node.js/npm,
 Make, Python 3.10 or later, and `dmgbuild` 1.6.7. `hdiutil` is included with macOS.
+Install Apple's tools first and finish the installation dialog before continuing:
+
+```bash
+xcode-select --install
+```
+
+If already installed, skip that command. Install [Homebrew](https://brew.sh/) if
+`brew` is unavailable:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+Follow the installer's printed **Next steps** to add Homebrew to your shell.
+Then install Git, Go, [Node.js 24](https://formulae.brew.sh/formula/node@24), and Python:
+
+```bash
+brew install git go node@24 python@3.13
+export PATH="$(brew --prefix node@24)/bin:$PATH"
+git --version
+go version
+node --version
+npm --version
+make --version
+swift --version
+python3.13 --version
+```
+
+Confirm Go is at least 1.25 and Node.js reports `v24.x`. Repeat the Node.js
+`export PATH` command in each new Terminal session, or add it to `~/.zshrc`.
+Apple's tools provide Make and Swift.
+
 Install the layout tool in a local, Git-ignored environment once, from the
 repository root:
 
 ```bash
-python3 -m venv .local/packaging-venv
+python3.13 -m venv .local/packaging-venv
 .local/packaging-venv/bin/python -m pip install 'dmgbuild==1.6.7'
 ```
 
-Check `python3 --version` first: Apple's older system Python may be below 3.10.
-Use a current Python from [python.org](https://www.python.org/downloads/macos/)
-if necessary. An existing environment created with an older Python must be
+The explicit `python3.13` command avoids Apple's older system Python.
+An existing environment created with an older Python must be
 recreated with the newer interpreter. dmgbuild versions below 1.6.7 are rejected
 because their backgrounds may appear blank on macOS 26.2 and later.
 
@@ -84,9 +115,35 @@ are separate release steps and are not automated by these scripts.
 ### Windows installation wizard
 
 Requires Windows with native amd64 or arm64 Go, Node.js/npm, and
-[NSIS 3](https://nsis.sourceforge.io/Download). Add the NSIS installation folder
-(typically `C:\Program Files (x86)\NSIS`) to `PATH` so `makensis` is available.
-From PowerShell at the repository root:
+[NSIS 3](https://nsis.sourceforge.io/Download). In PowerShell, install the tools
+with WinGet (provided by Microsoft's **App Installer**):
+
+```powershell
+winget install --exact --id Git.Git
+winget install --exact --id GoLang.Go
+winget install --exact --id OpenJS.NodeJS.LTS
+winget install --exact --id NSIS.NSIS
+winget install --exact --id Microsoft.EdgeWebView2Runtime
+```
+
+Close and reopen PowerShell to refresh `PATH`. Add the NSIS installation folder
+for this session (adjust if you chose a different installation directory):
+
+```powershell
+$env:Path = "${env:ProgramFiles(x86)}\NSIS;$env:Path"
+git --version
+go version
+node --version
+npm.cmd --version
+makensis /VERSION
+```
+
+Confirm Go is at least 1.25 and Node.js reports `v24.x`. The LTS WinGet package
+follows the active LTS major; if it supplies a different major, install Node.js
+24 from the [official downloads](https://nodejs.org/en/download) instead.
+WebView2 is needed to launch the app. Make and a separate Wails CLI are not needed.
+Repeat the NSIS `PATH` command in new sessions, or add its directory through
+Windows **Environment Variables**. Then, from PowerShell at the repository root:
 
 ```powershell
 .\scripts\package-windows.ps1
@@ -118,13 +175,58 @@ a separate release step.
 
 ### Linux DEB / RPM
 
-Requires Linux with the native build prerequisites below plus
-[nFPM](https://nfpm.goreleaser.com/docs/install/) on `PATH`. For example,
-install nFPM with Go and make its executable available:
+Install Git, Go, and the native libraries using the commands for your distribution.
+For **Ubuntu 24.04 / DEB**, the Go backports PPA provides newer Go versions than
+the default repository (see the [Go Ubuntu guide](https://go.dev/wiki/Ubuntu)):
+
+```bash
+sudo apt-get update
+sudo apt-get install -y git curl ca-certificates build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev desktop-file-utils software-properties-common
+sudo add-apt-repository -y ppa:longsleep/golang-backports
+sudo apt-get update
+sudo apt-get install -y golang-go
+```
+
+For **Fedora / RPM**:
+
+```bash
+sudo dnf install -y git curl ca-certificates golang gcc gcc-c++ make pkgconf-pkg-config gtk4-devel webkitgtk6.0-devel desktop-file-utils
+```
+
+On either distribution, install Node.js 24 with [nvm](https://github.com/nvm-sh/nvm)
+in Bash. If nvm is already installed, load it and run the final two commands:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+export NVM_DIR="$HOME/.nvm"
+. "$NVM_DIR/nvm.sh"
+nvm install 24
+nvm alias default 24
+```
+
+Check the prerequisites before proceeding:
+
+```bash
+git --version
+go version
+node --version
+npm --version
+make --version
+pkg-config --modversion gtk4 webkitgtk-6.0
+```
+
+Go must be at least 1.25, Node.js must report `v24.x`, and the last command must
+report both libraries. If your distribution supplies older Go, use the
+[official Go installer instructions](https://go.dev/doc/install) before continuing.
+The Ubuntu PPA commands are Ubuntu-specific; do not run them on Debian.
+
+Then install [nFPM](https://nfpm.goreleaser.com/docs/install/) and make its executable
+available in the same shell:
 
 ```bash
 go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
 export PATH="$(go env GOPATH)/bin:$PATH"
+nfpm --version
 ```
 
 Build DEB packages on Ubuntu 24.04 or a compatible Debian-family target.

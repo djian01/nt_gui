@@ -17,7 +17,7 @@ func HTTPPingContainer(a fyne.App, w fyne.Window, db *sql.DB, entryChan chan ntd
 	ntGlobal.httpIndex = 1
 
 	// ** Action-Button Card **
-	httpPingAddBtn := widget.NewButtonWithIcon("Add HTTP Ping", theme.ContentAddIcon(), func() {})
+	httpPingAddBtn := widget.NewButtonWithIcon("Add HTTP Test", theme.ContentAddIcon(), func() {})
 	httpPingAddBtn.Importance = widget.HighImportance
 	httpPingAddBtnContainer := container.New(layout.NewBorderLayout(nil, nil, httpPingAddBtn, nil), httpPingAddBtn)
 	httpPingAddBtncard := widget.NewCard("", "", httpPingAddBtnContainer)

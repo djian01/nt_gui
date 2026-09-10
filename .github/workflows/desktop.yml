@@ -1,0 +1,73 @@
+name: Net Test desktop
+on:
+  push:
+    paths: ['desktop/**', 'Icon.png', '.github/workflows/desktop.yml']
+  pull_request:
+    paths: ['desktop/**', 'Icon.png', '.github/workflows/desktop.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, windows-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: desktop/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/frontend/package-lock.json
+      - name: Install Linux native dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update > "$RUNNER_TEMP/apt.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/apt.log"; exit 1; }
+          sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev desktop-file-utils > "$RUNNER_TEMP/apt.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/apt.log"; exit 1; }
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci > "$RUNNER_TEMP/npm.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/npm.log"; exit 1; }
+      - name: Build frontend
+        run: npm --prefix frontend run build > "$RUNNER_TEMP/frontend.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/frontend.log"; exit 1; }
+      - name: Check Linux launcher
+        if: runner.os == 'Linux'
+        run: desktop-file-validate build/linux/net-test.desktop
+      - name: Test lifecycle, import, storage, and exports
+        run: |
+          if [ "$RUNNER_OS" = 'macOS' ]; then
+            export CGO_CFLAGS='-mmacosx-version-min=11.0'
+            export CGO_LDFLAGS='-mmacosx-version-min=11.0'
+          fi
+          go test -race ./... > "$RUNNER_TEMP/tests.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/tests.log"; exit 1; }
+      - name: Build and package native desktop app
+        run: |
+          if [ "$RUNNER_OS" = 'macOS' ]; then
+            export CGO_CFLAGS='-mmacosx-version-min=11.0'
+            export CGO_LDFLAGS='-mmacosx-version-min=11.0'
+          fi
+          if [ "$RUNNER_OS" = 'Windows' ]; then
+            go run github.com/akavel/rsrc@v0.10.2 -arch "$(go env GOARCH)" -ico build/icons/net-test.ico -o "rsrc_windows_$(go env GOARCH).syso" > "$RUNNER_TEMP/icons.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/icons.log"; exit 1; }
+            go build -tags production -ldflags '-H windowsgui' -o bin/net-test.exe . > "$RUNNER_TEMP/build.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/build.log"; exit 1; }
+          elif [ "$RUNNER_OS" = 'macOS' ]; then
+            make mac-app > "$RUNNER_TEMP/build.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/build.log"; exit 1; }
+            ditto -c -k --sequesterRsrc --keepParent "bin/Net Test.app" bin/net-test-macos.zip
+          else
+            make linux-package > "$RUNNER_TEMP/build.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/build.log"; exit 1; }
+            tar -czf bin/net-test-linux.tar.gz -C bin/net-test-linux usr
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: net-test-${{ matrix.os }}
+          path: |
+            desktop/bin/net-test.exe
+            desktop/bin/net-test-macos.zip
+            desktop/bin/net-test-linux.tar.gz

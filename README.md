@@ -4,22 +4,23 @@
 
 # Net Test
 
-Net Test is a cross-platform desktop network diagnostics application built with
-Go and [Wails](https://wails.io/). Its interface uses React and TypeScript and
-runs inside the operating system's native webview.
-
-The current application supports HTTP and HTTPS endpoint testing. TCP, ICMP,
-and DNS tests are planned for future releases.
+Net Test is a cross-platform desktop application for running network tests,
+tracking results, and investigating performance over time. It is built with Go
+and [Wails](https://wails.io/); its React and TypeScript interface runs inside
+the operating system's native webview.
 
 ## Current status
 
-The Wails application is under active development in `wails-http/`. The current
-version is an HTTP/HTTPS desktop application rather than a complete release of
-the planned network-testing suite.
+The desktop application is under active development in `desktop/`. Its shared
+test lifecycle, persistence, History, CSV export, and timeline components form
+the foundation for multiple network test types.
 
 Current functionality:
 
-- Run multiple HTTP or HTTPS tests using GET, PUT, or PATCH.
+- Run TCP connection tests for multiple hostnames/IPs and a port, with recording, charts, replay, and CSV analysis.
+- Run DNS tests with custom resolver IPs and UDP/TCP transport.
+- Run multiple HTTP or HTTPS tests using GET, POST, PUT, or PATCH, with optional redirect following.
+- Import current or legacy HTTP, DNS, or TCP CSV results for analysis, export chart PNGs, and delete selected saved tests.
 - Select HTTP or HTTPS separately from the URL input. HTTPS is the default.
 - Configure the probe interval and request timeout.
 - Define successful responses using HTTP status groups or exact status codes.
@@ -37,14 +38,13 @@ Current functionality:
 - Restore saved tests and complete timelines after restarting the application.
 - Browse saved History with search, status filters, and pagination.
 - Export every saved probe for a test to CSV.
+- Switch between persistent light and dark interface themes.
 
-## Planned functionality
+## Test types
 
-The following test types will be added after the HTTP/HTTPS application is
-stable across the supported desktop platforms:
+HTTP/HTTPS, DNS, and TCP tests are available now. Additional test types planned
+for future releases include:
 
-- **TCP tests** for checking connections to a host and port.
-- **DNS tests** with selectable UDP or TCP transport and custom DNS servers.
 - **ICMP tests** with platform-specific permission and compatibility handling.
 
 These protocols will reuse the current session lifecycle, automatic storage,
@@ -76,26 +76,26 @@ entered again when rerunning a saved test that used authenticated proxy access.
 ## Project structure
 
 ```text
-wails-http/
+desktop/
   main.go                    Wails application and desktop service
   Makefile                   Repeatable setup, build, run, and test commands
-  internal/ping/
-    runner.go                HTTP session lifecycle and network probes
+  internal/testengine/
+    runner.go                Shared HTTP/DNS/TCP session lifecycle and probes
     store.go                 SQLite persistence, timeline queries, and CSV data
   frontend/
-    src/App.tsx              HTTP form, test table, History, and desktop actions
+    src/App.tsx              Protocol forms, test table, History, and desktop actions
     src/LatencyChart.tsx     Live and saved timeline graph
     src/useSessions.ts       Session, event, and selected-test state
     src/api.ts               Typed Wails desktop API wrappers
-    src/style.css            Dark blue application design
+    src/style.css            Shared light and dark design standards
 docs/
   architecture/              Architecture and implementation decisions
   api_reference/             Desktop method contracts and call flows
 ```
 
 More detail is available in the
-[architecture documentation](docs/architecture/http-wails-prototype.md) and
-[desktop API reference](docs/api_reference/http-wails-prototype.md).
+[architecture documentation](docs/architecture/desktop.md) and
+[desktop API reference](docs/api_reference/desktop.md).
 
 ## License
 

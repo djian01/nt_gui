@@ -6,6 +6,16 @@ nt
 *.app
 nt_gui
 *.xz
+*.test
+coverage.out
+*.prof
+
+# Release packages
+*.dmg
+*.msi
+*.deb
+*.rpm
+*.AppImage
 
 # log file
 *.log
@@ -30,11 +40,15 @@ nt_gui
 # .DS_Store
 .DS_Store
 
-# Local notes and prototype build outputs
+# Local notes and desktop build outputs
 /.local/
 /.ai-temp/
 /tmp/
 /docs/memory/
-/wails-http/frontend/node_modules/
-/wails-http/frontend/dist/
-/wails-http/bin/
+/desktop/frontend/node_modules/
+/desktop/frontend/dist/
+/desktop/frontend/.vite/
+/desktop/frontend/coverage/
+/desktop/frontend/*.tsbuildinfo
+/desktop/bin/
+/desktop/rsrc_windows_*.syso

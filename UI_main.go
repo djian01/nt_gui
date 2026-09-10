@@ -111,7 +111,7 @@ func makeUI(w fyne.Window, a fyne.App, db *sql.DB, entryChan chan ntdb.DbEntry, 
 	AppTabContainer := container.NewAppTabs(
 		container.NewTabItemWithIcon("ICMP Ping", icmpIcon, ICMPPingContainer(a, w, db, entryChan, errChan)),
 		container.NewTabItemWithIcon("TCP Ping", tcpIcon, TCPPingContainer(a, w, db, entryChan, errChan)),
-		container.NewTabItemWithIcon("HTTP Ping", httpIcon, HTTPPingContainer(a, w, db, entryChan, errChan)),
+		container.NewTabItemWithIcon("HTTP Test", httpIcon, HTTPPingContainer(a, w, db, entryChan, errChan)),
 		container.NewTabItemWithIcon("DNS Ping", dnsIcon, DNSPingContainer(a, w, db, entryChan, errChan)),
 		container.NewTabItemWithIcon("Result Analysis", analyIcon, ResultAnalysisContainer(a, w, db, entryChan, errChan)),
 		container.NewTabItemWithIcon("History", historyIcon, HistoryContainer(a, w, db, entryChan, errChan, &selectedEntries, &displayObjects, selectAllCheckBox)),

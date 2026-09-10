@@ -98,6 +98,7 @@ func main() {
 	}()
 
 	a := app.NewWithID("net.packetstreams.ntgui")
+	a.SetIcon(resourceIconPng)
 
 	// Ensure cleanup when the app closes
 	a.Lifecycle().SetOnStopped(func() {

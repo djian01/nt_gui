@@ -85,6 +85,7 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [selected, setSelected] = useState<string | null>(chartID);
   const [search, setSearch] = useState("");
+  const [historyType, setHistoryType] = useState("all");
   const detailsRef = useRef<HTMLDivElement>(null);
   const [rowSelection, setRowSelection] = useState(0);
 
@@ -102,7 +103,7 @@ export default function App() {
   }, [rowSelection]);
   const [cursors, setCursors] = useState<number[]>([0]);
   const [view, setView] = useState<"http" | "dns" | "tcp" | "icmp" | "history">("http");
-  const filter = view === "history" ? "stopped" : `current-${view}`;
+  const filter = view === "history" ? (historyType === "all" ? "stopped" : `stopped-${historyType}`) : `current-${view}`;
   const { sessions, detail, connected, error, setError, merge, refresh, next, active, loading } =
     useSessions(selected, search, filter, cursors.at(-1) ?? 0);
   const filtered = view === "history" ? sessions.filter((s) => !s.running) : sessions;
@@ -440,20 +441,20 @@ export default function App() {
           </div>
         </form>
       </ActionDialog>}
-      {aboutOpen && <ActionDialog title="About Net Test" onClose={() => setAboutOpen(false)}>
+      {aboutOpen && <ActionDialog title="About NET-Test" onClose={() => setAboutOpen(false)}>
         <div className="about-heading">
           <img src="/net-test.svg" alt="" width="64" height="64" />
           <div>
-            <strong>Net Test</strong>
+            <strong>NET-Test</strong>
             <span>Network diagnostics</span>
           </div>
         </div>
         <p className="about-description">
-          Net Test is a desktop app for checking endpoint responsiveness, spotting failures,
+          NET-Test is a desktop app for checking endpoint responsiveness, spotting failures,
           and reviewing saved network test results over time.
         </p>
         <dl className="about-details">
-          <div><dt>Version</dt><dd>1.1.0</dd></div>
+          <div><dt>Version</dt><dd>2.0.0</dd></div>
           <div><dt>Developed by</dt><dd>Dennis Jian</dd></div>
           <div>
             <dt>Project home</dt>
@@ -470,10 +471,10 @@ export default function App() {
       </ActionDialog>}
       {!chartID && (
         <aside className="sidebar">
-          <button type="button" className="brand" onClick={() => setAboutOpen(true)} aria-label="About Net Test" title="About Net Test">
+          <button type="button" className="brand" onClick={() => setAboutOpen(true)} aria-label="About NET-Test" title="About NET-Test">
             <img className="brand-mark" src="/net-test.svg" alt="" width="40" height="40" />
             <div>
-              <strong>Net Test</strong>
+              <strong>NET-Test</strong>
               <span>Network diagnostics</span>
             </div>
           </button>
@@ -887,6 +888,21 @@ export default function App() {
                     <button className="reset-zoom bulk-delete" disabled={!!busy} onClick={() => setBulkDeleting([...checked])}>
                       <Trash2 size={12} /> Delete selected ({checked.size})
                     </button>
+                  )}
+                  {view === "history" && (
+                    <select className="history-type-filter" aria-label="Filter history by test type"
+                      value={historyType} onChange={(event) => {
+                        setHistoryType(event.target.value);
+                        setCursors([0]);
+                        setSelected(null);
+                        setChecked(new Set());
+                      }}>
+                      <option value="all">All types</option>
+                      <option value="http">HTTP</option>
+                      <option value="dns">DNS</option>
+                      <option value="tcp">TCP</option>
+                      <option value="icmp">ICMP</option>
+                    </select>
                   )}
                   <label className="search">
                     <Search size={14} />

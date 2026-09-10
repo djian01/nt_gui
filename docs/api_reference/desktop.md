@@ -1,4 +1,4 @@
-# Net Test desktop API
+# NET-Test v2.0.0 desktop API
 
 These are Wails-bound local Go methods, not network endpoints. `frontend/src/api.ts` calls `main.TestService.<Method>` through `Call.ByName`; `main.go` registers the service. All paths below are within `desktop/`. The service and event names are protocol-neutral so later test types can use the same desktop bridge.
 
@@ -31,9 +31,9 @@ The previous `Get` complete-history transfer has been replaced by `Timeline` ran
 
 `Config` with `type="dns"`: `resolver` (IPv4/IPv6 address, no hostname or custom port), non-empty `query`, `protocol` (`udp` by default or `tcp`), positive whole-second `intervalMs`/`timeoutMs` (UI defaults 1000/4000), and `recording` (false by default). HTTP-only options are cleared. `url` is a generated resolver/query display and search string, not a network URL.
 
-`Session`: optional DNS/TCP `index` (per-process row number), ID, sanitized config, running, startedAt, nullable endedAt, monotonic revision, sent/succeeded counts, successful-response minRtt/maxRtt/avgRtt, nullable last sample, endReason (empty while running; stopped/interrupted/storage_error/imported), saveError, passwordRequired, and optional importNote explaining missing source metadata. All RTT values are milliseconds. Dates in models are RFC3339; timeline bounds use Unix milliseconds. Eight active tests maximum; no historical session/probe retention cutoff.
+`Session`: optional DNS/TCP/ICMP `index` (per-process row number), ID, sanitized config, running, startedAt, nullable endedAt, monotonic revision, sent/succeeded counts, successful-response minRtt/maxRtt/avgRtt, nullable last sample, endReason (empty while running; stopped/interrupted/storage_error/imported), saveError, passwordRequired, and optional importNote explaining missing source metadata. All RTT values are milliseconds. Dates in models are RFC3339; timeline bounds use Unix milliseconds. Eight active tests maximum; no historical session/probe retention cutoff.
 
-`Sample`: one-based sequence, time, RTT, statusCode (0 for no HTTP response), optional responsePhase (HTTP reason phrase), success, error. DNS adds `dnsResponse` (comma-separated IPv4 addresses) and `dnsRecord` (A/CNAME). DNS/TCP chart metadata and CSV use zero-based sequences to match Fyne; the shared internal sequence remains one-based. Sequence counts completed probes; unrecorded raw samples are memory-only. A storage-failed or explicitly cancelled probe is not counted as saved.
+`Sample`: one-based sequence, time, RTT, statusCode (0 for no HTTP response), optional responsePhase (HTTP reason phrase), success, error. DNS adds `dnsResponse` (comma-separated IPv4 addresses) and `dnsRecord` (A/CNAME). DNS/TCP chart metadata and CSV use zero-based sequences to match legacy; the shared internal sequence remains one-based. Sequence counts completed probes; unrecorded raw samples are memory-only. A storage-failed or explicitly cancelled probe is not counted as saved.
 
 `Timeline` statistics refer to the entire selected raw range, not just representative points. Overview samples retain actual first/last/min/max/failure representatives. Requests are read within one database transaction; revisions identify their saved snapshot. Dense representative output is bounded by the bucket decomposition; recorded raw samples remain on disk; unrecorded charts use an in-memory SQLite store. Zoom far enough to receive individual samples.
 
@@ -53,7 +53,7 @@ flowchart TD
     A["App.tsx: start / runAgain"] --> B["api.ts: start / restart"]
     B --> C["main.go: TestService.Start / Restart"]
     C --> D["runner.go: Start / Restart → validate → startLocked"]
-    D --> E["store.go: Store.Save test configuration"]
+    D --> E["recording.go: prepareLiveResults; store.go: Store.Save only if recording ON"]
     E --> F["runner.go: run → probe → http.Client.Do"]
     F --> R["recording.go: saveProbe chooses durable/memory sample storage"]
     R --> G["store.go: saveTest / Store.Save sample + test + buckets transaction"]
@@ -65,11 +65,11 @@ flowchart TD
 
 ## History and timeline flow
 
-`App.tsx: App` uses the existing `List(search, filter, before)` contract with `current-http`/`current-dns`/`current-tcp` for Tests and `stopped` for History. Search and pagination stay scoped to that tab. The `current` filter adds app-session membership; method signatures and response fields are unchanged.
+`App.tsx: App` uses the existing `List(search, filter, before)` contract with `current-http`/`current-dns`/`current-tcp`/`current-icmp` for Tests and `stopped` for History. Search and pagination stay scoped to that tab. The `current` filter adds app-session membership; method signatures and response fields are unchanged.
 
 ```mermaid
 flowchart TD
-    T["App.tsx: App - Tests uses current-http/current-dns/current-tcp; History uses stopped"] --> A
+    T["App.tsx: App - Tests uses current-http/current-dns/current-tcp/current-icmp; History uses stopped"] --> A
     A["useSessions.ts: list effect"] --> B["api.ts: list → main.go: TestService.List"]
     B --> C["runner.go: List → store.go: List"]
     D["useSessions.ts: selection effect"] --> E["api.ts: get → main.go: TestService.Get"]
@@ -105,7 +105,7 @@ flowchart TD
     G --> H["store.go: Close"]
 ```
 
-No network tests automatically resume on startup. No Fyne database is opened, imported, or upgraded. Explicit HTTP/DNS/TCP CSV import is supported independently of the legacy database.
+No network tests automatically resume on startup. No legacy database is opened, imported, or upgraded. Explicit HTTP/DNS/TCP/ICMP CSV import is supported independently of the legacy database.
 
 ## CSV analysis, chart image, and bulk history flows
 
@@ -124,7 +124,7 @@ flowchart TD
     M --> N["main.go: TestService.Remove → runner.go: Remove → store.go: Remove"]
 ```
 
-CSV import creates a separate stopped history entry and never starts network requests. The parser supports desktop HTTP/DNS/TCP exports and legacy Fyne HTTP/DNS/TCP exports; malformed input rolls back without a partial history entry. Imports are bounded to 256 MiB and one million rows. CSV formats without replay settings cannot fully reconstruct the original configuration; the import documents available defaults/inferences. Import requires no active tests so its transaction cannot delay live probe saving.
+CSV import creates a separate stopped history entry and never starts network requests. The parser supports desktop HTTP/DNS/TCP/ICMP exports and legacy HTTP/DNS/TCP/ICMP exports; malformed input rolls back without a partial history entry. Imports are bounded to 256 MiB and one million rows. CSV formats without replay settings cannot fully reconstruct the original configuration; the import documents available defaults/inferences. Import requires no active tests so its transaction cannot delay live probe saving.
 
 Chart export saves the visible plot as PNG, including chart labels and range statistics. The bridge accepts PNG data only, at most 12 MiB encoded, dimensions no larger than 4096 per axis and 12 million pixels. CSV and PNG exports both finish a temporary file before replacing the user-selected destination. Cancellation returns no path and writes no output.
 
@@ -169,7 +169,7 @@ flowchart TD
     P --> Q["main.go: TestService.Dismiss closes chart window"]
 ```
 
-The existing eight-active-test desktop limit applies across HTTP, DNS, and TCP. Blank lines are skipped; each resolver starts a separate test. Duplicate resolver lines remain separate tests, as in Fyne. Resolver validation does not perform hostname lookups. Stop cancels in-flight DNS lookups; replay preserves resolver, query, protocol, interval, timeout, and current recording preference.
+The existing eight-active-test desktop limit applies across HTTP, DNS, and TCP. Blank lines are skipped; each resolver starts a separate test. Duplicate resolver lines remain separate tests, as in legacy. Resolver validation does not perform hostname lookups. Stop cancels in-flight DNS lookups; replay preserves resolver, query, protocol, interval, timeout, and current recording preference.
 
 Recording off saves nothing to the SQLite file: no session metadata, summary/latest snapshot, raw probe rows, or buckets. The test never appears in History. All current state stays in memory. Live raw probes and chart buckets are memory-only and are released on row close, history deletion, or app exit. Turning recording on is one-way and writes only subsequent probes to the durable store. The current chart retains earlier live probes until closed; reopened history and CSV contain only recorded probes. A failed durable save rolls back the pending live-chart transaction. No schema migration is introduced.
 
@@ -183,7 +183,7 @@ flowchart TD
     G --> H["dns_csv.go: dnsCSVRow → csv.Writer → main.go: saveExport"]
 ```
 
-DNS export retains the 18 Fyne columns, appending `Test ID`, `Interval (ms)`, `Timeout (ms)`, and `Time (UTC)` for replay fidelity and timestamp precision. Import accepts both layouts. Legacy replay defaults to 1-second interval, 4-second timeout, and recording on; query/resolver/protocol come from the file. Partial recordings may start at any non-negative sequence; consecutive rows are renumbered internally and summary statistics cover imported rows only. The UI offers DNS CSV export after stopping a recorded test, matching Fyne. No raw recording means export returns a clear error.
+DNS export retains the 18 legacy columns, appending `Test ID`, `Interval (ms)`, `Timeout (ms)`, and `Time (UTC)` for replay fidelity and timestamp precision. Import accepts both layouts. Legacy replay defaults to 1-second interval, 4-second timeout, and recording on; query/resolver/protocol come from the file. Partial recordings may start at any non-negative sequence; consecutive rows are renumbered internally and summary statistics cover imported rows only. The UI offers DNS CSV export after stopping a recorded test, matching legacy. No raw recording means export returns a clear error.
 
 
 ## Shared HTTP/DNS/TCP recording
@@ -279,7 +279,7 @@ flowchart TD
     K --> L["import.go: consistentImport / updateImportedSummary → store.go: saveSample"]
 ```
 
-TCP CSV supports Fyne's 17 columns (`Type` through `AdditionalInfo`), plus four
+TCP CSV supports legacy's 17 columns (`Type` through `AdditionalInfo`), plus four
 desktop columns (`Test ID`, `Interval (ms)`, `Timeout (ms)`, `Time (UTC)`).
 Exports use zero-based probe sequence numbers and preserve nanosecond timestamps.
 Imports accept partial consecutive recordings, produce a separate stopped
@@ -328,4 +328,24 @@ flowchart TD
  ST --> ROW["internal/testengine/icmp_csv.go: icmpCSVRow"]
 ```
 
-CSV accepts the exact 16-column Fyne ICMP format and the desktop format with appended Test ID, Interval (ms), Timeout (ms), Time (UTC), and DF. Legacy replay defaults to 1s/4s and DF OFF because the Fyne CSV omits those settings; an import note discloses this. Hostnames in both legacy destination columns are accepted and resolved on replay, not during import. Statistics cover recorded rows only. The existing bounded transactional streaming import, paginated export, and chart queries apply without schema changes.
+CSV accepts the exact 16-column legacy ICMP format and the desktop format with appended Test ID, Interval (ms), Timeout (ms), Time (UTC), and DF. Legacy replay defaults to 1s/4s and DF OFF because the legacy CSV omits those settings; an import note discloses this. Hostnames in both legacy destination columns are accepted and resolved on replay, not during import. Statistics cover recorded rows only. The existing bounded transactional streaming import, paginated export, and chart queries apply without schema changes.
+
+## Version 2.0.0 transport metadata
+
+HTTP probes in `internal/testengine/runner.go: probe` send `User-Agent: net-test/2.0.0`. This identifies the renamed application; local bridge method signatures and stored formats are unchanged. The start/save flow above includes the HTTP probe step.
+
+## History test-type filter
+
+`main.TestService.List(search, filter, before)` additionally accepts `stopped-http`, `stopped-dns`, `stopped-tcp`, and `stopped-icmp`. `stopped` still means all saved test types. Request/response shapes are unchanged. HTTP includes legacy configurations with missing or empty type. Protocol, saved-only, stopped-state, and endpoint predicates apply before the 50-row cursor page; no frontend full-history fetch occurs.
+
+```mermaid
+flowchart TD
+ A["App.tsx: App History dropdown + endpoint search"] --> B["useSessions.ts: useSessions"]
+ B --> C["api.ts: api.list"]
+ C --> D["main.go: TestService.List"]
+ D --> E["runner.go: Runner.List"]
+ E --> F["store.go: Store.List protocol predicate + stopped/search/cursor + LIMIT 51"]
+ F --> A
+```
+
+Changing test type resets the page, selection, and bulk-delete checkboxes. The dropdown is History-only and defaults to All types. The query retains the existing running-state index; protocol is a JSON predicate over matching test metadata, not raw samples. No schema change.

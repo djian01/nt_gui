@@ -37,10 +37,10 @@ run: build
 	./$(EXECUTABLE)
 
 mac-app: build
-	mkdir -p "bin/Net Test.app/Contents/MacOS" "bin/Net Test.app/Contents/Resources"
-	cp bin/net-test "bin/Net Test.app/Contents/MacOS/net-test"
-	cp build/darwin/Info.plist "bin/Net Test.app/Contents/Info.plist"
-	cp build/icons/net-test.icns "bin/Net Test.app/Contents/Resources/net-test.icns"
+	mkdir -p "bin/NET-Test.app/Contents/MacOS" "bin/NET-Test.app/Contents/Resources"
+	cp bin/net-test "bin/NET-Test.app/Contents/MacOS/net-test"
+	cp build/darwin/Info.plist "bin/NET-Test.app/Contents/Info.plist"
+	cp build/icons/net-test.icns "bin/NET-Test.app/Contents/Resources/net-test.icns"
 
 linux-package: build
 	mkdir -p bin/net-test-linux/usr/bin bin/net-test-linux/usr/share/applications

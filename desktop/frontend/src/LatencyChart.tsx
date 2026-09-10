@@ -75,7 +75,7 @@ async function chartPNG(svg: SVGSVGElement, session: Session, timeline: Timeline
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = foreground;
     context.font = "600 34px Inter, system-ui, sans-serif";
-    context.fillText(session.config.type === "icmp" ? "Net Test · ICMP echo time" : session.config.type === "tcp" ? "Net Test · TCP connection time" : session.config.type === "dns" ? "Net Test · DNS response time" : "Net Test · HTTP response time", 60, 64);
+    context.fillText(session.config.type === "icmp" ? "NET-Test · ICMP echo time" : session.config.type === "tcp" ? "NET-Test · TCP connection time" : session.config.type === "dns" ? "NET-Test · DNS response time" : "NET-Test · HTTP response time", 60, 64);
     context.fillStyle = muted;
     context.font = "24px Inter, system-ui, sans-serif";
     const endpoint = session.config.url.length > 100 ? `${session.config.url.slice(0, 97)}…` : session.config.url;

@@ -252,7 +252,7 @@ func TestTCPCSVRoundTripAndReopen(t *testing.T) {
 	w.Flush()
 	legacyImport, err := store.ImportCSV(&legacy)
 	if err != nil || legacyImport.Config.TimeoutMS != 4000 || legacyImport.Sent != 4 {
-		t.Fatalf("Fyne TCP import: %+v %v", legacyImport, err)
+		t.Fatalf("legacy TCP import: %+v %v", legacyImport, err)
 	}
 	records[3][5] = "80"
 	var invalid bytes.Buffer
@@ -277,7 +277,7 @@ func TestTCPLegacyHostnameReplay(t *testing.T) {
 	s := Session{ID: "legacy", Config: c, Sent: 1, Succeeded: 1, MinRTT: 1, AvgRTT: 1, MaxRTT: 1}
 	p := Sample{Sequence: 1, Time: time.Now().UTC(), RTT: 1, Success: true}
 	row := tcpCSVRow(s, s, p)[:len(legacyTCPHeader)]
-	row[4] = "localhost" // Fyne exported the hostname in both columns.
+	row[4] = "localhost" // legacy exported the hostname in both columns.
 	var legacy bytes.Buffer
 	w := csv.NewWriter(&legacy)
 	w.WriteAll([][]string{legacyTCPHeader, row})

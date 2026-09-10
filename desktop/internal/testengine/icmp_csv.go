@@ -77,7 +77,7 @@ func parseICMPRow(record []string) (importedRow, error) {
 	}
 	c := Config{Type: "icmp", Target: strings.TrimSpace(record[3]), PayloadSize: payload,
 		IntervalMS: 1000, TimeoutMS: 4000, Recording: true}
-	// Fyne sometimes wrote the hostname in both destination columns.
+	// legacy sometimes wrote the hostname in both destination columns.
 	if address := strings.TrimSpace(record[4]); net.ParseIP(address) != nil {
 		c.ResolvedIP = address
 	} else if address != c.Target && !(address == "" && len(record) == len(icmpCSVHeader)) {

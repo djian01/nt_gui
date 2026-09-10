@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420">
+  <defs><linearGradient id="bg" x2="0" y2="1"><stop stop-color="#FFFFFF"/><stop offset="1" stop-color="#EFF5FF"/></linearGradient></defs>
+  <rect width="720" height="420" fill="url(#bg)"/>
+  <text x="360" y="64" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="700" fill="#183B73">Install NET-Test</text>
+  <path d="M312 192H400M382 173L402 192L382 211" fill="none" stroke="#2864D8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="360" y="332" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#254874">Drag NET-Test to Applications to install</text>
+  <text x="360" y="365" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#596B84">Then open NET-Test from Applications.</text>
+</svg>

@@ -1,0 +1,33 @@
+name: net-test
+arch: ${PACKAGE_ARCH}
+platform: linux
+version: ${PACKAGE_VERSION}
+maintainer: Dennis Jian <dennis.jian@packetstreams.net>
+description: NET-Test network diagnostics desktop application
+homepage: https://github.com/djian01/nt_gui
+license: LicenseRef-Personal-Use
+section: net
+contents:
+  - src: desktop/bin/net-test
+    dst: /usr/bin/net-test
+    file_info:
+      mode: 0755
+  - src: desktop/build/linux/net-test.desktop
+    dst: /usr/share/applications/net-test.desktop
+  - src: desktop/frontend/public/net-test.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/net-test.svg
+  - src: desktop/build/icons/net-test.png
+    dst: /usr/share/icons/hicolor/512x512/apps/net-test.png
+  - src: LICENSE
+    dst: /usr/share/licenses/net-test/LICENSE
+overrides:
+  deb:
+    depends:
+      - libgtk-4-1
+      - libwebkitgtk-6.0-4
+      - ca-certificates
+  rpm:
+    depends:
+      - gtk4
+      - webkitgtk6.0
+      - ca-certificates

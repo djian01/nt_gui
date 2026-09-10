@@ -17,7 +17,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// Store owns a fresh Wails database. It never opens or migrates Fyne data.
+// Store owns a fresh Wails database. It never opens or migrates legacy data.
 type Store struct{ db *sql.DB }
 
 type Page struct {
@@ -243,6 +243,13 @@ func (s *Store) Get(id string) (Session, error) {
 func (s *Store) List(search, filter string, before int64) (Page, error) {
 	p := Page{Sessions: []Session{}}
 	where, args := "WHERE 1=1", []any{}
+	// Apply protocol selection before the History cursor and page limit.
+	switch filter {
+	case "stopped-http", "stopped-dns", "stopped-tcp", "stopped-icmp":
+		where += " AND coalesce(nullif(json_extract(data,'$.config.type'),''),'http')=?"
+		args = append(args, strings.TrimPrefix(filter, "stopped-"))
+		filter = "stopped"
+	}
 	// Older builds wrote unrecorded summaries. Keep them out of History
 	// without deleting existing data; missing type is legacy recorded HTTP.
 	if filter == "stopped" || filter == "all" || filter == "" {

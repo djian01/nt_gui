@@ -2,16 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>Net Test</string>
-  <key>CFBundleDisplayName</key><string>Net Test</string>
+  <key>CFBundleName</key><string>NET-Test</string>
+  <key>CFBundleDisplayName</key><string>NET-Test</string>
   <key>CFBundleIdentifier</key><string>net.packetstreams.ntgui.wails</string>
   <key>CFBundleExecutable</key><string>net-test</string>
   <key>CFBundleIconFile</key><string>net-test.icns</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.2.0</string>
-  <key>CFBundleVersion</key><string>2</string>
+  <key>CFBundleShortVersionString</key><string>2.0.0</string>
+  <key>CFBundleVersion</key><string>20000</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>NSHighResolutionCapable</key><true/>
-  <key>NSHumanReadableCopyright</key><string>Net Test — network diagnostics</string>
+  <key>NSHumanReadableCopyright</key><string>NET-Test — network diagnostics</string>
 </dict>
 </plist>

@@ -121,7 +121,7 @@ func probeTCP(ctx context.Context, c Config) Sample {
 	return s
 }
 
-// Keep the Fyne TCP failure labels in live results and CSV exports.
+// Keep the legacy TCP failure labels in live results and CSV exports.
 func tcpError(err error) string {
 	for _, item := range [][2]string{
 		{"refused", "Conn_Refused"}, {"no route", "No_Route"},

@@ -74,7 +74,7 @@ func probeDNS(ctx context.Context, c Config) Sample {
 	return probeDNSWithResolver(ctx, c.Query, newDNSResolver(c.Protocol, net.JoinHostPort(c.Resolver, "53")))
 }
 
-// Match nt v1.4.0 DnsProbing used by Fyne: LookupHost, IPv4-only response
+// Match nt v1.4.0 DnsProbing used by legacy: LookupHost, IPv4-only response
 // text, RTT before the CNAME lookup, and A/CNAME classification. The parent
 // context additionally permits prompt cancellation on Stop and app exit.
 func probeDNSWithResolver(ctx context.Context, query string, resolver *net.Resolver) Sample {

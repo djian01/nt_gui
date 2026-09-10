@@ -11,6 +11,8 @@ coverage.out
 *.prof
 
 # Release packages
+/installation_package/*
+!/installation_package/.gitkeep
 *.dmg
 *.msi
 *.deb

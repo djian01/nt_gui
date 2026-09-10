@@ -197,7 +197,7 @@ func TestDNSCSVLegacyRoundTripAndReopen(t *testing.T) {
 	w.Flush()
 	legacyImport, err := store.ImportCSV(bytes.NewReader(legacy.Bytes()))
 	if err != nil || legacyImport.Config.TimeoutMS != 4000 || legacyImport.Sent != 4 {
-		t.Fatalf("Fyne DNS import: %+v %v", legacyImport, err)
+		t.Fatalf("legacy DNS import: %+v %v", legacyImport, err)
 	}
 	// A bad later row must roll back the whole imported test.
 	records[3][3] = "8.8.8.8"

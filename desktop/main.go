@@ -91,7 +91,7 @@ func (s *TestService) ExportCSV(id string) (string, error) {
 	if _, err := s.store.Get(id); err != nil {
 		return "", err
 	}
-	path, err := s.app.Dialog.SaveFile().SetFilename("Net-Test-"+time.Now().Format("20060102-150405")+".csv").AddFilter("CSV results", "*.csv").SetMessage("Export all saved probes").PromptForSingleSelection()
+	path, err := s.app.Dialog.SaveFile().SetFilename("net-test-"+time.Now().Format("20060102-150405")+".csv").AddFilter("CSV results", "*.csv").SetMessage("Export all saved probes").PromptForSingleSelection()
 	if err != nil || path == "" {
 		return "", err
 	}
@@ -124,7 +124,7 @@ func (s *TestService) ExportChart(id, dataURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	path, err := s.app.Dialog.SaveFile().SetFilename("Net-Test-Chart-"+time.Now().Format("20060102-150405")+".png").AddFilter("PNG chart", "*.png").SetMessage("Save the visible chart").PromptForSingleSelection()
+	path, err := s.app.Dialog.SaveFile().SetFilename("net-test-Chart-"+time.Now().Format("20060102-150405")+".png").AddFilter("PNG chart", "*.png").SetMessage("Save the visible chart").PromptForSingleSelection()
 	if err != nil || path == "" {
 		return "", err
 	}
@@ -185,7 +185,7 @@ func (s *TestService) OpenChart(id string) error {
 		return nil
 	}
 	s.app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name: "chart-" + id, Title: "Net Test · Latency", URL: "/?chart=" + id,
+		Name: "chart-" + id, Title: "NET-Test · Latency", URL: "/?chart=" + id,
 		Width: 1100, Height: 760, MinWidth: 780, MinHeight: 600,
 		BackgroundColour: application.NewRGB(11, 18, 32),
 		Mac:              application.MacWindow{Appearance: application.NSAppearanceNameDarkAqua},
@@ -199,7 +199,7 @@ func main() {
 	application.RegisterEvent[testengine.Session]("test:updated")
 	application.RegisterEvent[string]("test:removed")
 	app := application.New(application.Options{
-		Name: "Net Test", Description: "Cross-platform network diagnostics",
+		Name: "NET-Test", Description: "Cross-platform network diagnostics",
 		Icon:     appIcon,
 		Services: []application.Service{application.NewService(service)},
 		Assets:   application.AssetOptions{Handler: application.BundledAssetFileServer(assets)},
@@ -244,7 +244,7 @@ func main() {
 	}
 	service.runner = testengine.New(service.store, func(s testengine.Session) { app.Event.Emit("test:updated", s) })
 	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name: "main", Title: "Net Test", URL: "/", Width: 1420, Height: 960,
+		Name: "main", Title: "NET-Test", URL: "/", Width: 1420, Height: 960,
 		MinWidth: 980, MinHeight: 720, BackgroundColour: application.NewRGB(11, 18, 32),
 		Mac:     application.MacWindow{Appearance: application.NSAppearanceNameDarkAqua},
 		Windows: application.WindowsWindow{Theme: application.Dark},

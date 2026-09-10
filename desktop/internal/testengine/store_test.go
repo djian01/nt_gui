@@ -311,3 +311,62 @@ func TestCurrentSessionPaginationAndReopen(t *testing.T) {
 		t.Fatalf("history lost after reopen: %d", historyCount)
 	}
 }
+
+func TestHistoryTypeFilterPagination(t *testing.T) {
+	store, err := OpenStore(filepath.Join(t.TempDir(), "results.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	for _, kind := range []string{"http", "dns", "tcp", "icmp"} {
+		for i := 0; i < 53; i++ {
+			c := config("https://matching.example")
+			c.Type, c.Recording = kind, true
+			if kind == "http" && i == 0 {
+				c.Type = ""
+			}
+			s := Session{ID: fmt.Sprintf("%s-%d", kind, i), Config: c, StartedAt: time.Now(), Revision: 1}
+			if err := store.Save(s, nil); err != nil {
+				t.Fatal(err)
+			}
+		}
+		for _, excluded := range []string{"running", "unrecorded", "search"} {
+			c := config("https://matching.example")
+			c.Type, c.Recording = kind, excluded != "unrecorded"
+			if excluded == "search" {
+				c.URL = "https://different.example"
+			}
+			s := Session{ID: kind + excluded, Config: c, Running: excluded == "running", StartedAt: time.Now(), Revision: 1}
+			if err := store.Save(s, nil); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	for _, kind := range []string{"http", "dns", "tcp", "icmp"} {
+		seen := map[string]bool{}
+		var cursor int64
+		for {
+			page, err := store.List("matching", "stopped-"+kind, cursor)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, s := range page.Sessions {
+				actual := s.Config.Type
+				if actual == "" {
+					actual = "http"
+				}
+				if actual != kind || s.Running || seen[s.ID] {
+					t.Fatalf("wrong result: %+v", s)
+				}
+				seen[s.ID] = true
+			}
+			if page.Next == 0 {
+				break
+			}
+			cursor = page.Next
+		}
+		if len(seen) != 53 {
+			t.Fatalf("%s: got %d matching records", kind, len(seen))
+		}
+	}
+}

@@ -43,8 +43,8 @@ type importedRow struct {
 	sample           Sample
 }
 
-// ImportCSV imports one HTTP test exported by this desktop or by the legacy
-// Fyne application. The imported test gets a fresh identity and is stopped.
+// ImportCSV imports an HTTP, DNS, TCP, or ICMP test from a desktop or legacy
+// CSV export. The imported test gets a fresh identity and is stopped.
 // Parsing and database writes are streamed, and any invalid row rolls back the
 // entire import.
 func (s *Store) ImportCSV(input io.Reader) (Session, error) {
@@ -121,7 +121,7 @@ func (s *Store) ImportCSV(input io.Reader) (Session, error) {
 				originalSequence = row.sample.Sequence
 				session.ImportNote = "DNS CSV: statistics cover recorded rows only; sequences are renumbered for analysis."
 				if len(header) == len(legacyDNSHeader) {
-					session.ImportNote += " Legacy Fyne replay uses a 1-second interval and 4-second timeout because those settings were not stored."
+					session.ImportNote += " Legacy replay uses a 1-second interval and 4-second timeout because those settings were not stored."
 				}
 			} else if format == importLegacyHTTP {
 				originalSequence = row.sample.Sequence
@@ -201,7 +201,7 @@ func detectImportFormat(header []string) (importFormat, error) {
 	if equalHeader(header, legacyHTTPHeader) {
 		return importLegacyHTTP, nil
 	}
-	return 0, errors.New("Unsupported CSV: choose a Net Test desktop export or a legacy Fyne HTTP/DNS/TCP/ICMP export")
+	return 0, errors.New("Unsupported CSV: choose a NET-Test desktop export or a legacy HTTP/DNS/TCP/ICMP export")
 }
 
 func equalHeader(got, want []string) bool {

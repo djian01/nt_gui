@@ -1,10 +1,188 @@
-# Build and install Net Test
+# Build and install NET-Test v2.0.0
 
 [Back to README](README.md)
 
-This guide builds the Net Test desktop application in `desktop/`.
+This guide builds the NET-Test desktop application in `desktop/`.
 Run the instructions for your operating system on that operating system.
-Commands after cloning assume your terminal is in `nt_gui/desktop`.
+Choose one of the two workflows:
+
+1. [Use scripts to build installation packages](#1-use-scripts-to-build-installation-packages).
+2. [Use commands to build and install the executable](#2-use-commands-to-build-and-install-the-executable), including prerequisite tool installation.
+
+Packaging scripts run from the repository root. Manual build and install
+commands run from `nt_gui/desktop`, after installing the prerequisites and
+cloning the repository.
+
+## 1. Use scripts to build installation packages
+
+Use the script matching your build machine's OS. Scripts can also be called
+by absolute path from another directory. They install locked project dependencies,
+build the frontend and native app, and create a package in the root
+`installation_package/` folder. Users receiving a package do not need Go, Node.js,
+Git, or the source code.
+
+Everything in `installation_package/` is ignored by Git except `.gitkeep`.
+Scripts and packaging configuration live in `scripts/` and are versioned.
+Temporary packaging files are removed automatically. An existing package with
+the same version and architecture is replaced only after packaging succeeds.
+
+Before running a script, install the Git, Go, Node.js, and native build prerequisites
+listed in [Section 2](#2-use-commands-to-build-and-install-the-executable):
+[macOS](#macos), [Windows](#windows), or [Linux](#linux). Then return here
+and run the packaging commands from the repository root. Use native builds:
+do not override `GOOS` or `GOARCH`.
+The default version comes from `desktop/build/darwin/Info.plist` (currently 2.0.0).
+An optional version must use `major.minor.patch`; it labels the package, and on
+macOS also updates the packaged bundle's version without editing the source plist.
+
+### macOS DMG
+
+Requires macOS, Xcode Command Line Tools (including Swift), Go, Node.js/npm,
+Make, Python 3.10 or later, and `dmgbuild` 1.6.7. `hdiutil` is included with macOS.
+Install the layout tool in a local, Git-ignored environment once, from the
+repository root:
+
+```bash
+python3 -m venv .local/packaging-venv
+.local/packaging-venv/bin/python -m pip install 'dmgbuild==1.6.7'
+```
+
+Check `python3 --version` first: Apple's older system Python may be below 3.10.
+Use a current Python from [python.org](https://www.python.org/downloads/macos/)
+if necessary. An existing environment created with an older Python must be
+recreated with the newer interpreter. dmgbuild versions below 1.6.7 are rejected
+because their backgrounds may appear blank on macOS 26.2 and later.
+
+Then build from the repository root (the script also finds this local tool
+automatically, or uses `dmgbuild` from `PATH`):
+
+```bash
+bash scripts/package-macos.sh
+# Optional explicit package version:
+bash scripts/package-macos.sh 2.0.0
+```
+
+Output: `installation_package/NET-Test-2.0.0-macos-arm64.dmg` on Apple Silicon,
+or `...-amd64.dmg` on an Intel build machine. These are separate native packages,
+not a universal binary.
+
+Users open the DMG and drag **NET-Test** onto **Applications**. Quit an installed
+copy before replacing it. The window opens in icon view with NET-Test on the
+left, a right-pointing arrow, and Applications on the right, plus installation
+instructions below. A blue package-box icon distinguishes the DMG and mounted
+volume from the app itself. The volume is named **NET-Test Installer**.
+Layout metadata is written without automating Finder.
+
+The DMG file's custom Finder icon uses macOS extended metadata, which some upload,
+download, or copy tools strip. The mounted volume icon and installation layout
+are embedded inside the DMG and survive such transfers.
+
+The script produces an unsigned, unnotarized package;
+macOS may block downloaded copies. Developer ID signing and Apple notarization
+are separate release steps and are not automated by these scripts.
+
+### Windows installation wizard
+
+Requires Windows with native amd64 or arm64 Go, Node.js/npm, and
+[NSIS 3](https://nsis.sourceforge.io/Download). Add the NSIS installation folder
+(typically `C:\Program Files (x86)\NSIS`) to `PATH` so `makensis` is available.
+From PowerShell at the repository root:
+
+```powershell
+.\scripts\package-windows.ps1
+# Optional explicit package version:
+.\scripts\package-windows.ps1 -Version 2.0.0
+```
+
+If local script execution is blocked, run the reviewed script with a policy
+override limited to this process:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1
+```
+
+Output: `installation_package\NET-Test-2.0.0-windows-amd64-Setup.exe`
+(or `arm64`). Users run the wizard to install under
+`%LOCALAPPDATA%\Programs\net-test`. It creates a Start menu shortcut and an
+Installed Apps uninstall entry for the current user, without requiring admin.
+Quit NET-Test before upgrading or uninstalling. Uninstall keeps saved user data.
+Setup uses the distinct package-box icon; the installed app and its shortcut
+continue to use the NET-Test app icon.
+
+The installer checks for Microsoft's registered WebView2 Evergreen Runtime.
+If absent, it stops with instructions to install the runtime from the
+[Microsoft download page](https://developer.microsoft.com/microsoft-edge/webview2/)
+and rerun Setup. WebView2 is not bundled. The generated installer is unsigned;
+Windows may show an unknown-publisher or SmartScreen warning. Code signing is
+a separate release step.
+
+### Linux DEB / RPM
+
+Requires Linux with the native build prerequisites below plus
+[nFPM](https://nfpm.goreleaser.com/docs/install/) on `PATH`. For example,
+install nFPM with Go and make its executable available:
+
+```bash
+go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
+export PATH="$(go env GOPATH)/bin:$PATH"
+```
+
+Build DEB packages on Ubuntu 24.04 or a compatible Debian-family target.
+Build RPM packages on the Fedora-family target you intend to support, with
+`gtk4-devel`, `webkitgtk6.0-devel`, a C/C++ toolchain, Make, and `pkg-config`.
+From the repository root:
+
+```bash
+bash scripts/package-linux.sh deb
+bash scripts/package-linux.sh rpm
+# Optional explicit package version:
+bash scripts/package-linux.sh deb 2.0.0
+```
+
+Outputs: `installation_package/NET-Test-2.0.0-linux-amd64.deb` or `.rpm`
+(architecture follows native Go). Users install a downloaded package with:
+
+```bash
+# Ubuntu / Debian, from the folder containing the package:
+sudo apt install ./NET-Test-2.0.0-linux-amd64.deb
+# Fedora:
+sudo dnf install ./NET-Test-2.0.0-linux-amd64.rpm
+```
+
+Packages install the executable, application menu entry, icons, and license.
+They declare GTK4, WebKitGTK 6.0, and CA certificate dependencies, which the
+package manager resolves from configured repositories. Use `sudo apt remove
+net-test` or `sudo dnf remove net-test` to uninstall; user data is retained.
+
+Linux packages are not portable across all distributions or releases: native
+library versions and package names must match. Building an RPM on Ubuntu does
+not establish Fedora compatibility. Test installation and launch on each target
+distribution and architecture before distributing it.
+
+### Packaging help and verification
+
+Installer artwork lives in `scripts/installer-assets/`: edit `installer.svg` or
+`dmg-background.svg`, then run `make icons` after dependency setup to regenerate
+the PNG/ICO/ICNS assets. Commit these assets alongside their SVG sources. Finder
+icon positions and window size are in `scripts/dmg-settings.py`; keep them aligned
+with the background. `scripts/set-macos-file-icon.swift` applies the DMG file icon.
+
+```bash
+bash scripts/package-macos.sh --help
+bash scripts/package-linux.sh --help
+```
+
+On Windows use `.\scripts\package-windows.ps1 -Help`. Packaging scripts stop on
+build errors; they do not run the application test suite or install the output.
+Run the existing tests and verify install, launch, upgrade, and uninstall on each
+target OS before a release. Signing, notarization, automatic updates, and CI
+release publishing are not included.
+
+## 2. Use commands to build and install the executable
+
+Follow your platform's steps in order: install prerequisite tools, get the
+source, install project dependencies, build the executable, and install a local
+copy using commands. These steps do not run the installation-package scripts.
 
 Choose your platform:
 
@@ -15,7 +193,7 @@ Choose your platform:
 - [Tests](#tests)
 - [Troubleshooting](#troubleshooting)
 
-## Which command should I use?
+### Which command should I use?
 
 Run all commands from `nt_gui/desktop`.
 
@@ -24,7 +202,7 @@ Run all commands from `nt_gui/desktop`.
 | `make setup` | First setup, or after `package.json`, `package-lock.json`, `go.mod`, or `go.sum` changes | Installs the locked frontend and Go dependencies |
 | `make run` | Normal development | Rebuilds the frontend and executable, then launches `bin/net-test` |
 | `make build` | You need a rebuilt executable without launching it | Rebuilds `bin/net-test`; it does not refresh a macOS `.app` bundle |
-| `make mac-app` | You want to open or distribute the macOS app bundle | Rebuilds everything and refreshes `bin/Net Test.app` |
+| `make mac-app` | You want to open or distribute the macOS app bundle | Rebuilds everything and refreshes `bin/NET-Test.app` |
 | `make linux-package` | You want the Linux executable, launcher, and icons together | Creates `bin/net-test-linux/usr/` with the executable and desktop integration files |
 | `make icons` | You changed the logo vector | Regenerates the committed PNG, Windows ICO, and macOS ICNS assets |
 
@@ -33,7 +211,7 @@ You do not need to run `make setup` before every build. Both `make run` and
 copied the app outside the repository, rebuild the bundle and copy it again;
 none of the build commands replace an installed copy automatically.
 
-## Requirements
+### Requirements
 
 All platforms need Git, Go **1.25 or later**, and **Node.js 24 LTS with npm**.
 Use the installers or instructions from [Git](https://git-scm.com/downloads),
@@ -52,10 +230,11 @@ and GTK4/WebKitGTK 6.0 development libraries on Linux. See the
 [Wails platform requirements](https://v3.wails.io/quick-start/installation/)
 for additional platform setup information.
 
-These steps produce a local executable, Linux desktop files, or an unsigned macOS application bundle.
+The manual steps below produce a local executable, Linux desktop files, or an
+unsigned macOS application bundle. Use the packaging scripts above for installers.
 The repository does not currently provide a signed installer workflow.
 
-## macOS
+### macOS
 
 1. **Install the development tools.**
 
@@ -104,13 +283,13 @@ The repository does not currently provide a signed installer workflow.
 5. **Build and launch during development.**
 
    ```bash
-   make run
+   make build
+   ./bin/net-test
    ```
 
-   `make run` checks and builds the TypeScript frontend, embeds its assets in
-   `desktop/bin/net-test`, and launches that executable. Use `make build` only
-   when you want to rebuild the executable without launching it. Quit the app
-   before continuing.
+   `make build` checks and builds the TypeScript frontend, embeds its assets in
+   `desktop/bin/net-test`, and `./bin/net-test` launches it. You can also use `make run` to build and
+   launch in one command. Quit the app before continuing.
 
 6. **Create a macOS application bundle.**
 
@@ -119,7 +298,7 @@ The repository does not currently provide a signed installer workflow.
    ```
 
    This rebuilds the app and creates
-   `desktop/bin/Net Test.app`. The Makefile sets matching macOS compiler and
+   `desktop/bin/NET-Test.app`. The Makefile sets matching macOS compiler and
    linker deployment targets of 11.0; that setting does not establish runtime
    compatibility with older macOS releases.
 
@@ -130,15 +309,15 @@ The repository does not currently provide a signed installer workflow.
 
    ```bash
    mkdir -p "$HOME/Applications"
-   ditto "bin/Net Test.app" "$HOME/Applications/Net Test.app"
-   open "$HOME/Applications/Net Test.app"
+   ditto "bin/NET-Test.app" "$HOME/Applications/NET-Test.app"
+   open "$HOME/Applications/NET-Test.app"
    ```
 
    You can also open it from your home folder's `Applications` folder in Finder.
    Quit an existing installed copy before replacing it. The bundle is unsigned
    and is not notarized.
 
-## Windows
+### Windows
 
 1. **Install the prerequisites.**
 
@@ -207,17 +386,17 @@ The repository does not currently provide a signed installer workflow.
 7. **Install a copy for your user account.**
 
    ```powershell
-   $installDir = Join-Path $env:LOCALAPPDATA "Programs\Net Test"
+   $installDir = Join-Path $env:LOCALAPPDATA "Programs\net-test"
    New-Item -ItemType Directory -Force -Path $installDir | Out-Null
    Copy-Item .\bin\net-test.exe -Destination $installDir -Force
    Start-Process (Join-Path $installDir "net-test.exe")
    ```
 
-   This copies the app to `%LOCALAPPDATA%\Programs\Net Test`; it does not create
+   This copies the app to `%LOCALAPPDATA%\Programs\net-test`; it does not create
    a Start menu entry or installer registration. You can create a shortcut to
    the executable in File Explorer. Quit an installed copy before replacing it.
 
-## Linux
+### Linux
 
 1. **Install Git and the native build dependencies.**
 
@@ -300,7 +479,7 @@ The repository does not currently provide a signed installer workflow.
    ```
 
    If `$HOME/.local/bin` is on your `PATH`, you can launch it with `net-test`.
-   The Net Test menu entry uses the new icon and an absolute executable path,
+   The NET-Test menu entry uses the new icon and an absolute executable path,
    so it also works when the desktop session does not include that directory
    in `PATH`. Linux uses a launcher and theme icons rather than an icon embedded
    in the ELF executable. GTK4 and WebKitGTK 6.0 runtime
@@ -312,7 +491,7 @@ The repository does not currently provide a signed installer workflow.
    `/usr` using your distribution's packaging tools. The CI archive preserves
    this layout and executable permissions; it is not an automatic installer.
 
-## Rebuilding after changes
+### Rebuilding after changes
 
 1. **Enter `desktop` and close the running app.** You do not need `make setup`
    for ordinary source or styling changes. Run it again only when
@@ -329,10 +508,10 @@ The repository does not currently provide a signed installer workflow.
 
    ```bash
    make mac-app
-   open "bin/Net Test.app"
+   open "bin/NET-Test.app"
    ```
 
-   Running `make build` does not update `bin/Net Test.app` because the bundle
+   Running `make build` does not update `bin/NET-Test.app` because the bundle
    contains a separate copied executable.
 
    For **Go-only changes**, if `frontend/dist` already exists and is current,
@@ -363,7 +542,7 @@ The repository does not currently provide a signed installer workflow.
    refreshed bundle again. Building or refreshing the repository copy does not
    replace an app in `$HOME/Applications`, `/Applications`, or another folder.
 
-## Updating the logo
+### Updating the logo
 
 Edit `desktop/frontend/public/net-test.svg`, then run `make icons` from
 `desktop/` after `make setup`. The generator uses the pinned Sharp development
@@ -373,7 +552,7 @@ together. Normal builds consume these assets without regenerating them.
 Rebuild each native package after regeneration, including the Windows resource
 step above. See [branding architecture](docs/architecture/branding.md).
 
-## Tests
+### Tests
 
 1. **Install the dependencies** using your platform's setup steps and enter
    `desktop`.
@@ -405,7 +584,7 @@ The [native CI workflow](.github/workflows/desktop.yml) defines builds and
 race tests for macOS, Windows, and Ubuntu 24.04. Its presence does not establish
 that a particular revision has passed on those platforms; check its run results.
 
-## Troubleshooting
+### Troubleshooting
 
 | Symptom | Action |
 | --- | --- |

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Version=1.0
-Name=Net Test
+Name=NET-Test
 Comment=Network diagnostics and response time analysis
 Exec=net-test
 TryExec=net-test

@@ -145,7 +145,7 @@ func TestICMPCSVRoundTripAndReopen(t *testing.T) {
 	w.Flush()
 	legacyImport, err := store.ImportCSV(&legacy)
 	if err != nil || legacyImport.Config.TimeoutMS != 4000 || legacyImport.Config.DF || legacyImport.Sent != 4 {
-		t.Fatalf("Fyne ICMP import: %+v %v", legacyImport, err)
+		t.Fatalf("legacy ICMP import: %+v %v", legacyImport, err)
 	}
 	records[3][5] = "64"
 	var invalid bytes.Buffer
@@ -169,7 +169,7 @@ func TestICMPLegacyHostnameReplay(t *testing.T) {
 	s := Session{ID: "legacy", Config: c, Sent: 1, Succeeded: 1, MinRTT: 1, AvgRTT: 1, MaxRTT: 1}
 	p := Sample{Sequence: 1, Time: time.Now().UTC(), RTT: 1, Success: true}
 	row := icmpCSVRow(s, s, p)[:len(legacyICMPHeader)]
-	row[4] = "localhost" // Fyne exported the hostname in both columns.
+	row[4] = "localhost" // legacy exported the hostname in both columns.
 	var legacy bytes.Buffer
 	w := csv.NewWriter(&legacy)
 	w.WriteAll([][]string{legacyICMPHeader, row})

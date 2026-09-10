@@ -1,9 +1,9 @@
-name: Net Test desktop
+name: NET-Test desktop
 on:
   push:
-    paths: ['desktop/**', 'Icon.png', '.github/workflows/desktop.yml']
+    paths: ['desktop/**', 'Icon.png', 'Makefile', '.github/workflows/desktop.yml']
   pull_request:
-    paths: ['desktop/**', 'Icon.png', '.github/workflows/desktop.yml']
+    paths: ['desktop/**', 'Icon.png', 'Makefile', '.github/workflows/desktop.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -59,7 +59,7 @@ jobs:
             go build -tags production -ldflags '-H windowsgui' -o bin/net-test.exe . > "$RUNNER_TEMP/build.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/build.log"; exit 1; }
           elif [ "$RUNNER_OS" = 'macOS' ]; then
             make mac-app > "$RUNNER_TEMP/build.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/build.log"; exit 1; }
-            ditto -c -k --sequesterRsrc --keepParent "bin/Net Test.app" bin/net-test-macos.zip
+            ditto -c -k --sequesterRsrc --keepParent "bin/NET-Test.app" bin/net-test-macos.zip
           else
             make linux-package > "$RUNNER_TEMP/build.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/build.log"; exit 1; }
             tar -czf bin/net-test-linux.tar.gz -C bin/net-test-linux usr

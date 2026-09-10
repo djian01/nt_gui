@@ -20,6 +20,8 @@ contents:
     dst: /usr/share/icons/hicolor/512x512/apps/net-test.png
   - src: LICENSE
     dst: /usr/share/licenses/net-test/LICENSE
+  - src: THIRD_PARTY_NOTICES.txt
+    dst: /usr/share/licenses/net-test/THIRD_PARTY_NOTICES.txt
 overrides:
   deb:
     depends:

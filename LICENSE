@@ -1,37 +1,71 @@
-Personal-Use License for nt_gui
+Personal-Use License for NET-Test
+Version 1.1
 Copyright (c) 2025 Dennis Jian
 
 1. Grant of Rights
-You are free to use, copy, modify, and distribute this software at no cost for 
-**personal, non-commercial, non-organizational purposes**. 
+Subject to this license, you may use, copy, modify, and distribute NET-Test
+and its accompanying first-party documentation (the "Software") at no cost
+solely for personal, non-commercial, non-organizational purposes.
 
 “Personal use” means use by a natural person for private projects, learning, or 
-hobby purposes, where the software is not used in connection with any company, 
-organization, or government entity.
+hobby purposes, including private, individual learning. It excludes use on
+behalf of, for the benefit of, or as part of the activities of a business,
+organization, or government entity. Being an employee or student does not
+by itself disqualify otherwise private personal use.
 
 2. Organizational / Commercial Use
-Any use of this software by a company, business, institution, or government entity 
-(“Organization”) requires a **separate commercial license** from the copyright holder.  
+Commercial or organizational use requires a separate written commercial
+license from the copyright holder before that use begins. Organizations
+include companies, businesses, schools, universities, charities, nonprofits,
+and government entities, regardless of whether the use generates revenue.
 This includes, but is not limited to:
 - Internal use within an organization
 - Use in products, services, or workflows related to an organization
 - Use by contractors or employees on behalf of an organization
+- Freelance work, sole-trader activities, paid consulting, and use in
+  revenue-generating projects, even when carried out by an individual
+- Institutional teaching, training, research, or administration
+
+Any permission for these uses is governed by the separate commercial license.
 
 To obtain a commercial license, please contact:
   Email: dennis.jian@packetstreams.net
 
 3. Redistribution
-Redistributions of this software, in source or binary form, must include this license.  
-Any modifications must be clearly documented.
+Redistribution, with or without modifications, is permitted only within the
+personal, non-commercial, non-organizational grant above. Each source or
+binary redistribution must preserve this license, the copyright notice,
+and applicable third-party notices.
+
+Modified versions must clearly identify the changes and their author and
+must not be represented as an unmodified official release. Recipients receive
+rights to the Software directly under this license, subject to the same
+restrictions. Redistribution or modification does not grant permission to
+relicense the Software or authorize commercial or organizational use.
 
 4. No Trademark Rights
-This license does not grant permission to use the name, logo, or trademarks of 
-the copyright holder.
+This license does not grant trademark rights or permission to imply endorsement
+by the copyright holder. Required attribution and truthful identification of
+the Software are permitted, without implying endorsement.
 
 5. Disclaimer of Warranty
-This software is provided “as is,” without any warranties of any kind, express or implied.  
-The copyright holder is not liable for any damages arising from its use.
+To the extent permitted by applicable law, the Software is provided "as is"
+without warranties of any kind, express or implied, including merchantability,
+fitness for a particular purpose, and non-infringement. To that same extent,
+the copyright holder is not liable for claims or damages arising from the
+Software or its use, whether in contract, tort, or otherwise.
+
+Nothing in this license excludes, restricts, or modifies rights, guarantees,
+or remedies that cannot lawfully be excluded, restricted, or modified,
+including applicable statutory consumer guarantees.
 
 6. Termination
 Any violation of this license automatically terminates the rights granted herein.  
-Organizational use without a commercial license constitutes infringement.
+Upon termination, you must stop exercising the rights granted by this license.
+Rights available under applicable law or separate third-party licenses are
+unaffected.
+
+7. Third-Party Components
+Third-party components remain subject to their own licenses and copyright
+notices. This license does not replace or restrict rights granted under those
+licenses. See THIRD_PARTY_NOTICES.txt for accompanying notices.

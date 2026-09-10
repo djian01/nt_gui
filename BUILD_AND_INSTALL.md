@@ -251,7 +251,8 @@ sudo apt install ./NET-Test-2.0.0-linux-amd64.deb
 sudo dnf install ./NET-Test-2.0.0-linux-amd64.rpm
 ```
 
-Packages install the executable, application menu entry, icons, and license.
+Packages install the executable, application menu entry, icons, license, and
+third-party notices.
 They declare GTK4, WebKitGTK 6.0, and CA certificate dependencies, which the
 package manager resolves from configured repositories. Use `sudo apt remove
 net-test` or `sudo dnf remove net-test` to uninstall; user data is retained.
@@ -262,6 +263,21 @@ not establish Fedora compatibility. Test installation and launch on each target
 distribution and architecture before distributing it.
 
 ### Packaging help and verification
+
+Release license files are `LICENSE` and `THIRD_PARTY_NOTICES.txt`. The macOS
+bundle stores them in `Contents/Resources/`; Linux packages and archives use
+`/usr/share/licenses/net-test/`; the Windows installer places them next to the
+executable and removes them on uninstall. Windows CI artifacts also include
+both files alongside the executable.
+
+When runtime dependencies change, refresh `THIRD_PARTY_NOTICES.txt` from the
+versions in `desktop/go.mod` and production entries in
+`desktop/frontend/package-lock.json`. Preserve upstream license and copyright
+text, including nested third-party notices. The Wails runtime npm package omits
+its license file; use the matching Wails source module's MIT license. Include
+the Go runtime license, and recheck any newly bundled platform components.
+The current inventory excludes development-only tools and separately installed
+system frameworks. It does not establish exhaustive legal compliance.
 
 Installer artwork lives in `scripts/installer-assets/`: edit `installer.svg` or
 `dmg-background.svg`, then run `make icons` after dependency setup to regenerate

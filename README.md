@@ -45,4 +45,6 @@ TLS verification is enabled for targets and proxies. Proxy passwords are never s
 
 ## License
 
-[Personal-Use License](LICENSE): free for individual personal, educational, or hobby use. Organizational and commercial use requires a commercial license. Contact [dennis.jian@packetstreams.net](mailto:dennis.jian@packetstreams.net).
+[Personal-Use License](LICENSE): free for private, individual, non-commercial use, including personal learning and hobbies. Commercial and organizational use—including freelance work, institutional education, and nonprofit use—requires a separate written commercial license. Contact [dennis.jian@packetstreams.net](mailto:dennis.jian@packetstreams.net).
+
+NET-Test is source-available under this restricted-use license. Third-party components retain their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.txt).

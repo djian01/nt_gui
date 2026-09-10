@@ -41,6 +41,7 @@ mac-app: build
 	cp bin/net-test "bin/NET-Test.app/Contents/MacOS/net-test"
 	cp build/darwin/Info.plist "bin/NET-Test.app/Contents/Info.plist"
 	cp build/icons/net-test.icns "bin/NET-Test.app/Contents/Resources/net-test.icns"
+	cp ../LICENSE ../THIRD_PARTY_NOTICES.txt "bin/NET-Test.app/Contents/Resources/"
 
 linux-package: build
 	mkdir -p bin/net-test-linux/usr/bin bin/net-test-linux/usr/share/applications
@@ -49,6 +50,8 @@ linux-package: build
 	cp build/linux/net-test.desktop bin/net-test-linux/usr/share/applications/net-test.desktop
 	cp frontend/public/net-test.svg bin/net-test-linux/usr/share/icons/hicolor/scalable/apps/net-test.svg
 	cp build/icons/net-test.png bin/net-test-linux/usr/share/icons/hicolor/512x512/apps/net-test.png
+	mkdir -p bin/net-test-linux/usr/share/licenses/net-test
+	cp ../LICENSE ../THIRD_PARTY_NOTICES.txt bin/net-test-linux/usr/share/licenses/net-test/
 
 test: frontend
 	go test -race ./...

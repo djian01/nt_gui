@@ -69,5 +69,7 @@ jobs:
           name: net-test-${{ matrix.os }}
           path: |
             desktop/bin/net-test.exe
+            LICENSE
+            THIRD_PARTY_NOTICES.txt
             desktop/bin/net-test-macos.zip
             desktop/bin/net-test-linux.tar.gz

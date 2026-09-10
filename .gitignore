@@ -54,3 +54,4 @@ coverage.out
 /desktop/frontend/*.tsbuildinfo
 /desktop/bin/
 /desktop/rsrc_windows_*.syso
+agent.md

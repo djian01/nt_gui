@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Net Test
+Comment=Network diagnostics and response time analysis
+Exec=net-test
+TryExec=net-test
+Icon=net-test
+Terminal=false
+Categories=Network;Utility;
+Keywords=network;latency;HTTP;diagnostics;

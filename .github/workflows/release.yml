@@ -1,0 +1,110 @@
+name: Release installers
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            platform: macos-arm64
+          - os: macos-15-intel
+            platform: macos-amd64
+          - os: windows-latest
+            platform: windows-amd64
+          - os: ubuntu-24.04
+            platform: linux-amd64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate release version
+        run: |
+          [[ "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Run this workflow on a version tag.'; exit 1; }
+          VERSION=${GITHUB_REF_NAME#v}
+          node -e 'if (require("./desktop/frontend/package.json").version !== process.argv[1]) process.exit(1)' "$VERSION"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: desktop/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/frontend/package-lock.json
+      - uses: actions/setup-python@v5
+        if: runner.os == 'macOS'
+        with:
+          python-version: '3.13'
+      - name: Install packaging dependencies
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then
+            python -m pip install 'dmgbuild==1.6.7' > "$RUNNER_TEMP/deps.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/deps.log"; exit 1; }
+          elif [ "$RUNNER_OS" = Windows ]; then
+            choco install nsis -y --no-progress > "$RUNNER_TEMP/deps.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/deps.log"; exit 1; }
+            echo 'C:\Program Files (x86)\NSIS' >> "$GITHUB_PATH"
+          else
+            sudo apt-get update > "$RUNNER_TEMP/deps.log" 2>&1 && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev desktop-file-utils >> "$RUNNER_TEMP/deps.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/deps.log"; exit 1; }
+            go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0 > "$RUNNER_TEMP/nfpm.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/nfpm.log"; exit 1; }
+          fi
+      - name: Build native installer
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then
+            bash scripts/package-macos.sh "$VERSION" > "$RUNNER_TEMP/package.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/package.log"; exit 1; }
+            hdiutil verify installation_package/*.dmg > "$RUNNER_TEMP/verify.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/verify.log"; exit 1; }
+          elif [ "$RUNNER_OS" = Windows ]; then
+            pwsh -NoProfile -File scripts/package-windows.ps1 -Version "$VERSION" > "$RUNNER_TEMP/package.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/package.log"; exit 1; }
+          else
+            bash scripts/package-linux.sh deb "$VERSION" > "$RUNNER_TEMP/package.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/package.log"; exit 1; }
+            desktop-file-validate desktop/build/linux/net-test.desktop
+            sudo apt-get install -y ./installation_package/*.deb > "$RUNNER_TEMP/verify.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/verify.log"; exit 1; }
+          fi
+      - name: Test application
+        working-directory: desktop
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then
+            export CGO_CFLAGS='-mmacosx-version-min=11.0'
+            export CGO_LDFLAGS='-mmacosx-version-min=11.0'
+          fi
+          go test -race ./... > "$RUNNER_TEMP/tests.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/tests.log"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.platform }}
+          path: installation_package/NET-Test-*
+          if-no-files-found: error
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installer-*
+          path: installation_package
+          merge-multiple: true
+      - name: Publish release with checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd installation_package
+          test "$(find . -maxdepth 1 -name 'NET-Test-*' | wc -l)" -eq 4
+          sha256sum NET-Test-* > SHA256SUMS.txt
+          if ! gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "NET-Test $GITHUB_REF_NAME" --notes-file ../docs/architecture/release-notes.txt
+          fi
+          gh release upload "$GITHUB_REF_NAME" NET-Test-* SHA256SUMS.txt --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest

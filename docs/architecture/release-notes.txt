@@ -1,0 +1,19 @@
+NET-Test 2.0.0
+
+Network diagnostics desktop application with HTTP/HTTPS, DNS, TCP, and ICMP probes; live charts; optional recording; searchable history; and CSV import/export.
+
+Installation packages:
+- macos-arm64.dmg: macOS on Apple Silicon.
+- macos-amd64.dmg: macOS on Intel.
+- windows-amd64-Setup.exe: Windows x64 installation wizard. Requires Microsoft WebView2 Evergreen Runtime.
+- linux-amd64.deb: Ubuntu 24.04 x64. GTK4 and WebKitGTK 6.0 dependencies are installed by apt.
+
+Open the macOS DMG and drag NET-Test into Applications. Run the Windows installer. On Ubuntu, run sudo apt install ./NET-Test-2.0.0-linux-amd64.deb.
+
+Packages are unsigned; macOS packages are not notarized. macOS Gatekeeper or Windows SmartScreen may require manual approval. SHA256SUMS.txt contains package integrity checksums.
+
+This release replaces the legacy GUI with the Wails-based desktop app. Legacy ntdata.db databases are not migrated; legacy CSV files can be imported. Existing desktop data in nt-wails/results.db is retained.
+
+Personal, individual, non-commercial use is permitted under the included license. Commercial or organizational use requires a separate written license. See LICENSE and THIRD_PARTY_NOTICES.txt.
+
+RPM and Windows/Linux ARM64 packages are not included in this release. Linux packages are built for Ubuntu 24.04 and are not claimed to support all distributions. Automated build and application tests do not replace interactive installation and launch testing on every target machine.

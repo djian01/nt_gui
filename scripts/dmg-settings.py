@@ -30,4 +30,6 @@ scroll_position = (0, 0)
 label_pos = 'bottom'
 text_size = 16
 icon_size = 112
-hide_extensions = ['NET-Test.app']
+# Setting hide_extensions adds FinderInfo to the app after signing, which
+# invalidates strict code-signature verification. Leave the sealed app intact.
+hide_extensions = []

@@ -108,9 +108,15 @@ The DMG file's custom Finder icon uses macOS extended metadata, which some uploa
 download, or copy tools strip. The mounted volume icon and installation layout
 are embedded inside the DMG and survive such transfers.
 
-The script produces an unsigned, unnotarized package;
-macOS may block downloaded copies. Developer ID signing and Apple notarization
-are separate release steps and are not automated by these scripts.
+The script cleans extended attributes on the staged app, ad-hoc signs the complete
+bundle after final version metadata is written, and verifies its sealed resources.
+It verifies the DMG and mounts it read-only to verify the bundled app again before
+keeping the installer. An invalid bundle signature fails packaging and CI.
+
+Ad-hoc signing provides integrity checks, not Apple developer trust. The app is
+not Developer ID signed or notarized; downloaded copies may still need explicit
+approval in System Settings > Privacy & Security. Developer ID signing and Apple
+notarization are separate release steps and are not automated by these scripts.
 
 ### Windows installation wizard
 

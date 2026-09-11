@@ -56,11 +56,10 @@ jobs:
             sudo apt-get update > "$RUNNER_TEMP/deps.log" 2>&1 && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev desktop-file-utils >> "$RUNNER_TEMP/deps.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/deps.log"; exit 1; }
             go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0 > "$RUNNER_TEMP/nfpm.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/nfpm.log"; exit 1; }
           fi
-      - name: Build native installer
+      - name: Build and verify native installer
         run: |
           if [ "$RUNNER_OS" = macOS ]; then
             bash scripts/package-macos.sh "$VERSION" > "$RUNNER_TEMP/package.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/package.log"; exit 1; }
-            hdiutil verify installation_package/*.dmg > "$RUNNER_TEMP/verify.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/verify.log"; exit 1; }
           elif [ "$RUNNER_OS" = Windows ]; then
             pwsh -NoProfile -File scripts/package-windows.ps1 -Version "$VERSION" > "$RUNNER_TEMP/package.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/package.log"; exit 1; }
           else

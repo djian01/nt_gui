@@ -9,7 +9,7 @@ Installation packages:
 
 Open the macOS DMG and drag NET-Test into Applications. Run the Windows installer. On Ubuntu, run sudo apt install ./NET-Test-2.0.1-linux-amd64.deb.
 
-Packages are unsigned; macOS packages are not notarized. macOS Gatekeeper or Windows SmartScreen may require manual approval. SHA256SUMS.txt contains package integrity checksums.
+Windows packages are unsigned. The corrected macOS app bundle is ad-hoc signed and verified after mounting the DMG, but is not Developer ID signed or notarized. macOS Gatekeeper or Windows SmartScreen may require manual approval. SHA256SUMS.txt contains package integrity checksums.
 
 Version 2.0.1 adds a shared 10-slot concurrent test pool with live per-protocol usage and available-slot status. macOS Intel installers are excluded from this release.
 
@@ -18,3 +18,5 @@ The application uses the Wails-based desktop UI. Legacy ntdata.db databases are 
 Personal, individual, non-commercial use is permitted under the included license. Commercial or organizational use requires a separate written license. See LICENSE and THIRD_PARTY_NOTICES.txt.
 
 RPM and Windows/Linux ARM64 packages are not included in this release. Linux packages are built for Ubuntu 24.04 and are not claimed to support all distributions. Automated build and application tests do not replace interactive installation and launch testing on every target machine.
+
+macOS installer correction: repaired the app bundle signature that caused the original ARM64 download to be reported as damaged. Only the macOS DMG and checksum manifest are replaced; Windows and Linux installers are unchanged. The application source tag remains v2.0.1; the packaging correction is recorded separately on main. Ad-hoc signing does not remove Gatekeeper approval requirements.

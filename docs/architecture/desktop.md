@@ -1,4 +1,4 @@
-# NET-Test v2.0.0 architecture
+# NET-Test v2.0.1 architecture
 
 `desktop/` is the only Go module and desktop application. Wails owns native windows and dialogs; React renders the interface. The independent `internal/testengine` package owns network probes, lifecycle, storage, and CSV handling. Root build targets delegate to `desktop/Makefile`.
 
@@ -25,7 +25,7 @@ Batch validation and capacity checks precede probes. Stop cancellation does not 
 
 ## Interface
 
-`App.tsx: App` renders protocol forms, the shared table, History, selection, actions, and About version 2.0.0. `useSessions.ts` reconciles local bridge queries and events. `LatencyChart.tsx` provides indexed timeline views, pause, range selection/reset, hover, and PNG generation. `main.go: TestService.OpenChart` opens a separate native chart window.
+`App.tsx: App` renders protocol forms, the shared table, History, selection, actions, and About version 2.0.1. `useSessions.ts` reconciles local bridge queries and events. `LatencyChart.tsx` provides indexed timeline views, pause, range selection/reset, hover, and PNG generation. `main.go: TestService.OpenChart` opens a separate native chart window.
 
 `style.css` supplies shared dark/light tokens and separate hover/selected states. The existing `net-test-theme` local-storage key is retained. Unrecorded sessions can display charts; CSV export requires recorded samples. History deletion and closing a current test are distinct operations.
 

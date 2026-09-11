@@ -1,4 +1,4 @@
-# Build and install NET-Test v2.0.0
+# Build and install NET-Test v2.0.1
 
 [Back to README](README.md)
 
@@ -31,7 +31,7 @@ commands from the repository root. If you do not have the source yet, run
 `git clone https://github.com/djian01/nt_gui.git` and `cd nt_gui` after installing
 Git. Run each command only after the previous command succeeds. Use native builds:
 do not override `GOOS` or `GOARCH`.
-The default version comes from `desktop/build/darwin/Info.plist` (currently 2.0.0).
+The default version comes from `desktop/build/darwin/Info.plist` (currently 2.0.1).
 An optional version must use `major.minor.patch`; it labels the package, and on
 macOS also updates the packaged bundle's version without editing the source plist.
 
@@ -90,10 +90,10 @@ automatically, or uses `dmgbuild` from `PATH`):
 ```bash
 bash scripts/package-macos.sh
 # Optional explicit package version:
-bash scripts/package-macos.sh 2.0.0
+bash scripts/package-macos.sh 2.0.1
 ```
 
-Output: `installation_package/NET-Test-2.0.0-macos-arm64.dmg` on Apple Silicon,
+Output: `installation_package/NET-Test-2.0.1-macos-arm64.dmg` on Apple Silicon,
 or `...-amd64.dmg` on an Intel build machine. These are separate native packages,
 not a universal binary.
 
@@ -148,7 +148,7 @@ Windows **Environment Variables**. Then, from PowerShell at the repository root:
 ```powershell
 .\scripts\package-windows.ps1
 # Optional explicit package version:
-.\scripts\package-windows.ps1 -Version 2.0.0
+.\scripts\package-windows.ps1 -Version 2.0.1
 ```
 
 If local script execution is blocked, run the reviewed script with a policy
@@ -158,7 +158,7 @@ override limited to this process:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1
 ```
 
-Output: `installation_package\NET-Test-2.0.0-windows-amd64-Setup.exe`
+Output: `installation_package\NET-Test-2.0.1-windows-amd64-Setup.exe`
 (or `arm64`). Users run the wizard to install under
 `%LOCALAPPDATA%\Programs\net-test`. It creates a Start menu shortcut and an
 Installed Apps uninstall entry for the current user, without requiring admin.
@@ -238,17 +238,17 @@ From the repository root:
 bash scripts/package-linux.sh deb
 bash scripts/package-linux.sh rpm
 # Optional explicit package version:
-bash scripts/package-linux.sh deb 2.0.0
+bash scripts/package-linux.sh deb 2.0.1
 ```
 
-Outputs: `installation_package/NET-Test-2.0.0-linux-amd64.deb` or `.rpm`
+Outputs: `installation_package/NET-Test-2.0.1-linux-amd64.deb` or `.rpm`
 (architecture follows native Go). Users install a downloaded package with:
 
 ```bash
 # Ubuntu / Debian, from the folder containing the package:
-sudo apt install ./NET-Test-2.0.0-linux-amd64.deb
+sudo apt install ./NET-Test-2.0.1-linux-amd64.deb
 # Fedora:
-sudo dnf install ./NET-Test-2.0.0-linux-amd64.rpm
+sudo dnf install ./NET-Test-2.0.1-linux-amd64.rpm
 ```
 
 Packages install the executable, application menu entry, icons, license, and

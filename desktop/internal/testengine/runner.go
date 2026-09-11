@@ -465,7 +465,7 @@ func probe(ctx context.Context, client *http.Client, c Config) Sample {
 		s.Error = err.Error()
 		return s
 	}
-	req.Header.Set("User-Agent", "net-test/2.0.0")
+	req.Header.Set("User-Agent", "net-test/2.0.1")
 	resp, err := client.Do(req)
 	s.RTT = float64(time.Since(s.Time).Microseconds()) / 1000
 	if err != nil {

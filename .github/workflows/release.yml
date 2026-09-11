@@ -16,8 +16,6 @@ jobs:
         include:
           - os: macos-14
             platform: macos-arm64
-          - os: macos-15-intel
-            platform: macos-amd64
           - os: windows-latest
             platform: windows-amd64
           - os: ubuntu-24.04
@@ -101,7 +99,7 @@ jobs:
         run: |
           set -euo pipefail
           cd installation_package
-          test "$(find . -maxdepth 1 -name 'NET-Test-*' | wc -l)" -eq 4
+          test "$(find . -maxdepth 1 -name 'NET-Test-*' | wc -l)" -eq 3
           sha256sum NET-Test-* > SHA256SUMS.txt
           if ! gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
             gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "NET-Test $GITHUB_REF_NAME" --notes-file ../docs/architecture/release-notes.txt

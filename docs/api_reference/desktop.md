@@ -1,4 +1,4 @@
-# NET-Test v2.0.0 desktop API
+# NET-Test v2.0.1 desktop API
 
 These are Wails-bound local Go methods, not network endpoints. `frontend/src/api.ts` calls `main.TestService.<Method>` through `Call.ByName`; `main.go` registers the service. All paths below are within `desktop/`. The service and event names are protocol-neutral so later test types can use the same desktop bridge.
 
@@ -330,9 +330,9 @@ flowchart TD
 
 CSV accepts the exact 16-column legacy ICMP format and the desktop format with appended Test ID, Interval (ms), Timeout (ms), Time (UTC), and DF. Legacy replay defaults to 1s/4s and DF OFF because the legacy CSV omits those settings; an import note discloses this. Hostnames in both legacy destination columns are accepted and resolved on replay, not during import. Statistics cover recorded rows only. The existing bounded transactional streaming import, paginated export, and chart queries apply without schema changes.
 
-## Version 2.0.0 transport metadata
+## Version 2.0.1 transport metadata
 
-HTTP probes in `internal/testengine/runner.go: probe` send `User-Agent: net-test/2.0.0`. This identifies the renamed application; local bridge method signatures and stored formats are unchanged. The start/save flow above includes the HTTP probe step.
+HTTP probes in `internal/testengine/runner.go: probe` send `User-Agent: net-test/2.0.1`. This identifies the renamed application; local bridge method signatures and stored formats are unchanged. The start/save flow above includes the HTTP probe step.
 
 ## History test-type filter
 

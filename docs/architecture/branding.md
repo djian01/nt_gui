@@ -1,6 +1,6 @@
-# NET-Test v2.0.0 branding
+# NET-Test v2.0.1 branding
 
-The displayed app name is `NET-Test`; executable and asset paths use lowercase `net-test`, and the macOS bundle is `NET-Test.app`; the About dialog, frontend package metadata, and macOS bundle identify version 2.0.0. Existing network-route artwork is retained.
+The displayed app name is `NET-Test`; executable and asset paths use lowercase `net-test`, and the macOS bundle is `NET-Test.app`; the About dialog, frontend package metadata, and macOS bundle identify version 2.0.1. Existing network-route artwork is retained.
 
 `desktop/frontend/public/net-test.svg` is the editable master. `frontend/scripts/generate-icons.mjs` uses Sharp to generate root `Icon.png` for the README and `desktop/build/icons/net-test.png`, `.ico`, and `.icns`. Run `make icons` to regenerate these application assets.
 

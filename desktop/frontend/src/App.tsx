@@ -456,7 +456,7 @@ export default function App() {
           and reviewing saved network test results over time.
         </p>
         <dl className="about-details">
-          <div><dt>Version</dt><dd>2.0.0</dd></div>
+          <div><dt>Version</dt><dd>2.0.1</dd></div>
           <div><dt>Developed by</dt><dd>Dennis Jian</dd></div>
           <div>
             <dt>Project home</dt>

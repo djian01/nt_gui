@@ -1,6 +1,6 @@
 <p align="center"><img src="Icon.png" alt="NET-Test logo" width="150"/></p>
 
-# NET-Test v2.0.0
+# NET-Test v2.0.1
 
 NET-Test is a network diagnostics desktop application built with Go, Wails, React, and TypeScript. The sole application is in `desktop/`.
 

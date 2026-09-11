@@ -15,6 +15,8 @@ NET-Test is a network diagnostics desktop application built with Go, Wails, Reac
 
 Recording defaults to off: temporary tests remain in memory until closed or the app exits. Turning recording on saves future probes only. Saved results survive restart; tests never restart automatically.
 
+Windows x64 users can download `NET-Test-2.0.1-windows-amd64.exe` from [Releases](https://github.com/djian01/nt_gui/releases/latest) and run it directly without installing NET-Test. Microsoft WebView2 Runtime is required. Saved data is created automatically at `%APPDATA%\nt-wails\results.db`. The `-Setup.exe` download remains available for users who prefer an installer. License and third-party notices accompany the release downloads.
+
 ## Build
 
 From the repository root:

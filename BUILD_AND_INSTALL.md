@@ -118,7 +118,7 @@ not Developer ID signed or notarized; downloaded copies may still need explicit
 approval in System Settings > Privacy & Security. Developer ID signing and Apple
 notarization are separate release steps and are not automated by these scripts.
 
-### Windows installation wizard
+### Windows installer and standalone executable
 
 Requires Windows with native amd64 or arm64 Go, Node.js/npm, and
 [NSIS 3](https://nsis.sourceforge.io/Download). In PowerShell, install the tools
@@ -164,8 +164,20 @@ override limited to this process:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1
 ```
 
-Output: `installation_package\NET-Test-2.0.1-windows-amd64-Setup.exe`
-(or `arm64`). Users run the wizard to install under
+Outputs (or `arm64` when built on Windows ARM64):
+
+- `installation_package\NET-Test-2.0.1-windows-amd64-Setup.exe`: installation wizard.
+- `installation_package\NET-Test-2.0.1-windows-amd64.exe`: standalone app; download and double-click to run without installing NET-Test.
+- `LICENSE` and `THIRD_PARTY_NOTICES.txt` alongside the executables.
+
+The standalone app requires WebView2 Runtime, just like the installed app.
+It automatically creates `%APPDATA%\nt-wails\results.db` for saved data;
+no database needs to be downloaded. Moving or replacing the executable keeps
+saved results. This is installation-free, but data remains in the Windows user
+profile, not beside the executable. `NET_TEST_DATA_DIR` (or the compatibility
+alias `NT_WAILS_DATA_DIR`) overrides the data directory.
+
+Users choosing Setup run the wizard to install under
 `%LOCALAPPDATA%\Programs\net-test`. It creates a Start menu shortcut and an
 Installed Apps uninstall entry for the current user, without requiring admin.
 Quit NET-Test before upgrading or uninstalling. Uninstall keeps saved user data.

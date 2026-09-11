@@ -40,9 +40,13 @@ try {
     Invoke-Checked 'go' @('build', '-tags', 'production', '-ldflags', '-H windowsgui', '-o', (Join-Path $Work 'net-test.exe'), '.')
     $Package = Join-Path $OutputDir "NET-Test-$Version-windows-$Arch-Setup.exe"
     Invoke-Checked 'makensis' @("/DVERSION=$Version", "/DARCH=$Arch", "/DSOURCE_DIR=$Work", "/DREPO_DIR=$Root", "/DOUTPUT_FILE=$Work\Setup.exe", (Join-Path $PSScriptRoot 'windows-installer.nsi'))
+    $Standalone = Join-Path $OutputDir "NET-Test-$Version-windows-$Arch.exe"
+    Copy-Item (Join-Path $Work 'net-test.exe') $Standalone -Force
+    Copy-Item (Join-Path $Root 'LICENSE'), (Join-Path $Root 'THIRD_PARTY_NOTICES.txt') $OutputDir -Force
     Move-Item -Force (Join-Path $Work 'Setup.exe') $Package
     Write-Host "Created: $Package"
-    Write-Host 'This installer is unsigned. WebView2 Runtime must be installed on the destination PC.'
+    Write-Host "Created: $Standalone (run directly; no app installation required)"
+    Write-Host 'Both executables are unsigned. WebView2 Runtime must be installed on the destination PC.'
 } finally {
     Pop-Location
     Remove-Item -Recurse -Force $Work

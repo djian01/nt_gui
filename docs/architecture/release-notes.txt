@@ -2,12 +2,15 @@ NET-Test 2.0.1
 
 Network diagnostics desktop application with HTTP/HTTPS, DNS, TCP, and ICMP probes; live charts; optional recording; searchable history; and CSV import/export.
 
-Installation packages:
+Downloads:
 - macos-arm64.dmg: macOS on Apple Silicon.
 - windows-amd64-Setup.exe: Windows x64 installation wizard. Requires Microsoft WebView2 Evergreen Runtime.
+- windows-amd64.exe: Windows x64 standalone app. Download and double-click to run without installing NET-Test. Requires Microsoft WebView2 Evergreen Runtime.
 - linux-amd64.deb: Ubuntu 24.04 x64. GTK4 and WebKitGTK 6.0 dependencies are installed by apt.
 
-Open the macOS DMG and drag NET-Test into Applications. Run the Windows installer. On Ubuntu, run sudo apt install ./NET-Test-2.0.1-linux-amd64.deb.
+Open the macOS DMG and drag NET-Test into Applications. On Windows, run the standalone executable directly or choose the Setup installer. On Ubuntu, run sudo apt install ./NET-Test-2.0.1-linux-amd64.deb.
+
+The Windows standalone app automatically creates and reuses %APPDATA%\nt-wails\results.db. No database download or app installation is required; saved data stays in your Windows user profile when the executable is moved or replaced. LICENSE and THIRD_PARTY_NOTICES.txt accompany the downloads.
 
 Windows packages are unsigned. The corrected macOS app bundle is ad-hoc signed and verified after mounting the DMG, but is not Developer ID signed or notarized. macOS Gatekeeper or Windows SmartScreen may require manual approval. SHA256SUMS.txt contains package integrity checksums.
 
@@ -20,3 +23,5 @@ Personal, individual, non-commercial use is permitted under the included license
 RPM and Windows/Linux ARM64 packages are not included in this release. Linux packages are built for Ubuntu 24.04 and are not claimed to support all distributions. Automated build and application tests do not replace interactive installation and launch testing on every target machine.
 
 macOS installer correction: repaired the app bundle signature that caused the original ARM64 download to be reported as damaged. Only the macOS DMG and checksum manifest are replaced; Windows and Linux installers are unchanged. The application source tag remains v2.0.1; the packaging correction is recorded separately on main. Ad-hoc signing does not remove Gatekeeper approval requirements.
+
+Windows standalone addition: the standalone executable is the exact application binary extracted from the published v2.0.1 Windows installer. Existing installers and the source tag are unchanged. The checksum manifest also covers the standalone download and accompanying license files.

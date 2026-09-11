@@ -1,4 +1,4 @@
-name: Release installers
+name: Release packages
 on:
   push:
     tags: ['v*.*.*']
@@ -56,7 +56,7 @@ jobs:
             sudo apt-get update > "$RUNNER_TEMP/deps.log" 2>&1 && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev desktop-file-utils >> "$RUNNER_TEMP/deps.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/deps.log"; exit 1; }
             go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0 > "$RUNNER_TEMP/nfpm.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/nfpm.log"; exit 1; }
           fi
-      - name: Build and verify native installer
+      - name: Build and verify native packages
         run: |
           if [ "$RUNNER_OS" = macOS ]; then
             bash scripts/package-macos.sh "$VERSION" > "$RUNNER_TEMP/package.log" 2>&1 || { tail -c 4000 "$RUNNER_TEMP/package.log"; exit 1; }
@@ -78,7 +78,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.platform }}
-          path: installation_package/NET-Test-*
+          path: |
+            installation_package/NET-Test-*
+            installation_package/LICENSE
+            installation_package/THIRD_PARTY_NOTICES.txt
           if-no-files-found: error
   publish:
     needs: build
@@ -98,10 +101,14 @@ jobs:
         run: |
           set -euo pipefail
           cd installation_package
-          test "$(find . -maxdepth 1 -name 'NET-Test-*' | wc -l)" -eq 3
-          sha256sum NET-Test-* > SHA256SUMS.txt
+          VERSION=${GITHUB_REF_NAME#v}
+          for asset in "NET-Test-$VERSION-macos-arm64.dmg" "NET-Test-$VERSION-windows-amd64-Setup.exe" "NET-Test-$VERSION-windows-amd64.exe" "NET-Test-$VERSION-linux-amd64.deb" LICENSE THIRD_PARTY_NOTICES.txt; do
+            test -s "$asset"
+          done
+          test "$(find . -maxdepth 1 -name 'NET-Test-*' | wc -l)" -eq 4
+          sha256sum NET-Test-* LICENSE THIRD_PARTY_NOTICES.txt > SHA256SUMS.txt
           if ! gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
             gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "NET-Test $GITHUB_REF_NAME" --notes-file ../docs/architecture/release-notes.txt
           fi
-          gh release upload "$GITHUB_REF_NAME" NET-Test-* SHA256SUMS.txt --clobber
+          gh release upload "$GITHUB_REF_NAME" NET-Test-* LICENSE THIRD_PARTY_NOTICES.txt SHA256SUMS.txt --clobber
           gh release edit "$GITHUB_REF_NAME" --draft=false --latest

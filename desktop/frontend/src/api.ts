@@ -56,7 +56,8 @@ export type Session = {
 };
 export type Detail = { session: Session; samples: Sample[] };
 
-export type Page = { sessions: Session[]; next: number; active: number };
+export type ActiveByType = Record<"http" | "dns" | "tcp" | "icmp", number>;
+export type Page = { sessions: Session[]; next: number; active: number; capacity: number; activeByType: ActiveByType };
 export type Timeline = {
   samples: Sample[]; count: number; succeeded: number; average: number;
   maximum: number; from: number; to: number; revision: number; aggregated: boolean;

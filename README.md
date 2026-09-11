@@ -34,7 +34,7 @@ See [build and installation](BUILD_AND_INSTALL.md) for platform requirements. Go
 
 Existing desktop data stays in the user configuration directory at `nt-wails/results.db`. The application identity and saved theme preference are retained across the rename. Legacy `ntdata.db` databases are not migrated; legacy CSV exports can be imported as independent stopped sessions. No existing user database is deleted by this source migration.
 
-TLS verification is enabled for targets and proxies. Proxy passwords are never saved in SQLite or exported. Eight tests may run concurrently. Recorded timelines use indexed summaries; unrecorded long runs can consume growing memory. Saved data remains until explicit deletion.
+TLS verification is enabled for targets and proxies. Proxy passwords are never saved in SQLite or exported. Ten tests may run concurrently. Recorded timelines use indexed summaries; unrecorded long runs can consume growing memory. Saved data remains until explicit deletion.
 
 ## Source and documentation
 

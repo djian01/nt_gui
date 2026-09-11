@@ -46,7 +46,7 @@ func TestDNSValidationAndBatch(t *testing.T) {
 	if len(r.sessions) != 0 {
 		t.Fatal("partially started invalid batch")
 	}
-	if _, err := r.StartDNS(dnsConfig(), strings.Repeat("127.0.0.1\n", 9)); err == nil {
+	if _, err := r.StartDNS(dnsConfig(), strings.Repeat("127.0.0.1\n", MaxActive+1)); err == nil {
 		t.Fatal("accepted over-capacity batch")
 	}
 	created, err := r.StartDNS(dnsConfig(), "127.0.0.1\r\n\n::1")

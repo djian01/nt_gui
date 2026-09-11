@@ -231,7 +231,7 @@ func TestICMPValidationBatchAndFilters(t *testing.T) {
 	}
 	r := newTestRunner(t, nil)
 	defer r.Close()
-	for _, targets := range []string{"", "127.0.0.1\ninvalid/host", strings.Repeat("127.0.0.1\n", 9)} {
+	for _, targets := range []string{"", "127.0.0.1\ninvalid/host", strings.Repeat("127.0.0.1\n", MaxActive+1)} {
 		if _, err := r.StartICMP(icmpConfig(), targets); err == nil {
 			t.Fatalf("accepted invalid batch %q", targets)
 		}
@@ -258,7 +258,7 @@ func TestICMPValidationBatchAndFilters(t *testing.T) {
 			t.Fatalf("%s: %+v %v", filter, page, err)
 		}
 	}
-	if _, err := r.StartICMP(icmpConfig(), strings.Repeat("127.0.0.1\n", 7)); err == nil {
+	if _, err := r.StartICMP(icmpConfig(), strings.Repeat("127.0.0.1\n", MaxActive-1)); err == nil {
 		t.Fatal("ignored shared active limit")
 	}
 	for _, s := range created {

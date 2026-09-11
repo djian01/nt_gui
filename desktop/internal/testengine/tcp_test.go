@@ -95,7 +95,7 @@ func TestTCPValidationAndBatch(t *testing.T) {
 	if _, err := r.StartTCP(c, "127.0.0.1\ninvalid/host"); err == nil {
 		t.Fatal("accepted invalid second target")
 	}
-	if _, err := r.StartTCP(c, strings.Repeat("127.0.0.1\n", 9)); err == nil {
+	if _, err := r.StartTCP(c, strings.Repeat("127.0.0.1\n", MaxActive+1)); err == nil {
 		t.Fatal("accepted over-capacity batch")
 	}
 	if len(r.sessions) != 0 {
@@ -108,7 +108,7 @@ func TestTCPValidationAndBatch(t *testing.T) {
 	if created[0].Index != 1 || created[1].Index != 2 || created[1].Config.ResolvedIP != "::1" {
 		t.Fatalf("TCP identities: %+v", created)
 	}
-	if _, err := r.StartTCP(c, strings.Repeat("127.0.0.1\n", 7)); err == nil {
+	if _, err := r.StartTCP(c, strings.Repeat("127.0.0.1\n", MaxActive-1)); err == nil {
 		t.Fatal("ignored shared active capacity")
 	}
 	page, err := r.List("", "current-tcp", 0)

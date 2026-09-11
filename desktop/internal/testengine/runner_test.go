@@ -368,3 +368,82 @@ func TestCurrentSessionRetainsStoppedResults(t *testing.T) {
 		}
 	}
 }
+
+func TestTenSharedSlotsAndBatchCapacity(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(204) }))
+	defer server.Close()
+	r := newTestRunner(t, nil)
+	defer r.Close()
+	c, err := validate(config(server.URL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var first Session
+	for i := 0; i < 9; i++ {
+		s, err := r.Start(c)
+		if err != nil {
+			t.Fatalf("slot %d: %v", i+1, err)
+		}
+		if i == 0 {
+			first = s
+		}
+	}
+	if _, err := r.startBatch([]Config{c, c}); err == nil {
+		t.Fatal("oversized batch accepted")
+	}
+	page, err := r.List("", "current", 0)
+	if err != nil || page.Active != 9 {
+		t.Fatalf("batch partially started: %+v, %v", page, err)
+	}
+	if _, err := r.startBatch([]Config{c}); err != nil {
+		t.Fatalf("tenth slot rejected: %v", err)
+	}
+	if _, err := r.Start(c); err == nil {
+		t.Fatal("eleventh test accepted")
+	}
+	page, err = r.List("no-match", "stopped-dns", 1)
+	if err != nil || page.Capacity != 10 || page.Active != 10 || page.ActiveByType["http"] != 10 {
+		t.Fatalf("incorrect global pool: %+v, %v", page, err)
+	}
+	if _, err := r.Stop(first.ID); err != nil {
+		t.Fatal(err)
+	}
+	page, err = r.List("", "current", 0)
+	if err != nil || page.Active != 9 || page.ActiveByType["http"] != 9 {
+		t.Fatalf("stop did not free slot: %+v, %v", page, err)
+	}
+	if _, err := r.Restart(first.ID, ""); err != nil {
+		t.Fatalf("released slot could not be reused: %v", err)
+	}
+}
+
+func TestPoolCountsAllTypesIndependentOfVisibleRows(t *testing.T) {
+	r := newTestRunner(t, nil)
+	// Lifecycle snapshots isolate aggregation from network availability and ICMP permissions.
+	for i, kind := range []string{"", "http", "dns", "tcp", "tcp", "icmp"} {
+		id := fmt.Sprint(i)
+		r.sessions[id] = &state{Session: Session{ID: id, Config: Config{Type: kind}, Running: true}}
+	}
+	r.sessions["stopped"] = &state{Session: Session{Config: Config{Type: "dns"}, Running: false}}
+	for _, filter := range []string{"current-http", "current-dns", "current-tcp", "current-icmp", "stopped", "stopped-tcp"} {
+		page, err := r.List("no-match", filter, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(page.Sessions) != 0 || page.Active != 6 || page.Capacity != 10 {
+			t.Fatalf("%s: %+v", filter, page)
+		}
+		for kind, want := range map[string]int{"http": 2, "dns": 1, "tcp": 2, "icmp": 1} {
+			if page.ActiveByType[kind] != want {
+				t.Fatalf("%s: %s count = %d, want %d", filter, kind, page.ActiveByType[kind], want)
+			}
+		}
+	}
+	// A terminal storage failure releases capacity just like an explicit stop.
+	r.sessions["5"].Running = false
+	r.sessions["5"].EndReason = "storage_error"
+	page, err := r.List("", "stopped", 0)
+	if err != nil || page.Active != 5 || page.ActiveByType["icmp"] != 0 {
+		t.Fatalf("terminal state retained slot: %+v, %v", page, err)
+	}
+}

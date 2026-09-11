@@ -13,7 +13,7 @@ These are Wails-bound local Go methods, not network endpoints. `frontend/src/api
 | `Record` | Running HTTP, DNS, TCP, or ICMP ID | Updated `Session`; enables recording for future probes only | `App.tsx: chart Record action` |
 | `Dismiss` | Stopped DNS, TCP, or ICMP ID | Void; removes current row and closes chart, retains saved history | `App.tsx: shared table Close action` |
 | `Restart` | ID, proxy password string (empty if unused) | New running `Session` retaining recording preference; original run is preserved | `App.tsx: restart / runAgain` |
-| `List` | Endpoint search, filter (`all`, `running`, `stopped`, `current`, `current-http`, `current-dns`, `current-tcp`, `current-icmp`), before cursor (0 initially) | `Page`: up to 50 sessions newest first, next cursor (0 at end), active count | `useSessions.ts: useSessions` |
+| `List` | Endpoint search, filter (`all`, `running`, `stopped`, `current`, `current-http`, `current-dns`, `current-tcp`, `current-icmp`), before cursor (0 initially) | `Page`: up to 50 sessions newest first, next cursor (0 at end), global active count, capacity, activeByType | `useSessions.ts: useSessions` |
 | `Get` | ID | `Detail`: current `Session` and up to six recent raw samples, oldest first | `useSessions.ts: selection effect` |
 | `Timeline` | ID, inclusive from/to Unix milliseconds (0 means default bound) | `Timeline`: ordered representative samples, exact count/succeeded/average/maximum, range, revision, aggregated flag | `LatencyChart.tsx: range effect` |
 | `Stop` | ID | Stopped `Session`; durable only when recorded, otherwise memory-only; storage/not-found error | `App.tsx: stop` |
@@ -31,7 +31,7 @@ The previous `Get` complete-history transfer has been replaced by `Timeline` ran
 
 `Config` with `type="dns"`: `resolver` (IPv4/IPv6 address, no hostname or custom port), non-empty `query`, `protocol` (`udp` by default or `tcp`), positive whole-second `intervalMs`/`timeoutMs` (UI defaults 1000/4000), and `recording` (false by default). HTTP-only options are cleared. `url` is a generated resolver/query display and search string, not a network URL.
 
-`Session`: optional DNS/TCP/ICMP `index` (per-process row number), ID, sanitized config, running, startedAt, nullable endedAt, monotonic revision, sent/succeeded counts, successful-response minRtt/maxRtt/avgRtt, nullable last sample, endReason (empty while running; stopped/interrupted/storage_error/imported), saveError, passwordRequired, and optional importNote explaining missing source metadata. All RTT values are milliseconds. Dates in models are RFC3339; timeline bounds use Unix milliseconds. Eight active tests maximum; no historical session/probe retention cutoff.
+`Session`: optional DNS/TCP/ICMP `index` (per-process row number), ID, sanitized config, running, startedAt, nullable endedAt, monotonic revision, sent/succeeded counts, successful-response minRtt/maxRtt/avgRtt, nullable last sample, endReason (empty while running; stopped/interrupted/storage_error/imported), saveError, passwordRequired, and optional importNote explaining missing source metadata. All RTT values are milliseconds. Dates in models are RFC3339; timeline bounds use Unix milliseconds. Ten active tests maximum; no historical session/probe retention cutoff.
 
 `Sample`: one-based sequence, time, RTT, statusCode (0 for no HTTP response), optional responsePhase (HTTP reason phrase), success, error. DNS adds `dnsResponse` (comma-separated IPv4 addresses) and `dnsRecord` (A/CNAME). DNS/TCP chart metadata and CSV use zero-based sequences to match legacy; the shared internal sequence remains one-based. Sequence counts completed probes; unrecorded raw samples are memory-only. A storage-failed or explicitly cancelled probe is not counted as saved.
 
@@ -169,7 +169,7 @@ flowchart TD
     P --> Q["main.go: TestService.Dismiss closes chart window"]
 ```
 
-The existing eight-active-test desktop limit applies across HTTP, DNS, and TCP. Blank lines are skipped; each resolver starts a separate test. Duplicate resolver lines remain separate tests, as in legacy. Resolver validation does not perform hostname lookups. Stop cancels in-flight DNS lookups; replay preserves resolver, query, protocol, interval, timeout, and current recording preference.
+The existing ten-active-test desktop limit applies across HTTP, DNS, TCP, and ICMP. Blank lines are skipped; each resolver starts a separate test. Duplicate resolver lines remain separate tests, as in legacy. Resolver validation does not perform hostname lookups. Stop cancels in-flight DNS lookups; replay preserves resolver, query, protocol, interval, timeout, and current recording preference.
 
 Recording off saves nothing to the SQLite file: no session metadata, summary/latest snapshot, raw probe rows, or buckets. The test never appears in History. All current state stays in memory. Live raw probes and chart buckets are memory-only and are released on row close, history deletion, or app exit. Turning recording on is one-way and writes only subsequent probes to the durable store. The current chart retains earlier live probes until closed; reopened history and CSV contain only recorded probes. A failed durable save rolls back the pending live-chart transaction. No schema migration is introduced.
 
@@ -237,7 +237,7 @@ configs, clearing HTTP/DNS fields, generating `url` as host:port for search,
 and populating `resolvedIP`. Each hostname lookup is limited to the smaller
 of the configured timeout and ten seconds. StartTCP ignores any supplied
 resolvedIP and resolves each listed target. Duplicate lines are separate tests.
-The batch limit and total active limit are eight. Responses return normalized
+The batch limit and total active limit are ten. Responses return normalized
 `Session[]` with independent TCP indices, or validation/resolution/capacity/storage
 errors with no partially running batch. TCP uses the existing `Sample` fields.
 
@@ -293,7 +293,7 @@ whole import. The shared 256 MiB/one-million-row limits remain in place.
 ## ICMP contract and call flow
 
 Local endpoint: `main.TestService.StartICMP(config, targets)` (Wails IPC, no HTTP route).
-`Config.type="icmp"` uses `target`, resolved/pinned IPv4 `resolvedIP`, `payloadSize` (32–65507 bytes), `df`, `intervalMs`, `timeoutMs` (positive whole seconds), and `recording`. The form defaults to 32 bytes, DF OFF, 1s interval, 4s timeout, recording OFF. `StartICMP` ignores supplied resolvedIP and resolves each entered target; `Restart` preserves the previous pinned IP. Single-target `Start` also accepts ICMP. Eight active tests are shared across protocols. Response is a session array containing ID/index, configuration, lifecycle, statistics, and latest sample; validation/resolution/storage/capacity errors are returned through IPC.
+`Config.type="icmp"` uses `target`, resolved/pinned IPv4 `resolvedIP`, `payloadSize` (32–65507 bytes), `df`, `intervalMs`, `timeoutMs` (positive whole seconds), and `recording`. The form defaults to 32 bytes, DF OFF, 1s interval, 4s timeout, recording OFF. `StartICMP` ignores supplied resolvedIP and resolves each entered target; `Restart` preserves the previous pinned IP. Single-target `Start` also accepts ICMP. Ten active tests are shared across protocols. Response is a session array containing ID/index, configuration, lifecycle, statistics, and latest sample; validation/resolution/storage/capacity errors are returned through IPC.
 
 ```mermaid
 flowchart TD
@@ -349,3 +349,37 @@ flowchart TD
 ```
 
 Changing test type resets the page, selection, and bulk-delete checkboxes. The dropdown is History-only and defaults to All types. The query retains the existing running-state index; protocol is a JSON predicate over matching test metadata, not raw samples. No schema change.
+
+## Shared concurrent test slots
+
+The `main.TestService.List(search, filter, before)` IPC response extends `Page` with
+`capacity` (10) and `activeByType` (`http`, `dns`, `tcp`, `icmp`, including zero
+counts), alongside the existing `active`, `sessions`, and `next` fields. Counts
+include all running tests, recorded or temporary, independently of search,
+protocol filters, History, and pagination. Missing legacy protocol types count
+as HTTP. Empty slots equal `capacity - active`.
+
+Start, Restart, StartDNS, StartTCP, and StartICMP share the ten-slot limit.
+Oversized batches are rejected before any test starts. Stop and terminal storage
+failures release capacity; unsuccessful probes on running tests do not.
+
+```mermaid
+flowchart TD
+    A["runner.go: emitLocked on start, Stop, or terminal run failure"] --> B["main.go: App.Event.Emit test:updated"]
+    B --> C["useSessions.ts: useSessions update listener → refresh"]
+    C --> D["api.ts: api.list"]
+    D --> E["main.go: TestService.List"]
+    E --> F["runner.go: Runner.List under runner lock"]
+    F --> G["store.go: Store.List for paginated visible sessions"]
+    G --> H["runner.go: Runner.List aggregates active sessions by type"]
+    H --> I["useSessions.ts: useSessions stores pool snapshot"]
+    I --> J["App.tsx: App → TestPoolStatus.tsx: TestPoolStatus"]
+```
+
+The compact strip appears above the shared breadcrumb header on HTTP, DNS, TCP, ICMP, and
+History pages. It contains a single row with the running total, a ten-slot colored bar, per-type counts, and
+empty slots (wrapping only on narrow screens); Start/Stop actions remain in their existing locations. Standalone chart
+windows omit the strip. Existing event-driven list refreshes update all counts;
+no polling, schema migration, or historical aggregation is added. Frontend
+capacity guards use the backend capacity. The runner remains authoritative when
+requests overlap before the refreshed snapshot arrives.

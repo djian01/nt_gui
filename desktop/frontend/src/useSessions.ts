@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, errorText, onUpdate, onRemove, type Detail, type Session } from "./api";
+import { api, errorText, onUpdate, onRemove, type Detail, type Session, type Page } from "./api";
 
 const emptySessions: Session[] = [];
 
@@ -18,7 +18,9 @@ export function useSessions(selected: string | null, search: string, filter: str
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [next, setNext] = useState(0);
-  const [active, setActive] = useState(0);
+  const [pool, setPool] = useState<Pick<Page, "active" | "capacity" | "activeByType">>({
+    active: 0, capacity: 0, activeByType: { http: 0, dns: 0, tcp: 0, icmp: 0 },
+  });
   const [refreshKey, setRefreshKey] = useState(0);
   const removed = useRef(new Set<string>());
   const refresh = useCallback(() => setRefreshKey(v => v + 1), []);
@@ -42,7 +44,7 @@ export function useSessions(selected: string | null, search: string, filter: str
           return recent && recent.revision > s.revision ? recent : s;
         }));
         setLoadedQuery(queryKey);
-        setNext(page.next); setActive(page.active); setConnected(true);
+        setNext(page.next); setPool({ active: page.active, capacity: page.capacity, activeByType: page.activeByType }); setConnected(true);
       }).catch(err => { if (mounted) setError(errorText(err)); })
         .finally(() => { off(); if (mounted) setLoading(false); });
     }, 150);
@@ -77,5 +79,5 @@ export function useSessions(selected: string | null, search: string, filter: str
     }).catch(err => { if (mounted) setError(errorText(err)); }).finally(off);
     return () => { mounted = false; off(); };
   }, [selected]);
-  return { sessions: loadedQuery === queryKey ? sessions : emptySessions, detail, connected, error, setError, merge, refresh, next, active, loading };
+  return { sessions: loadedQuery === queryKey ? sessions : emptySessions, detail, connected, error, setError, merge, refresh, next, ...pool, loading };
 }

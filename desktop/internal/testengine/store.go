@@ -21,9 +21,11 @@ import (
 type Store struct{ db *sql.DB }
 
 type Page struct {
-	Sessions []Session `json:"sessions"`
-	Next     int64     `json:"next"`
-	Active   int       `json:"active"`
+	Sessions     []Session      `json:"sessions"`
+	Next         int64          `json:"next"`
+	Active       int            `json:"active"`
+	Capacity     int            `json:"capacity"`
+	ActiveByType map[string]int `json:"activeByType"`
 }
 
 type Timeline struct {

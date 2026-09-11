@@ -84,7 +84,7 @@ func (r *Runner) StartTCP(config Config, targets string) ([]Session, error) {
 		}
 		configs = append(configs, c)
 		if len(configs) > MaxActive {
-			return nil, errors.New("8 active tests maximum")
+			return nil, fmt.Errorf("%d active tests maximum", MaxActive)
 		}
 	}
 	if len(configs) == 0 {

@@ -1,3 +1,4 @@
+import { TestPoolStatus } from "./TestPoolStatus";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import {
@@ -104,7 +105,7 @@ export default function App() {
   const [cursors, setCursors] = useState<number[]>([0]);
   const [view, setView] = useState<"http" | "dns" | "tcp" | "icmp" | "history">("http");
   const filter = view === "history" ? (historyType === "all" ? "stopped" : `stopped-${historyType}`) : `current-${view}`;
-  const { sessions, detail, connected, error, setError, merge, refresh, next, active, loading } =
+  const { sessions, detail, connected, error, setError, merge, refresh, next, active, capacity, activeByType, loading } =
     useSessions(selected, search, filter, cursors.at(-1) ?? 0);
   const filtered = view === "history" ? sessions.filter((s) => !s.running) : sessions;
   const [config, setConfig] = useState<Config>({
@@ -230,6 +231,7 @@ export default function App() {
     <div className="metrics" ref={detailsRef}>
       <Metric
         label="Latest response"
+        truncateNote={!!session && isDNS(session)}
         value={session?.last && (!isNetwork(session) || session.last.success) ? ms(session.last.rtt) : "—"}
         unit={session?.last && (!isNetwork(session) || session.last.success) ? "ms" : ""}
         note={
@@ -504,6 +506,7 @@ export default function App() {
         </aside>
       )}
       <main>
+        {!chartID && <TestPoolStatus active={active} capacity={capacity} activeByType={activeByType} />}
         <header className="topbar">
           <div className="breadcrumb">
             Network tools
@@ -570,12 +573,7 @@ export default function App() {
                   merge(imported); setSelected(null); setCursors([0]); refresh();
                   setNotice(`Imported ${imported.config.url}`);
                 })}><Upload size={14} /> Import CSV</button>
-              ) : (
-                <span className="running-count">
-                  <i className={`dot ${active ? "accent" : ""}`} />
-                  {active} active {active === 1 ? "test" : "tests"}
-                </span>
-              )}
+              ) : null}
             </div>
           </div>
           {notice && <div className="notice-banner" role="status">{notice}</div>}
@@ -592,15 +590,15 @@ export default function App() {
               </button>
             </div>
           )}
-          {!chartID && view === "dns" && <DNSForm disabled={!!busy || !connected || active >= 8} busy={busy === "start"} onStart={(dnsConfig, resolvers) => action("start", async () => {
+          {!chartID && view === "dns" && <DNSForm disabled={!!busy || !connected || active >= capacity} busy={busy === "start"} onStart={(dnsConfig, resolvers) => action("start", async () => {
             const created = await api.startDNS(dnsConfig, resolvers);
             setSelected(created[0]?.id ?? null); setCursors([0]); refresh();
           })} />}
-          {!chartID && view === "icmp" && <ICMPForm disabled={!!busy || !connected || active >= 8} busy={busy === "start"} onStart={(icmpConfig, targets) => action("start", async () => {
+          {!chartID && view === "icmp" && <ICMPForm disabled={!!busy || !connected || active >= capacity} busy={busy === "start"} onStart={(icmpConfig, targets) => action("start", async () => {
             const created = await api.startICMP(icmpConfig, targets);
             setSelected(created[0]?.id ?? null); setCursors([0]); refresh();
           })} />}
-          {!chartID && view === "tcp" && <TCPForm disabled={!!busy || !connected || active >= 8} busy={busy === "start"} onStart={(tcpConfig, targets) => action("start", async () => {
+          {!chartID && view === "tcp" && <TCPForm disabled={!!busy || !connected || active >= capacity} busy={busy === "start"} onStart={(tcpConfig, targets) => action("start", async () => {
             const created = await api.startTCP(tcpConfig, targets);
             setSelected(created[0]?.id ?? null); setCursors([0]); refresh();
           })} />}
@@ -698,7 +696,7 @@ export default function App() {
                 <button
                   className="button primary start-button"
                   type="submit"
-                  disabled={!!busy || !connected || active >= 8}
+                  disabled={!!busy || !connected || active >= capacity}
                 >
                   <Play size={15} fill="currentColor" />
                   {busy === "start" ? "Starting…" : "Start test"}
@@ -1023,7 +1021,7 @@ export default function App() {
                               className={`icon-button ${s.running ? "stop-action" : ""}`}
                               title={s.running ? "Stop test" : "Run again"}
                               aria-label={`${s.running ? "Stop" : "Run again"} ${s.config.url}`}
-                              disabled={!!busy || (!s.running && active >= 8)}
+                              disabled={!!busy || (!s.running && active >= capacity)}
                               onClick={() =>
                                 void (s.running ? stop(s) : restart(s))
                               }
@@ -1133,6 +1131,7 @@ function Metric({
   note,
   icon,
   warning = false,
+  truncateNote = false,
 }: {
   label: string;
   value: string;
@@ -1140,6 +1139,7 @@ function Metric({
   note: string;
   icon: React.ReactNode;
   warning?: boolean;
+  truncateNote?: boolean;
 }) {
   return (
     <motion.div
@@ -1156,7 +1156,7 @@ function Metric({
         {value}
         <span>{unit}</span>
       </div>
-      <div className="metric-note">{note}</div>
+      <div className={`metric-note${truncateNote ? " metric-note-truncated" : ""}`} title={truncateNote ? note : undefined}>{note}</div>
     </motion.div>
   );
 }

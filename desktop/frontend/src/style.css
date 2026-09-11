@@ -373,17 +373,6 @@ h1 {
   gap: 14px;
   flex-shrink: 0;
 }
-.running-count {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  padding: 8px 12px;
-  border-radius: 6px;
-}
 .dot {
   display: inline-block;
   width: 6px;
@@ -784,6 +773,7 @@ select {
   margin-bottom: 22px;
 }
 .metric {
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 9px;
@@ -819,6 +809,11 @@ select {
   font-size: 9px;
   color: var(--text-muted);
   margin-top: 4px;
+}
+.metric-note-truncated {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .metric.warning .metric-value {
   color: var(--danger);
@@ -1707,3 +1702,31 @@ tbody tr:not(.selected):hover {
 .dns-result { display: block; max-width: 24ch; margin-top: 6px; font-size: 9px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .history-type-filter { width: 130px; flex-shrink: 0; }
+
+.test-pool {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 10px 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-inset);
+  font-variant-numeric: tabular-nums;
+}
+.test-pool-total { font-size: 13px; font-weight: 500; white-space: nowrap; }
+.test-pool-slots { display: flex; flex: 1; min-width: 115px; gap: 3px; }
+.test-pool-slots i { flex: 1; min-width: 0; height: 9px; border-radius: 2px; }
+.test-pool .pool-empty { background: var(--border); }
+.test-pool-empty { margin-left: auto; color: var(--text-muted); white-space: nowrap; }
+.test-pool-legend { display: flex; flex-wrap: wrap; gap: 8px 12px; color: var(--text-muted); }
+.test-pool-legend span { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.test-pool-legend b { color: var(--text); font-weight: 500; }
+.test-pool-legend i { width: 7px; height: 7px; border-radius: 50%; }
+.test-pool .pool-http { background: light-dark(#5b94ef, #70a6f8); }
+.test-pool .pool-dns { background: light-dark(#aa80ee, #b697f4); }
+.test-pool .pool-tcp { background: light-dark(#eaae40, #eebd62); }
+.test-pool .pool-icmp { background: light-dark(#2cbaa5, #48cbb7); }
+@media (max-width: 900px) {
+  .test-pool { padding: 10px 20px; column-gap: 16px; }
+  .test-pool-legend { column-gap: 12px; }
+}

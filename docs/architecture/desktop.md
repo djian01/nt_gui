@@ -12,7 +12,7 @@ SQLite schema version 1 stores tests, samples, and radix-4 timeline buckets. WAL
 
 `recording.go: prepareLiveResults / saveProbe / resultsStore / Runner.Record` route temporary tests to memory and recorded probes to durable storage. Recording defaults off; enabling it saves future probes only. Recorded runs avoid duplicating raw samples in memory. Temporary results disappear on close or exit. Old HTTP configurations without a type retain their existing recording semantics.
 
-Eight active tests share one runner. History uses 50-row keyset pages. Timeline queries use indexed bounds and summary buckets with exact range counts and successful latency statistics. Representative points retain actual samples. CSV exports stream pages of 256 to a fixed sequence watermark. No raw-history polling or automatic retention cutoff is introduced.
+Ten active tests share one runner. History uses 50-row keyset pages. Timeline queries use indexed bounds and summary buckets with exact range counts and successful latency statistics. Representative points retain actual samples. CSV exports stream pages of 256 to a fixed sequence watermark. No raw-history polling or automatic retention cutoff is introduced.
 
 ## Protocols
 
@@ -51,3 +51,9 @@ Wails Go/runtime versions are pinned together at 3.0.0-beta.17. Windows requires
 ## History type selection
 
 `App.tsx: App` places an All types / HTTP / DNS / TCP / ICMP dropdown beside endpoint search. `Store.List` combines the selected protocol with saved-only/stopped/search conditions before keyset pagination. Existing API signatures and schema stay unchanged. Changing type clears page/selection/bulk selection; current test tabs are unaffected.
+
+The status strip above the shared breadcrumb header (`TestPoolStatus.tsx`) uses the global pool snapshot
+from `Runner.List` through `useSessions`. Capacity and per-protocol counts are
+computed from in-memory running sessions under the runner lock, independently of
+paged visible results. Existing lifecycle events trigger refreshes. Ten shared
+slots apply across HTTP, DNS, TCP, and ICMP; no database changes are required.

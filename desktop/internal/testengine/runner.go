@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	MaxActive = 8
+	MaxActive = 10
 )
 
 type Config struct {
@@ -257,7 +257,7 @@ func (r *Runner) startBatch(configs []Config) ([]Session, error) {
 		}
 	}
 	if active+len(configs) > MaxActive {
-		return nil, fmt.Errorf("Only %d active test slots available (8 active tests maximum)", MaxActive-active)
+		return nil, fmt.Errorf("Only %d active test slots available (%d active tests maximum)", MaxActive-active, MaxActive)
 	}
 	created := make([]Session, 0, len(configs))
 	for _, c := range configs {
@@ -297,7 +297,7 @@ func (r *Runner) startLocked(c Config) (Session, error) {
 		}
 	}
 	if active >= MaxActive {
-		return Session{}, errors.New("Stop a test before starting another (8 active tests maximum)")
+		return Session{}, fmt.Errorf("Stop a test before starting another (%d active tests maximum)", MaxActive)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	publicConfig := c
@@ -505,9 +505,16 @@ func (r *Runner) List(search, filter string, before int64) (Page, error) {
 	} else {
 		page, err = r.store.List(search, filter, before)
 	}
+	page.Capacity = MaxActive
+	page.ActiveByType = map[string]int{"http": 0, "dns": 0, "tcp": 0, "icmp": 0}
 	for _, s := range r.sessions {
 		if s.Running {
 			page.Active++
+			kind := s.Config.Type
+			if kind == "" {
+				kind = "http"
+			}
+			page.ActiveByType[kind]++
 		}
 	}
 	for i, s := range page.Sessions {

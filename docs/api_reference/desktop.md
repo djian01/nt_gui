@@ -383,3 +383,45 @@ windows omit the strip. Existing event-driven list refreshes update all counts;
 no polling, schema migration, or historical aggregation is added. Frontend
 capacity guards use the backend capacity. The runner remains authoritative when
 requests overlap before the refreshed snapshot arrives.
+
+## Session latency cards
+
+All session responses and `test:updated` payloads now include nullable `p95Rtt`
+and `p99Rtt` in milliseconds. These are exact nearest-rank percentiles:
+`sortedSuccessfulRTTs[ceil(percentile * count) - 1]`. Failures are excluded;
+no successful samples means null. Existing `avgRtt`, `minRtt`, and `maxRtt`
+power the shared **Average / Min / Max RTT** card. The adjacent **P95/P99
+Latency** card displays P95 then P99 for HTTP, ICMP, TCP, and DNS, including
+History and detached charts. Both cards display an em dash when unavailable.
+
+No new endpoint, request parameter, or database schema is introduced. The
+existing `main.TestService.Get(id)` returns the selected session's full-session
+percentiles plus its usual six recent samples. `List`, `Start*`, `Stop`,
+`Record`, `Restart`, and `ImportCSV` retain their existing request contracts;
+returned Session objects carry the additional nullable fields. New recorded
+summaries persist the percentiles in the existing JSON data. CSV formats remain
+unchanged; imports calculate percentiles from imported successful rows.
+
+```mermaid
+flowchart TD
+  A["internal/testengine/runner.go: Runner.run — HTTP / ICMP / TCP / DNS probe"] --> B["internal/testengine/percentiles.go: latencyPercentiles.add / rankPercentile.add"]
+  B --> C["internal/testengine/recording.go: Runner.saveProbe"]
+  C --> D["internal/testengine/store.go: Store.Save / saveTest — Session JSON"]
+  C --> E["internal/testengine/runner.go: Runner.emitLocked — test:updated"]
+  E --> F["frontend/src/api.ts: onUpdate"]
+  F --> G["frontend/src/useSessions.ts: useSessions / merge / append"]
+  H["frontend/src/api.ts: api.get — session ID"] --> I["main.go: TestService.Get"]
+  I --> J["internal/testengine/runner.go: Runner.Get"]
+  J --> K["internal/testengine/store.go: Store.Get / Store.Recent"]
+  K --> G
+  G --> L["frontend/src/App.tsx: App / Metric — both latency cards"]
+  M["internal/testengine/import.go: Store.ImportCSV / updateImportedSummary"] --> B
+```
+
+Live updates use two heap partitions per percentile, O(log n) work per successful
+probe and O(n) stored floating-point values. No raw history is sent to the UI to
+calculate these metrics. Older summaries lacking percentiles stream only that
+session's successful stored RTTs when selected; this fallback takes O(n log n)
+time. Incomplete legacy recordings show unavailable percentiles rather than
+misrepresenting a subset as the full session. New sessions keep full-session
+percentiles even when recording starts partway through the run.

@@ -244,15 +244,18 @@ export default function App() {
         icon={<Activity size={18} />}
       />
       <Metric
-        label="Average latency"
-        value={session?.succeeded ? ms(session.avgRtt) : "—"}
-        unit={session?.succeeded ? "ms" : ""}
-        note={
-          session?.succeeded
-            ? `Min ${ms(session.minRtt)} · Max ${ms(session.maxRtt)} ms`
-            : "Successful responses only"
-        }
+        label="Average / Min / Max RTT"
+        value={<LatencyValues readings={[["Avg", session?.succeeded ? session.avgRtt : null], ["Min", session?.succeeded ? session.minRtt : null], ["Max", session?.succeeded ? session.maxRtt : null]]} />}
+        note="Successful responses · ms"
         icon={<Timer size={18} />}
+        compact
+      />
+      <Metric
+        label="P95/P99 Latency"
+        value={<LatencyValues readings={[["P95", session?.p95Rtt], ["P99", session?.p99Rtt]]} />}
+        note="Successful responses · ms"
+        icon={<Timer size={18} />}
+        compact
       />
       <Metric
         label="Failure rate"
@@ -1124,6 +1127,15 @@ export default function App() {
   );
 }
 
+function LatencyValues({ readings }: { readings: [string, number | null | undefined][] }) {
+  return <div className="metric-readings">
+    {readings.map(([label, value]) => <div key={label}>
+      <span>{label}</span>
+      <strong>{value == null ? "—" : ms(value)}</strong>
+    </div>)}
+  </div>;
+}
+
 function Metric({
   label,
   value,
@@ -1132,18 +1144,20 @@ function Metric({
   icon,
   warning = false,
   truncateNote = false,
+  compact = false,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   unit?: string;
   note: string;
   icon: React.ReactNode;
   warning?: boolean;
   truncateNote?: boolean;
+  compact?: boolean;
 }) {
   return (
     <motion.div
-      className={`metric ${warning ? "warning" : ""}`}
+      className={`metric ${warning ? "warning" : ""}${compact ? " metric-compact" : ""}`}
       initial={false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22 }}
@@ -1154,7 +1168,7 @@ function Metric({
       </div>
       <div className="metric-value">
         {value}
-        <span>{unit}</span>
+        {unit && <span>{unit}</span>}
       </div>
       <div className={`metric-note${truncateNote ? " metric-note-truncated" : ""}`} title={truncateNote ? note : undefined}>{note}</div>
     </motion.div>

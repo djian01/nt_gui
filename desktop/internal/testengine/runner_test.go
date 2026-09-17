@@ -122,6 +122,13 @@ func TestHTTPResultsAndMethods(t *testing.T) {
 				t.Fatal(err)
 			}
 			got := await(t, updates, func(s Session) bool { return s.Sent == 1 })
+			if test.code < 400 {
+				if got.P95RTT == nil || got.P99RTT == nil || *got.P95RTT != got.Last.RTT || *got.P99RTT != got.Last.RTT {
+					t.Fatal("live percentiles differ")
+				}
+			} else if got.P95RTT != nil || got.P99RTT != nil {
+				t.Fatal("failed probe produced percentiles")
+			}
 			if got.Last.StatusCode != test.code || got.Last.Success != (test.code < 400) {
 				t.Fatalf("unexpected result: %+v", got.Last)
 			}

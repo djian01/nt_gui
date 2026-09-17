@@ -74,6 +74,7 @@ func (s *Store) ImportCSV(input io.Reader) (Session, error) {
 	defer tx.Rollback()
 
 	var session Session
+	var percentiles latencyPercentiles
 	var sourceID string
 	var previousTime time.Time
 	var originalSequence int
@@ -156,6 +157,7 @@ func (s *Store) ImportCSV(input io.Reader) (Session, error) {
 			accepted[row.sample.StatusCode] = true
 		}
 		updateImportedSummary(&session, row.sample)
+		percentiles.add(row.sample, &session)
 		if err := saveSample(tx, session.ID, &row.sample); err != nil {
 			return Session{}, err
 		}

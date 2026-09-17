@@ -239,7 +239,30 @@ func readSession(row *sql.Row) (Session, error) {
 }
 
 func (s *Store) Get(id string) (Session, error) {
-	return readSession(s.db.QueryRow("SELECT data FROM tests WHERE id=?", id))
+	test, err := readSession(s.db.QueryRow("SELECT data FROM tests WHERE id=?", id))
+	if err != nil || test.Succeeded == 0 || (test.P95RTT != nil && test.P99RTT != nil) {
+		return test, err
+	}
+	// Older summaries have no percentiles. Read this session only, streaming
+	// successful raw RTTs rather than using the six recent/aggregated samples.
+	rows, err := s.db.Query("SELECT json_extract(data,'$.rtt') FROM samples WHERE test_id=? AND json_extract(data,'$.success')=1", id)
+	if err != nil {
+		return test, err
+	}
+	defer rows.Close()
+	var percentiles latencyPercentiles
+	for rows.Next() {
+		var rtt float64
+		if err := rows.Scan(&rtt); err != nil {
+			return test, err
+		}
+		percentiles.add(Sample{Success: true, RTT: rtt}, &test)
+	}
+	// Partial legacy recordings cannot describe the full session distribution.
+	if percentiles.p95.lower.Len()+percentiles.p95.upper.Len() != test.Succeeded {
+		test.P95RTT, test.P99RTT = nil, nil
+	}
+	return test, rows.Err()
 }
 
 func (s *Store) List(search, filter string, before int64) (Page, error) {

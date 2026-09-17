@@ -45,6 +45,9 @@ func TestImportWailsCSVRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if imported.P95RTT == nil || imported.P99RTT == nil || *imported.P95RTT != 14.75 || *imported.P99RTT != 14.75 {
+		t.Fatal("imported percentiles differ")
+	}
 	if imported.ID == original.ID || imported.Running || imported.EndReason != "imported" {
 		t.Fatalf("imported identity/state is wrong: %+v", imported)
 	}

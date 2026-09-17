@@ -52,6 +52,8 @@ export type Session = {
   minRtt: number;
   maxRtt: number;
   avgRtt: number;
+  p95Rtt: number | null;
+  p99Rtt: number | null;
   last: Sample | null;
 };
 export type Detail = { session: Session; samples: Sample[] };

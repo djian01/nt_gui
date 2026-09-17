@@ -83,6 +83,8 @@ type Session struct {
 	MinRTT           float64    `json:"minRtt"`
 	MaxRTT           float64    `json:"maxRtt"`
 	AvgRTT           float64    `json:"avgRtt"`
+	P95RTT           *float64   `json:"p95Rtt"`
+	P99RTT           *float64   `json:"p99Rtt"`
 	Last             *Sample    `json:"last"`
 }
 
@@ -93,6 +95,7 @@ type Detail struct {
 
 type state struct {
 	Session
+	percentiles   latencyPercentiles
 	requestConfig Config
 	cancel        context.CancelFunc
 }
@@ -430,6 +433,7 @@ func (r *Runner) run(ctx context.Context, s *state) {
 			next.MaxRTT = max(next.MaxRTT, sample.RTT)
 			next.AvgRTT += (sample.RTT - next.AvgRTT) / float64(next.Succeeded)
 		}
+		s.percentiles.add(sample, &next)
 		next.Revision++
 		if err := r.saveProbe(next, &sample); err != nil {
 			s.cancel()

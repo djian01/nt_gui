@@ -38,12 +38,22 @@ Existing desktop data stays in the user configuration directory at `nt-wails/res
 
 TLS verification is enabled for targets and proxies. Proxy passwords are never saved in SQLite or exported. Ten tests may run concurrently. Recorded timelines use indexed summaries; unrecorded long runs can consume growing memory. Saved data remains until explicit deletion.
 
-## Source and documentation
+## Documentation
+
+- [Build and installation](BUILD_AND_INSTALL.md): platform requirements, local builds, and installation packages.
+- [API reference and call flows](docs/api_reference/desktop.md): desktop service methods, request/response models, events, and frontend/backend call flows.
+- [Application architecture](docs/architecture/desktop.md): lifecycle, storage, protocols, interface, and known limitations.
+- [Branding and icons](docs/architecture/branding.md): application identity, artwork, and icon generation.
+- [Release process](docs/architecture/releases.md): automated builds, packaging, validation, and publishing.
+- [Release notes](docs/architecture/release-notes.txt): version changes and release updates.
+- [License](LICENSE): personal-use terms and commercial licensing.
+- [Third-party notices](THIRD_PARTY_NOTICES.txt): dependency licenses and acknowledgments.
+
+## Source layout
 
 - `desktop/main.go`: Wails startup, local service bridge, dialogs, and chart windows.
 - `desktop/internal/testengine/`: protocol adapters, lifecycle, recording, SQLite, and CSV formats.
 - `desktop/frontend/src/`: forms, session state, charts, and themes.
-- [Architecture](docs/architecture/desktop.md), [API contracts and flows](docs/api_reference/desktop.md), and [branding](docs/architecture/branding.md).
 
 ## License
 

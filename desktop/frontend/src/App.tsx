@@ -330,6 +330,17 @@ export default function App() {
                 LIVE
               </span>
             )}
+            {session?.running && (
+              <button
+                className="icon-button stop-action"
+                title="Stop test"
+                aria-label={`Stop ${session.config.url}`}
+                disabled={!!busy}
+                onClick={() => void stop(session)}
+              >
+                <Square size={13} fill="currentColor" />
+              </button>
+            )}
             {session && !chartID && view !== "history" && (
               <button
                 className="icon-button"

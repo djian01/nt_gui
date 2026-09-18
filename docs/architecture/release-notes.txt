@@ -24,4 +24,6 @@ RPM and Windows/Linux ARM64 packages are not included in this release. Linux pac
 
 September 2026 rebuild: all four application downloads are rebuilt from the source commit linked below. Adds shared P95/P99 latency statistics and Average / Min / Max RTT cards across HTTP, DNS, TCP, ICMP, History, and detached charts. Percentiles use successful probes and persist with recorded sessions; imported CSV sessions also calculate percentiles. The README now links all project documentation, including the API reference. A red pulsing REC indicator now appears beside LIVE while recording is active, across all protocols and detached charts. It remains active when the chart is paused and respects reduced-motion settings.
 
+The response-time graph header now includes the same red Stop test button as the session row, including detached graph windows and all test protocols. Either control stops the selected test through the existing stop action.
+
 The rebuilt macOS package retains the bundle-signing correction, and Windows Setup and the standalone executable come from the same build. SHA256SUMS.txt is regenerated for all four packages and the accompanying license files. The original v2.0.1 source tag is retained; use the build-source commit below for the exact rebuilt source.

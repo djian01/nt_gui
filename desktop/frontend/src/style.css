@@ -1097,13 +1097,30 @@ tbody tr:not(.selected):hover {
 .analysis-grid.history-detail {
   grid-template-columns: minmax(0, 1fr);
 }
-.live-label {
+.live-label,
+.recording-label {
   display: flex;
   align-items: center;
   gap: 6px;
   color: var(--accent-text);
   font-size: 8px;
   letter-spacing: 1px;
+}
+.recording-label {
+  color: var(--danger);
+  white-space: nowrap;
+}
+.recording-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+  animation: recording-pulse 1.8s ease-in-out infinite;
+}
+@keyframes recording-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
 }
 .chart-heading-copy {
   min-width: 0;

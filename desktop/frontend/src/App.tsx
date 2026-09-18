@@ -318,6 +318,12 @@ export default function App() {
           </div>
           <div className="heading-actions">
             {session && session.running && !isRecording(session) && <button className="button secondary" disabled={!!busy} onClick={() => void action("record", async () => merge(await api.record(session.id)))}><Radio size={14} />Record</button>}
+            {session?.running && isRecording(session) && (
+              <span className="recording-label" role="status" aria-label="Recording in progress" title="Recording in progress">
+                <i className="recording-dot" aria-hidden="true" />
+                REC
+              </span>
+            )}
             {session?.running && (
               <span className="live-label">
                 <i className="dot accent" />

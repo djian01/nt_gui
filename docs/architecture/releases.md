@@ -1,6 +1,6 @@
 # Application releases
 
-`.github/workflows/release.yml` builds version tags matching `vMAJOR.MINOR.PATCH`, or can be manually rerun on an existing tag. The tag must match `desktop/frontend/package.json`.
+`.github/workflows/release.yml` builds version tags matching `vMAJOR.MINOR.PATCH`, or can be manually dispatched from a branch or tag with an existing `release_tag` input. The release tag must match `desktop/frontend/package.json`. Manual rebuilds use the selected workflow ref’s immutable commit (`github.sha`) for every job while publishing to `release_tag`; the existing release tag is not moved. Concurrency is grouped by the destination release tag.
 
 The `build` job uses native macOS ARM64, Windows x64, and Ubuntu 24.04 x64 runners. It calls `scripts/package-macos.sh`, `scripts/package-windows.ps1`, or `scripts/package-linux.sh deb`, reusing the existing packaging configuration and license inclusion. The macOS script ad-hoc signs the complete staged bundle after final plist updates, verifies its sealed resources, verifies the DMG, and mounts it read-only to verify the delivered bundle again. The DMG layout leaves the signed app’s Finder metadata intact (`scripts/dmg-settings.py` disables `hide_extensions`). Any failure stops publication. The workflow installs the DEB, and runs `go test -race ./...` on each target after frontend compilation.
 
@@ -15,3 +15,7 @@ Starting with v2.0.1, the release matrix excludes macOS Intel. Local Intel packa
 The v2.0.1 macOS packaging correction replaces only the ARM64 DMG and its checksum in the existing release. The published v2.0.1 source tag remains unchanged; the packaging fix is committed separately on main and identified in the release notes.
 
 The v2.0.1 Windows standalone addition extracts `net-test.exe` from the already published, checksum-verified Windows installer, preserving the exact released application build. It adds the standalone executable and accompanying license files and updates the checksum manifest and release notes. Existing installers and the v2.0.1 source tag remain unchanged.
+
+## Rebuilding an existing release
+
+Run **Release packages** from the desired source branch (normally `main`) and set `release_tag` to the existing destination tag, for example `v2.0.1`. `.github/workflows/release.yml` validates the tag and version, builds and tests all three native platforms, and replaces the four packages only after every build succeeds. Publication regenerates checksums, refreshes release notes with the exact source commit and Actions run, then downloads the published files and verifies their hashes. Updating assets is not atomic; a failed upload may require rerunning publication. The original source archives still represent the unchanged tag; the release notes identify the rebuilt source.

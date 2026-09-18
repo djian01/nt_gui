@@ -3,11 +3,19 @@ on:
   push:
     tags: ['v*.*.*']
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to rebuild from the selected branch or tag
+        required: true
+        type: string
+        default: v2.0.1
 permissions:
   contents: read
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.release_tag || github.ref_name }}
   cancel-in-progress: false
+env:
+  RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
 jobs:
   build:
     strategy:
@@ -26,10 +34,13 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - name: Validate release version
         run: |
-          [[ "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Run this workflow on a version tag.'; exit 1; }
-          VERSION=${GITHUB_REF_NAME#v}
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Use a vMAJOR.MINOR.PATCH release tag.'; exit 1; }
+          git ls-remote --exit-code origin "refs/tags/$RELEASE_TAG" > /dev/null
+          VERSION=${RELEASE_TAG#v}
           node -e 'if (require("./desktop/frontend/package.json").version !== process.argv[1]) process.exit(1)' "$VERSION"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
       - uses: actions/setup-go@v5
@@ -90,6 +101,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - uses: actions/download-artifact@v4
         with:
           pattern: installer-*
@@ -101,14 +114,19 @@ jobs:
         run: |
           set -euo pipefail
           cd installation_package
-          VERSION=${GITHUB_REF_NAME#v}
+          VERSION=${RELEASE_TAG#v}
           for asset in "NET-Test-$VERSION-macos-arm64.dmg" "NET-Test-$VERSION-windows-amd64-Setup.exe" "NET-Test-$VERSION-windows-amd64.exe" "NET-Test-$VERSION-linux-amd64.deb" LICENSE THIRD_PARTY_NOTICES.txt; do
             test -s "$asset"
           done
           test "$(find . -maxdepth 1 -name 'NET-Test-*' | wc -l)" -eq 4
           sha256sum NET-Test-* LICENSE THIRD_PARTY_NOTICES.txt > SHA256SUMS.txt
-          if ! gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "NET-Test $GITHUB_REF_NAME" --notes-file ../docs/architecture/release-notes.txt
+          cp ../docs/architecture/release-notes.txt "$RUNNER_TEMP/release-notes.txt"
+          printf '\nBuild source: https://github.com/%s/commit/%s\nBuild verification: https://github.com/%s/actions/runs/%s\n' "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> "$RUNNER_TEMP/release-notes.txt"
+          if ! gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --draft --title "NET-Test $RELEASE_TAG" --notes-file "$RUNNER_TEMP/release-notes.txt"
           fi
-          gh release upload "$GITHUB_REF_NAME" NET-Test-* LICENSE THIRD_PARTY_NOTICES.txt SHA256SUMS.txt --clobber
-          gh release edit "$GITHUB_REF_NAME" --draft=false --latest
+          gh release upload "$RELEASE_TAG" NET-Test-* LICENSE THIRD_PARTY_NOTICES.txt SHA256SUMS.txt --clobber
+          gh release edit "$RELEASE_TAG" --draft=false --latest --notes-file "$RUNNER_TEMP/release-notes.txt"
+          gh release download "$RELEASE_TAG" --dir "$RUNNER_TEMP/release-verification"
+          cd "$RUNNER_TEMP/release-verification"
+          sha256sum --check SHA256SUMS.txt
